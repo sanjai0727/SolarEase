@@ -1,0 +1,6 @@
+{
+  "name": "SolarEase",
+  "description": "Guides residential customers through the complete solar adoption journey — from identity verification and site assessment through to warranty registration and AMC support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
