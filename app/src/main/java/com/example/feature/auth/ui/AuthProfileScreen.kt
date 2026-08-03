@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.AssignmentInd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,9 +23,8 @@ fun AuthProfileRoute(
     viewModel: AuthViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var ebNumber by remember { mutableStateOf("") }
     // In a real app, this would be a Uri or similar
-    var photoRef by remember { mutableStateOf<String?>(null) } 
+    var photoRef by rememberSaveable { mutableStateOf<String?>(null) } 
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
@@ -40,7 +40,7 @@ fun AuthProfileRoute(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        StepProgress(currentStep = 3, totalSteps = 10)
+        StepProgress(currentStep = 3, totalSteps = 11)
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -98,32 +98,19 @@ fun AuthProfileRoute(
                     Text("Tap to capture site photo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                Text("Photo Captured ✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("✅ Geotag Site Photo Captured", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    // Future implementation: Add "View Photo" and "Retake Photo" actions here
+                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text("Geotagged site photo required", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        OutlinedTextField(
-            value = ebNumber,
-            onValueChange = { ebNumber = it },
-            label = { Text("EB Service Number") },
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth(),
-            isError = uiState is AuthUiState.Error,
-            supportingText = {
-                if (uiState is AuthUiState.Error) {
-                    Text((uiState as AuthUiState.Error).message)
-                }
-            }
-        )
-        
         Spacer(modifier = Modifier.weight(1f))
         
         Button(
-            onClick = { viewModel.submitProfile(ebNumber, photoRef) },
+            onClick = { viewModel.submitProfile(photoRef) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
@@ -134,12 +121,12 @@ fun AuthProfileRoute(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
-            enabled = uiState !is AuthUiState.Loading && ebNumber.isNotBlank() && photoRef != null
+            enabled = uiState !is AuthUiState.Loading && photoRef != null
         ) {
             if (uiState is AuthUiState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text("Complete Registration", style = MaterialTheme.typography.titleMedium)
+                Text("Continue", style = MaterialTheme.typography.titleMedium)
             }
         }
     }

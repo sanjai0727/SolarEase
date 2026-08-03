@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Factory
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,10 +19,10 @@ import com.example.ui.components.SelectableCard
 
 @Composable
 fun CustomerCategoryRoute(
-    onNavigateNext: () -> Unit
+    onNavigateNext: (String) -> Unit
 ) {
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -30,7 +31,7 @@ fun CustomerCategoryRoute(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        StepProgress(currentStep = 4, totalSteps = 10)
+        StepProgress(currentStep = 5, totalSteps = 11)
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -66,9 +67,9 @@ fun CustomerCategoryRoute(
         )
 
         val categories = listOf(
-            Triple("Domestic", Icons.Default.Home, "Residential property"), 
+            Triple("Residential", Icons.Default.Home, "Residential property"), 
             Triple("Commercial", Icons.Default.Business, "Office or retail space"), 
-            Triple("Industry", Icons.Default.Factory, "Factory or warehouse")
+            Triple("Industrial", Icons.Default.Factory, "Factory or warehouse")
         )
         
         categories.forEach { (category, icon, description) ->
@@ -76,11 +77,7 @@ fun CustomerCategoryRoute(
                 selected = selectedCategory == category,
                 onClick = {
                     selectedCategory = category
-                    if (category != "Domestic") {
-                        errorMessage = "Only Domestic category is supported in this version."
-                    } else {
-                        errorMessage = null
-                    }
+                    errorMessage = null
                 },
                 title = category,
                 description = description,
@@ -100,13 +97,13 @@ fun CustomerCategoryRoute(
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = onNavigateNext,
+            onClick = { selectedCategory?.let { onNavigateNext(it) } },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .padding(bottom = 8.dp),
             shape = MaterialTheme.shapes.extraLarge,
-            enabled = selectedCategory == "Domestic",
+            enabled = selectedCategory != null,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary

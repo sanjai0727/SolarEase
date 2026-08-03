@@ -15,13 +15,19 @@ import com.example.ui.theme.SolarEaseTheme
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    com.example.core.session.UserSession.init(this)
+    
+    if (BuildConfig.DEBUG) {
+        com.example.core.session.UserSession.clear(this)
+    }
     enableEdgeToEdge()
     setContent {
       SolarEaseTheme {
         val navController = rememberNavController()
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           androidx.compose.foundation.layout.Box(modifier = Modifier.padding(innerPadding)) {
-            SolarEaseNavGraph(navController = navController)
+            val startDest = if (com.example.core.session.UserSession.currentUser?.onboardingCompleted == true) com.example.navigation.Screen.CustomerDashboard else com.example.navigation.Screen.AuthPhone
+            SolarEaseNavGraph(navController = navController, startDestination = startDest)
           }
         }
       }

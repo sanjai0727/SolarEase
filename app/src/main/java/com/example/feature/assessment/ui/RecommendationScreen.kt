@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Recommend
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +17,9 @@ import com.example.ui.components.StepProgress
 
 @Composable
 fun RecommendationRoute(
-    onNavigateNext: () -> Unit
+    result: RecommendationResult,
+    onNavigateNext: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -25,7 +28,7 @@ fun RecommendationRoute(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        StepProgress(currentStep = 7, totalSteps = 10)
+        StepProgress(currentStep = 8, totalSteps = 11)
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -70,13 +73,13 @@ fun RecommendationRoute(
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                 )
                 Text(
-                    text = "5.0 kW",
+                    text = "${result.recommendedSystemSizeKw} kW",
                     style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
                 Text(
-                    text = "Est. Annual Gen: 7,500 kWh",
+                    text = "Based on ${result.monthlyConsumption.toInt()} kWh/month",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                 )
@@ -103,28 +106,86 @@ fun RecommendationRoute(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(text = "Area Required: ~45 sq.m", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = "Status: Feasible", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Area Required: ~${result.requiredAreaSqM} sq.m", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (result.isFeasible) {
+                        Text(text = "Status: Suitable for installation", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Text(text = "Status: Insufficient area (Available: ${result.availableArea} sq.m)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                        Text(text = "Suggestion: Increase area or reduce size.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+
+                Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Info",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Review Your Recommendation",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Please review your recommended solar system.\n\nIf you would like to change your monthly consumption, available area, or other site details, tap Back.\n\nIf everything looks correct, tap Continue to proceed to Panel Selection.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Button(
-            onClick = onNavigateNext,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
                 .padding(bottom = 8.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Select Panels", style = MaterialTheme.typography.titleMedium)
+            OutlinedButton(
+                onClick = onNavigateBack,
+                modifier = Modifier
+                    .weight(0.35f)
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+            ) {
+                Text("Back", style = MaterialTheme.typography.titleMedium)
+            }
+            
+            Button(
+                onClick = onNavigateNext,
+                modifier = Modifier
+                    .weight(0.65f)
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                enabled = result.isFeasible,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            ) {
+                Text("Continue", style = MaterialTheme.typography.titleMedium)
+            }
         }
     }
 }
