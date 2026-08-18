@@ -1,18 +1,62 @@
+# =========================
+# Android / Gradle
+# =========================
 *.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.gradle/
+.kotlin/
 local.properties
+
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+app/build/
+
+# Android Studio
+.idea/
+*.iws
+
+# =========================
+# Environment / Secrets
+# =========================
 .env
+.env.*
+!.env.example
+
 debug.keystore
+firebase-adminsdk.json
+*service-account*.json
+*service_account*.json
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# =========================
+# Python tooling / cache
+# =========================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Local artifacts
+# =========================
+.artifacts/
+.idea/
+.artifacts/
+antigravity-backend/alembic_out.txt

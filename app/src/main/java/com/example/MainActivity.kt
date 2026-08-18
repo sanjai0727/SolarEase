@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         val navController = rememberNavController()
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           androidx.compose.foundation.layout.Box(modifier = Modifier.padding(innerPadding)) {
-            val startDest = if (com.example.core.session.UserSession.currentUser?.onboardingCompleted == true) com.example.navigation.Screen.CustomerDashboard else com.example.navigation.Screen.AuthPhone
+            val startDest = if (com.example.core.session.UserSession.currentUser?.onboardingCompleted == true) com.example.navigation.Screen.CustomerDashboard else com.example.navigation.Screen.AuthGraph
             SolarEaseNavGraph(navController = navController, startDestination = startDest)
           }
         }

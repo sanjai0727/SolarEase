@@ -1,12 +1,23 @@
 package com.example.feature.auth.ui
 
+import android.app.Activity
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.FirebaseException
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
+import android.util.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 sealed class AuthUiState {
     data object Idle : AuthUiState()
@@ -16,43 +27,189 @@ sealed class AuthUiState {
 }
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
+    init {
+        Log.d("AuthLifecycle", "AuthViewModel created: ${this.hashCode()}")
+    }
+
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
-    private var otpFailures = 0
+    private var storedVerificationId: String? = null
+    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
+    
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    fun sendOtp(phoneNumber: String) {
+    fun sendOtp(phoneNumber: String, activity: Activity) {
+        Log.d("AuthLifecycle", "sendOtp() called on ViewModel: ${this.hashCode()}")
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
-            delay(1000) // Mock API call
-            if (phoneNumber.length >= 10) {
-                _uiState.value = AuthUiState.Success("OTP sent successfully")
-            } else {
+            
+            Log.d("AuthViewModel", "Firebase App Name: ${auth.app.name}")
+            Log.d("AuthViewModel", "Firebase Project ID: ${auth.app.options.projectId}")
+            Log.d("AuthViewModel", "Firebase Application ID: ${auth.app.options.applicationId}")
+            Log.d("AuthViewModel", "Phone number before normalize: $phoneNumber")
+
+            if (phoneNumber.length < 10) {
                 _uiState.value = AuthUiState.Error("Invalid phone number")
+                return@launch
             }
+
+            val normalizedNumber = if (phoneNumber.startsWith("+91")) {
+                phoneNumber
+            } else {
+                "+91$phoneNumber"
+            }
+
+            val options = PhoneAuthOptions.newBuilder(auth)
+                .setPhoneNumber(normalizedNumber)
+                .setTimeout(60L, TimeUnit.SECONDS)
+                .setActivity(activity)
+                .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                    override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                        Log.d("AuthLifecycle", "onVerificationCompleted() on ViewModel: ${this.hashCode()}")
+                        signInWithCredential(credential, null, normalizedNumber)
+                    }
+
+                    override fun onVerificationFailed(e: FirebaseException) {
+                        Log.e("AuthLifecycle", "onVerificationFailed() on ViewModel: ${this.hashCode()}")
+                        Log.e("AuthViewModel", "FirebaseException class: ${e.javaClass.name}")
+                        Log.e("AuthViewModel", "FirebaseException message: ${e.message}")
+                        if (e is FirebaseAuthException) {
+                            Log.e("AuthViewModel", "FirebaseAuth errorCode: ${e.errorCode}")
+                        }
+                        _uiState.value = AuthUiState.Error(e.message ?: "Verification failed")
+                    }
+
+                    override fun onCodeSent(
+                        verificationId: String,
+                        token: PhoneAuthProvider.ForceResendingToken
+                    ) {
+                        Log.d("AuthLifecycle", "onCodeSent() on ViewModel: ${this.hashCode()}")
+                        Log.d("AuthLifecycle", "Verification ID received: ${verificationId.take(5)}...")
+                        storedVerificationId = verificationId
+                        resendToken = token
+                        _uiState.value = AuthUiState.Success("OTP sent successfully")
+                    }
+                })
+                .build()
+                
+            PhoneAuthProvider.verifyPhoneNumber(options)
         }
     }
 
     fun verifyOtp(otp: String, fullName: String? = null, phoneNumber: String? = null) {
+        Log.d("AuthLifecycle", "verifyOtp() called on ViewModel: ${this.hashCode()}")
+        val verificationId = storedVerificationId
+        Log.d("AuthLifecycle", "storedVerificationId is ${if (verificationId == null) "NULL" else "NOT NULL"}")
+        
+        if (verificationId == null) {
+            _uiState.value = AuthUiState.Error("Please request OTP first.")
+            return
+        }
+        
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
-            delay(1000)
-            if (otp == "123456") {
-                otpFailures = 0
-                if (fullName != null && phoneNumber != null) {
-                    val user = com.example.core.session.User(fullName, phoneNumber)
-                    com.example.core.session.UserSession.saveUser(getApplication(), user)
-                }
-                _uiState.value = AuthUiState.Success()
-            } else {
-                otpFailures++
-                if (otpFailures >= 3) {
-                    _uiState.value = AuthUiState.Error("Too many failed attempts. Try again in 15 minutes.")
-                } else {
-                    _uiState.value = AuthUiState.Error("Invalid OTP. Attempts left: ${3 - otpFailures}")
-                }
+            try {
+                Log.d("AuthLifecycle", "Calling PhoneAuthProvider.getCredential() on ViewModel: ${this.hashCode()}")
+                val credential = PhoneAuthProvider.getCredential(verificationId, otp)
+                signInWithCredential(credential, fullName, phoneNumber)
+            } catch (e: Exception) {
+                _uiState.value = AuthUiState.Error(e.message ?: "Invalid OTP.")
             }
         }
+    }
+
+    private fun signInWithCredential(credential: PhoneAuthCredential, fullName: String?, phoneNumber: String?) {
+        Log.d("AuthLifecycle", "signInWithCredential() called on ViewModel: ${this.hashCode()}")
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("AuthLifecycle", "signInWithCredential success on ViewModel: ${this.hashCode()}")
+                    val user = task.result?.user
+                    handleFirebaseUser(user)
+                } else {
+                    Log.e("AuthLifecycle", "signInWithCredential failed on ViewModel: ${this.hashCode()}")
+                    if (task.exception is FirebaseAuthException) {
+                        val e = task.exception as FirebaseAuthException
+                        Log.e("AuthLifecycle", "ErrorCode: ${e.errorCode}, Message: ${e.message}")
+                    }
+                    _uiState.value = AuthUiState.Error(task.exception?.message ?: "Authentication failed")
+                }
+            }
+    }
+
+    private fun handleFirebaseUser(user: FirebaseUser?) {
+        Log.d("AuthLifecycle", "handleFirebaseUser called. user exists: ${user != null}")
+        if (user != null) {
+            // Obtain the ID token
+            user.getIdToken(false).addOnCompleteListener { tokenTask ->
+                if (tokenTask.isSuccessful) {
+                    val idToken = tokenTask.result?.token
+                    if (idToken != null) {
+                        viewModelScope.launch {
+                            try {
+                                val response = com.example.core.network.RetrofitClient.apiService.verifyFirebaseToken(
+                                    com.example.core.network.dto.FirebaseTokenRequest(idToken)
+                                )
+                                if (response.isSuccessful) {
+                                    Log.d("AuthLifecycle", "Backend /auth/firebase SUCCESS. Status: ${response.code()}")
+                                    val body = response.body()
+                                    if (body != null) {
+                                        com.example.core.session.UserSession.saveTokens(getApplication(), body.accessToken, body.refreshToken)
+                                        val sessionUser = com.example.core.session.User(
+                                            customerName = body.user.fullName ?: "User",
+                                            mobileNumber = body.user.mobileNumber
+                                        )
+                                        com.example.core.session.UserSession.saveUser(getApplication(), sessionUser)
+                                        _uiState.value = AuthUiState.Success()
+                                    } else {
+                                        _uiState.value = AuthUiState.Error("Invalid backend response")
+                                    }
+                                } else {
+                                    val errorBody = response.errorBody()?.string()
+                                    Log.e("AuthLifecycle", "Backend /auth/firebase FAILED. Status: ${response.code()}, Error: $errorBody")
+                                    if (response.code() == 409) {
+                                        _uiState.value = AuthUiState.Error("Phone number is already linked to a different Firebase account.")
+                                    } else if (response.code() == 401) {
+                                        _uiState.value = AuthUiState.Error("Invalid or expired Firebase authentication token.")
+                                    } else {
+                                        _uiState.value = AuthUiState.Error("Backend error: ${response.code()}")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                _uiState.value = AuthUiState.Error(e.message ?: "Network error connecting to backend")
+                            }
+                        }
+                    } else {
+                        _uiState.value = AuthUiState.Error("Failed to obtain Firebase ID token")
+                    }
+                } else {
+                    _uiState.value = AuthUiState.Error(tokenTask.exception?.message ?: "Failed to get Firebase ID token")
+                }
+            }
+        } else {
+            _uiState.value = AuthUiState.Error("Authentication succeeded but user is null")
+        }
+    }
+
+    fun signInWithGoogle(googleIdToken: String) {
+        Log.d("AuthLifecycle", "signInWithGoogle() called on ViewModel")
+        val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = task.result?.user
+                    Log.d("AuthLifecycle", "signInWithGoogle success. Current user exists: ${user != null}")
+                    handleFirebaseUser(user)
+                } else {
+                    Log.e("AuthLifecycle", "signInWithGoogle failed")
+                    if (task.exception is FirebaseAuthException) {
+                        val e = task.exception as FirebaseAuthException
+                        Log.e("AuthLifecycle", "ErrorCode: ${e.errorCode}, Message: ${e.message}")
+                    }
+                    _uiState.value = AuthUiState.Error(task.exception?.message ?: "Google Authentication failed")
+                }
+            }
     }
 
     fun submitProfile(photoRef: String?) {
@@ -69,5 +226,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetState() {
         _uiState.value = AuthUiState.Idle
+    }
+
+    fun setLoading() {
+        _uiState.value = AuthUiState.Loading
+    }
+
+    fun setError(message: String) {
+        _uiState.value = AuthUiState.Error(message)
     }
 }

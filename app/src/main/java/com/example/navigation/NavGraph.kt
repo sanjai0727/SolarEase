@@ -1,11 +1,16 @@
 package com.example.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
+import com.example.feature.auth.ui.AuthViewModel
 import com.example.feature.auth.ui.AuthPhoneRoute
+import com.example.feature.auth.ui.AuthMainRoute
 import com.example.feature.auth.ui.AuthOtpRoute
 import com.example.feature.auth.ui.AuthProfileRoute
 import com.example.feature.ebservice.ui.EbServiceNumberRoute
@@ -27,41 +32,74 @@ import com.example.feature.financial.ui.FinancialRoute
 import com.example.feature.environmental.ui.EnvironmentalRoute
 
 @Composable
-fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = Screen.AuthPhone) {
+fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = Screen.AuthGraph) {
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        composable<Screen.AuthPhone> {
-            AuthPhoneRoute(
-                onNavigateToOtp = { fullName, phone ->
-                    navController.navigate(Screen.AuthOtp(fullName, phone))
+        navigation<Screen.AuthGraph>(startDestination = Screen.AuthMain) {
+            composable<Screen.AuthMain> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.AuthGraph>()
                 }
-            )
-        }
-        
-        composable<Screen.AuthOtp> { backStackEntry ->
-            val args = backStackEntry.toRoute<Screen.AuthOtp>()
-            AuthOtpRoute(
-                fullName = args.fullName,
-                phoneNumber = args.phoneNumber,
-                onNavigateToProfile = {
-                    navController.navigate(Screen.AuthProfile)
-                },
-                onNavigateBack = {
-                    navController.popBackStack()
+                val authViewModel: AuthViewModel = viewModel(parentEntry)
+                AuthMainRoute(
+                    viewModel = authViewModel,
+                    onNavigateToPhoneAuth = {
+                        navController.navigate(Screen.AuthPhone)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.AuthProfile)
+                    }
+                )
+            }
+
+            composable<Screen.AuthPhone> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.AuthGraph>()
                 }
-            )
-        }
-        
-        composable<Screen.AuthProfile> {
-            AuthProfileRoute(
-                onRegistrationComplete = {
-                    navController.navigate(Screen.EbServiceNumber)
+                val authViewModel: AuthViewModel = viewModel(parentEntry)
+                AuthPhoneRoute(
+                    viewModel = authViewModel,
+                    onNavigateToOtp = { fullName, phone ->
+                        navController.navigate(Screen.AuthOtp(fullName, phone))
+                    }
+                )
+            }
+
+            composable<Screen.AuthOtp> { backStackEntry ->
+                val args = backStackEntry.toRoute<Screen.AuthOtp>()
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.AuthGraph>()
                 }
-            )
+                val authViewModel: AuthViewModel = viewModel(parentEntry)
+                AuthOtpRoute(
+                    fullName = args.fullName,
+                    phoneNumber = args.phoneNumber,
+                    viewModel = authViewModel,
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.AuthProfile)
+                    },
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable<Screen.AuthProfile> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.AuthGraph>()
+                }
+                val authViewModel: AuthViewModel = viewModel(parentEntry)
+                AuthProfileRoute(
+                    viewModel = authViewModel,
+                    onRegistrationComplete = {
+                        navController.navigate(Screen.EbServiceNumber)
+                    }
+                )
+            }
         }
-        
+
         composable<Screen.EbServiceNumber> {
             EbServiceNumberRoute(
                 onNavigateNext = { 

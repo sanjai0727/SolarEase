@@ -4,6 +4,12 @@ import kotlinx.serialization.Serializable
 
 sealed class Screen {
     @Serializable
+    data object AuthGraph : Screen()
+
+    @Serializable
+    data object AuthMain : Screen()
+
+    @Serializable
     data object AuthPhone : Screen()
     
     @Serializable

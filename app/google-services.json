@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "612667385200",
+    "project_id": "solarease-bf39c",
+    "storage_bucket": "solarease-bf39c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:612667385200:android:2c2c21a35530d1efc01bb5",
+        "android_client_info": {
+          "package_name": "com.aistudio.solarease.vnbmqr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "612667385200-hq16m49jr8a4l1bfj0j5aaq3nc5a89d2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.solarease.vnbmqr",
+            "certificate_hash": "bb1bb18abf9bd7f3f950452851f62a6babf327e4"
+          }
+        },
+        {
+          "client_id": "612667385200-03bugtp2n15q0r6e590um1c5lpuoqtmm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOfpX9-o9MMlrqvW1y6pzZiahR3ZVcZZk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "612667385200-03bugtp2n15q0r6e590um1c5lpuoqtmm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

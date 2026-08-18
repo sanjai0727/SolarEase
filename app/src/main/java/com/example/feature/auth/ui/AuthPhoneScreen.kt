@@ -120,8 +120,14 @@ fun AuthPhoneRoute(
         
         Spacer(modifier = Modifier.weight(1f))
         
+        val context = androidx.compose.ui.platform.LocalContext.current
         Button(
-            onClick = { viewModel.sendOtp(phoneNumber) },
+            onClick = {
+                val activity = context as? android.app.Activity
+                if (activity != null) {
+                    viewModel.sendOtp(phoneNumber, activity)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
