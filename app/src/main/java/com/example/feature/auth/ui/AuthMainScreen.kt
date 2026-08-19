@@ -47,10 +47,10 @@ fun AuthMainRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    
+
     var fullName by rememberSaveable { mutableStateOf("") }
-    
-    val isFullNameValid = fullName.isBlank() || (fullName.trim().length in 3..60 && 
+
+    val isFullNameValid = fullName.isBlank() || (fullName.trim().length in 3..60 &&
         fullName.all { it.isLetter() || it.isWhitespace() || it == '.' })
 
     LaunchedEffect(uiState) {
@@ -71,9 +71,9 @@ fun AuthMainRoute(
             .padding(24.dp)
     ) {
         StepProgress(currentStep = 1, totalSteps = 11)
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         Box(
             modifier = Modifier
                 .size(64.dp)
@@ -98,14 +98,14 @@ fun AuthMainRoute(
             color = Color(0xFF1E1E1E),
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        
+
         Text(
             text = "Enter your details to start your solar journey.",
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF666666),
             modifier = Modifier.padding(bottom = 32.dp)
         )
-        
+
         OutlinedTextField(
             value = fullName,
             onValueChange = { fullName = it },
@@ -124,7 +124,7 @@ fun AuthMainRoute(
                 }
             }
         )
-        
+
         if (uiState is AuthUiState.Error) {
             Text(
                 text = (uiState as AuthUiState.Error).message,
@@ -134,7 +134,7 @@ fun AuthMainRoute(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         Text(
             text = "Continue with",
             style = MaterialTheme.typography.bodyMedium,
@@ -142,9 +142,9 @@ fun AuthMainRoute(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         Surface(
             onClick = {
                 val activity = context as? Activity
@@ -152,7 +152,7 @@ fun AuthMainRoute(
                     coroutineScope.launch {
                         viewModel.setLoading()
                         val credentialManager = CredentialManager.create(context)
-                        
+
                         val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
                             .setFilterByAuthorizedAccounts(false)
                             .setServerClientId(context.getString(R.string.default_web_client_id))
@@ -169,21 +169,32 @@ fun AuthMainRoute(
                                 context = activity
                             )
                             val credential = result.credential
-                            
+
                             if (credential is androidx.credentials.CustomCredential &&
                                 credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                             ) {
-                                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                val googleIdTokenCredential =
+                                    GoogleIdTokenCredential.createFrom(credential.data)
                                 viewModel.signInWithGoogle(googleIdTokenCredential.idToken)
                             } else {
                                 Log.e("AuthMainRoute", "Unexpected credential type")
                                 viewModel.setError("Unexpected credential type")
                             }
                         } catch (e: GetCredentialException) {
-                            Log.e("AuthMainRoute", "GetCredentialException: ${e.errorMessage}")
-                            viewModel.setError(e.errorMessage?.toString() ?: "Sign in cancelled")
+                            Log.e(
+                                "AuthMainRoute",
+                                "GetCredentialException: type=${e::class.java.name}, message=${e.message}, errorMessage=${e.errorMessage}",
+                                e
+                            )
+                            viewModel.setError(
+                                e.errorMessage?.toString() ?: "Sign in cancelled"
+                            )
                         } catch (e: Exception) {
-                            Log.e("AuthMainRoute", "Exception: ${e.message}")
+                            Log.e(
+                                "AuthMainRoute",
+                                "Exception: type=${e::class.java.name}, message=${e.message}",
+                                e
+                            )
                             viewModel.setError(e.message ?: "An error occurred")
                         }
                     }
@@ -203,7 +214,10 @@ fun AuthMainRoute(
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (uiState is AuthUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = primaryGreen)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = primaryGreen
+                    )
                 } else {
                     Image(
                         painter = painterResource(id = R.drawable.ic_google),
@@ -220,9 +234,9 @@ fun AuthMainRoute(
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         Surface(
             onClick = {
                 Log.d("AuthMainRoute", "Sign in with Facebook clicked (Not Implemented)")
@@ -254,9 +268,9 @@ fun AuthMainRoute(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(48.dp))
-        
+
         val termsText = buildAnnotatedString {
             append("By continuing, you agree to our\n")
             withStyle(style = SpanStyle(color = primaryGreen, fontWeight = FontWeight.Medium)) {
@@ -268,7 +282,7 @@ fun AuthMainRoute(
             }
             append(".")
         }
-        
+
         Text(
             text = termsText,
             style = MaterialTheme.typography.bodySmall,
@@ -276,7 +290,7 @@ fun AuthMainRoute(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
