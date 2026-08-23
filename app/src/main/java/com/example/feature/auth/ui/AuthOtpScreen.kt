@@ -22,7 +22,7 @@ import com.example.ui.components.StepProgress
 fun AuthOtpRoute(
     fullName: String,
     phoneNumber: String,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToHome: () -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
@@ -32,7 +32,7 @@ fun AuthOtpRoute(
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
             viewModel.resetState()
-            onNavigateToProfile()
+            onNavigateToHome()
         }
     }
 

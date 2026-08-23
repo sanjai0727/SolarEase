@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AuthMainRoute(
     onNavigateToPhoneAuth: () -> Unit,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToHome: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -56,7 +56,7 @@ fun AuthMainRoute(
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success && (uiState as AuthUiState.Success).message == null) {
             viewModel.resetState()
-            onNavigateToProfile()
+            onNavigateToHome()
         }
     }
 

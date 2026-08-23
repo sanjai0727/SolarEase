@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # Firebase
     GOOGLE_APPLICATION_CREDENTIALS: str = "firebase-adminsdk.json"
 
+    # Gemini
+    GEMINI_API_KEY: str = ""
+
     @property
     def get_cors_origins(self) -> list[str]:
         try:
