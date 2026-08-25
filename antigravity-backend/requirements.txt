@@ -8,3 +8,4 @@ psycopg[binary]>=3.1.19
 firebase-admin>=6.5.0
 google-genai>=0.1.0
 python-multipart>=0.0.32
+python-jose[cryptography]>=3.3.0
