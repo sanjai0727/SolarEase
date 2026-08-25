@@ -21,7 +21,13 @@ import com.example.feature.environmental.ui.EnvironmentalRoute
 import com.example.feature.home.ui.HomeRoute
 import com.example.feature.home.ui.modules.BillCalculatorRoute
 import com.example.feature.home.ui.modules.ElectricityChatbotRoute
-import com.example.feature.home.ui.modules.SolarEaseLensRoute
+import com.example.feature.lens.ui.LensLandingScreen
+import com.example.feature.lens.ui.LensScreen
+import com.example.feature.lens.ui.LensViewModel
+import com.example.feature.lens.ui.ApplianceDetailsScreen
+import com.example.feature.lens.ui.ApplianceResultScreen
+import com.example.core.network.RetrofitClient
+import com.example.feature.lens.data.LensRepository
 import com.example.feature.home.ui.modules.TnebBillStatusRoute
 import com.example.feature.home.ui.modules.SolarPanelRoute
 
@@ -92,7 +98,7 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 onNavigateToSolarEaseLens = { navController.navigate(Screen.SolarEaseLens) },
                 onNavigateToTnebBillStatus = { navController.navigate(Screen.TnebBillStatus) },
                 onNavigateToSolarPanel = { navController.navigate(Screen.SolarPanel) },
-                onNavigateToProfile = { }
+                onNavigateToProfile = { navController.navigate(Screen.Profile) }
             )
         }
         
@@ -104,8 +110,58 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
             ElectricityChatbotRoute(onNavigateBack = { navController.popBackStack() })
         }
         
-        composable<Screen.SolarEaseLens> {
-            SolarEaseLensRoute(onNavigateBack = { navController.popBackStack() })
+        navigation<Screen.SolarEaseLens>(startDestination = Screen.LensMain) {
+            composable<Screen.LensMain> { backStackEntry ->
+                LensLandingScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenCamera = { navController.navigate(Screen.LensCamera) }
+                )
+            }
+            
+            composable<Screen.LensCamera> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.SolarEaseLens>()
+                }
+                val lensViewModel: LensViewModel = viewModel(
+                    parentEntry,
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            return LensViewModel(LensRepository(RetrofitClient.lensApi)) as T
+                        }
+                    }
+                )
+                LensScreen(
+                    viewModel = lensViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToDetails = { navController.navigate(Screen.LensDetails) }
+                )
+            }
+            
+            composable<Screen.LensDetails> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.SolarEaseLens>()
+                }
+                val lensViewModel: LensViewModel = viewModel(parentEntry)
+                ApplianceDetailsScreen(
+                    viewModel = lensViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToResult = { navController.navigate(Screen.LensResult) }
+                )
+            }
+
+            composable<Screen.LensResult> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.SolarEaseLens>()
+                }
+                val lensViewModel: LensViewModel = viewModel(parentEntry)
+                ApplianceResultScreen(
+                    viewModel = lensViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onScanAnother = { 
+                        navController.popBackStack(Screen.LensMain, false)
+                    }
+                )
+            }
         }
         
         composable<Screen.TnebBillStatus> {
@@ -145,6 +201,12 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
 
         composable<Screen.Environmental> {
             EnvironmentalRoute(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Screen.Profile> {
+            com.example.feature.profile.ui.ProfileRoute(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -153,7 +153,7 @@ fun OrderSummaryRoute(
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(text = "Name", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = uiState.customerName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(text = uiState.username, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -370,7 +370,7 @@ fun OrderReceiptPopup(
                         // Customer Details
                         Text(text = "Customer Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Name: ${uiState.customerName}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Name: ${uiState.username}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Mobile: ${uiState.mobileNumber}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Address: ${uiState.installationAddress}", style = MaterialTheme.typography.bodyMedium)
                         

@@ -97,7 +97,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun verifyOtp(otp: String, fullName: String? = null, phoneNumber: String? = null) {
+    fun verifyOtp(otp: String, username: String? = null, phoneNumber: String? = null) {
         Log.d("AuthLifecycle", "verifyOtp() called on ViewModel: ${this.hashCode()}")
         val verificationId = storedVerificationId
         Log.d("AuthLifecycle", "storedVerificationId is ${if (verificationId == null) "NULL" else "NOT NULL"}")
@@ -112,21 +112,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 Log.d("AuthLifecycle", "Calling PhoneAuthProvider.getCredential() on ViewModel: ${this.hashCode()}")
                 val credential = PhoneAuthProvider.getCredential(verificationId, otp)
-                signInWithCredential(credential, fullName, phoneNumber)
+                signInWithCredential(credential, username, phoneNumber)
             } catch (e: Exception) {
                 _uiState.value = AuthUiState.Error(e.message ?: "Invalid OTP.")
             }
         }
     }
 
-    private fun signInWithCredential(credential: PhoneAuthCredential, fullName: String?, phoneNumber: String?) {
+    private fun signInWithCredential(credential: PhoneAuthCredential, username: String?, phoneNumber: String?) {
         Log.d("AuthLifecycle", "signInWithCredential() called on ViewModel: ${this.hashCode()}")
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Log.d("AuthLifecycle", "signInWithCredential success on ViewModel: ${this.hashCode()}")
                     val user = task.result?.user
-                    handleFirebaseUser(user)
+                    handleFirebaseUser(user, username, isSignUp = false)
                 } else {
                     Log.e("AuthLifecycle", "signInWithCredential failed on ViewModel: ${this.hashCode()}")
                     if (task.exception is FirebaseAuthException) {
@@ -138,29 +138,41 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    private fun handleFirebaseUser(user: FirebaseUser?) {
-        Log.d("AuthLifecycle", "handleFirebaseUser called. user exists: ${user != null}")
+    private fun handleFirebaseUser(user: FirebaseUser?, username: String? = null, isSignUp: Boolean = false) {
+        Log.d("AuthFlow", "Firebase current user available")
         if (user != null) {
             // Obtain the ID token
-            user.getIdToken(false).addOnCompleteListener { tokenTask ->
+            user.getIdToken(true).addOnCompleteListener { tokenTask ->
                 if (tokenTask.isSuccessful) {
                     val idToken = tokenTask.result?.token
                     if (idToken != null) {
+                        Log.d("AuthFlow", "Firebase ID token obtained, length: ${idToken.length}")
+                        Log.d("AuthFlow", "Sending token to backend")
                         viewModelScope.launch {
                             try {
                                 val response = com.example.core.network.RetrofitClient.apiService.verifyFirebaseToken(
-                                    com.example.core.network.dto.FirebaseTokenRequest(idToken)
+                                    "Bearer $idToken",
+                                    com.example.core.network.dto.FirebaseTokenRequest(
+                                        firebaseIdToken = idToken,
+                                        username = username,
+                                        is_signup = isSignUp
+                                    )
                                 )
                                 if (response.isSuccessful) {
-                                    Log.d("AuthLifecycle", "Backend /auth/firebase SUCCESS. Status: ${response.code()}")
+                                    Log.d("AuthFlow", "Backend verification successful")
                                     val body = response.body()
                                     if (body != null) {
                                         com.example.core.session.UserSession.saveTokens(getApplication(), body.accessToken, body.refreshToken)
                                         val sessionUser = com.example.core.session.User(
-                                            customerName = body.user.fullName ?: "User",
-                                            mobileNumber = body.user.mobileNumber
+                                            id = body.user.id,
+                                            name = body.user.name,
+                                            username = body.user.username ?: "User",
+                                            email = body.user.email,
+                                            mobileNumber = body.user.mobileNumber,
+                                            houseAddress = body.user.houseAddress
                                         )
                                         com.example.core.session.UserSession.saveUser(getApplication(), sessionUser)
+                                        Log.d("AuthFlow", "User session created")
                                         _uiState.value = AuthUiState.Success()
                                     } else {
                                         _uiState.value = AuthUiState.Error("Invalid backend response")
@@ -168,13 +180,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                 } else {
                                     val errorBody = response.errorBody()?.string()
                                     Log.e("AuthLifecycle", "Backend /auth/firebase FAILED. Status: ${response.code()}, Error: $errorBody")
-                                    if (response.code() == 409) {
-                                        _uiState.value = AuthUiState.Error("Phone number is already linked to a different Firebase account.")
-                                    } else if (response.code() == 401) {
-                                        _uiState.value = AuthUiState.Error("Invalid or expired Firebase authentication token.")
-                                    } else {
-                                        _uiState.value = AuthUiState.Error("Backend error: ${response.code()}")
+                                    var errorMessage = "Backend error: ${response.code()}"
+                                    if (response.code() == 409) errorMessage = "An account already exists. Please sign in instead."
+                                    if (response.code() == 401) errorMessage = "Invalid or expired authentication session. Please try again."
+                                    
+                                    try {
+                                        if (errorBody != null) {
+                                            val json = org.json.JSONObject(errorBody)
+                                            if (json.has("detail")) {
+                                                errorMessage = json.getString("detail")
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        // ignore parsing error
                                     }
+                                    _uiState.value = AuthUiState.Error(errorMessage)
                                 }
                             } catch (e: Exception) {
                                 _uiState.value = AuthUiState.Error(e.message ?: "Network error connecting to backend")
@@ -192,15 +212,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun signInWithGoogle(googleIdToken: String) {
+    fun signInWithGoogle(googleIdToken: String, username: String? = null, isSignUp: Boolean = false) {
         Log.d("AuthLifecycle", "signInWithGoogle() called on ViewModel")
         val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val user = task.result?.user
-                    Log.d("AuthLifecycle", "signInWithGoogle success. Current user exists: ${user != null}")
-                    handleFirebaseUser(user)
+                    Log.d("AuthFlow", "Google credential received")
+                    Log.d("AuthFlow", "Firebase authentication successful")
+                    handleFirebaseUser(user, username, isSignUp)
                 } else {
                     Log.e("AuthLifecycle", "signInWithGoogle failed")
                     if (task.exception is FirebaseAuthException) {

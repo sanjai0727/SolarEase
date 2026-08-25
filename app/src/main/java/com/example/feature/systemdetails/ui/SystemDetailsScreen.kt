@@ -41,7 +41,7 @@ fun SystemDetailsRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Solar System" else "My Solar System", style = MaterialTheme.typography.titleLarge)
                         Text("Your installed solar plant information", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

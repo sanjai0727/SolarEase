@@ -5,7 +5,9 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class FirebaseTokenRequest(
-    @Json(name = "firebase_id_token") val firebaseIdToken: String
+    @Json(name = "firebase_id_token") val firebaseIdToken: String,
+    @Json(name = "username") val username: String? = null,
+    @Json(name = "is_signup") val is_signup: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)
@@ -20,8 +22,23 @@ data class TokenResponse(
 @JsonClass(generateAdapter = true)
 data class UserResponse(
     @Json(name = "id") val id: String,
-    @Json(name = "full_name") val fullName: String? = null,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "username") val username: String? = null,
+    @Json(name = "email") val email: String? = null,
     @Json(name = "mobile_number") val mobileNumber: String?,
+    @Json(name = "house_address") val houseAddress: String? = null,
+    @Json(name = "latitude") val latitude: Double? = null,
+    @Json(name = "longitude") val longitude: Double? = null,
     @Json(name = "is_verified") val isVerified: Boolean,
     @Json(name = "created_at") val createdAt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class UserUpdateRequest(
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "username") val username: String? = null,
+    @Json(name = "mobile_number") val mobileNumber: String? = null,
+    @Json(name = "house_address") val houseAddress: String? = null,
+    @Json(name = "latitude") val latitude: Double? = null,
+    @Json(name = "longitude") val longitude: Double? = null
 )

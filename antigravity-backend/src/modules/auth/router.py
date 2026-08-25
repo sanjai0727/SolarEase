@@ -61,6 +61,7 @@ async def verify_otp(
     response_model=TokenResponse
 )
 async def verify_firebase(
+    request: FirebaseTokenRequest,
     firebase_claims: dict = Depends(get_verified_firebase_token),
     service: AuthService = Depends(get_auth_service),
 ):
@@ -75,10 +76,17 @@ async def verify_firebase(
     logger.info(f"verify_firebase called. UID exists: {bool(firebase_uid)}, Phone: {bool(phone_number)}, Email: {bool(email)}, Provider: {provider}")
     
     if phone_number:
-        user = service.sync_phone_user(firebase_uid, phone_number)
+        user = service.sync_phone_user(firebase_uid, phone_number, is_signup=request.is_signup)
     elif email:
+        username = request.username
         name = firebase_claims.get("name")
-        user = service.sync_social_user(firebase_uid, email, full_name=name)
+        user = service.sync_social_user(
+            firebase_uid=firebase_uid,
+            email=email,
+            username=username,
+            name=name,
+            is_signup=request.is_signup
+        )
     else:
         logger.error(f"HTTP 400 Bad Request: Firebase token missing both phone number and email. Available claims keys: {list(firebase_claims.keys())}")
         from fastapi import HTTPException, status
@@ -132,9 +140,39 @@ def logout(
     response_model=UserResponse
 )
 def get_me(
-    current_user: User = Depends(get_current_user),
+    firebase_claims: dict = Depends(get_verified_firebase_token),
+    service: AuthService = Depends(get_auth_service),
 ):
-    return current_user
+    firebase_uid = firebase_claims.get("uid")
+    user = service.repository.get_user_by_firebase_uid(firebase_uid)
+    if not user:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+    return user
+
+
+from src.modules.auth.schemas import UserUpdateRequest
+@router.patch(
+    "/me",
+    response_model=UserResponse
+)
+def update_me(
+    request: UserUpdateRequest,
+    firebase_claims: dict = Depends(get_verified_firebase_token),
+    service: AuthService = Depends(get_auth_service),
+):
+    firebase_uid = firebase_claims.get("uid")
+    user = service.repository.get_user_by_firebase_uid(firebase_uid)
+    if not user:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+    return service.update_profile(user, request)
 
 
 @router.get("/session")

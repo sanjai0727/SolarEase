@@ -30,17 +30,19 @@ class AuthRepository:
     def create_user(
         self, 
         mobile_number: Optional[str] = None, 
-        full_name: Optional[str] = None, 
+        username: Optional[str] = None, 
         is_verified: bool = False, 
         firebase_uid: Optional[str] = None,
-        email: Optional[str] = None
+        email: Optional[str] = None,
+        name: Optional[str] = None
     ) -> User:
         user = User(
             mobile_number=mobile_number, 
-            full_name=full_name, 
+            username=username, 
             is_verified=is_verified, 
             firebase_uid=firebase_uid,
-            email=email
+            email=email,
+            name=name
         )
         self.db.add(user)
         self.db.commit()

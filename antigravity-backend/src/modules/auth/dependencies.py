@@ -13,7 +13,6 @@ security = HTTPBearer()
 firebase_security = HTTPBearer(auto_error=False)
 
 def get_verified_firebase_token(
-    request_body: Optional[FirebaseTokenRequest] = None,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(firebase_security)
 ) -> dict[str, Any]:
     """
@@ -23,8 +22,6 @@ def get_verified_firebase_token(
     token = None
     if credentials:
         token = credentials.credentials
-    elif request_body:
-        token = request_body.firebase_id_token
 
     if not token:
         raise HTTPException(

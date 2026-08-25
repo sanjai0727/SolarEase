@@ -103,7 +103,7 @@ fun InstallationTrackingRoute(
             Spacer(modifier = Modifier.height(16.dp))
         
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                val userName = com.example.core.session.UserSession.currentUser?.customerName
+                val userName = com.example.core.session.UserSession.currentUser?.username
                 Text(
                     text = if (userName != null) "$userName's Installation" else "Installation Tracking",
                     style = MaterialTheme.typography.headlineMedium,

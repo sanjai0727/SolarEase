@@ -109,7 +109,7 @@ fun SiteSurveyStatusRoute(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val userName = com.example.core.session.UserSession.currentUser?.customerName
+        val userName = com.example.core.session.UserSession.currentUser?.username
         Text(
             text = if (userName != null) "$userName's Site Survey" else "Site Survey",
             style = MaterialTheme.typography.headlineMedium,

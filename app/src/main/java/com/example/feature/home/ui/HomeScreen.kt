@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,9 +76,14 @@ fun HomeRoute(
     onNavigateToActivity: () -> Unit = {},
     onNavigateToSolar: () -> Unit = {}
 ) {
-    val userName = remember {
-        UserSession.currentUser?.customerName
-            ?.trim()?.split(" ")?.firstOrNull()?.takeIf { it.isNotBlank() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showAccountPreview by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showProfilePrompt by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val currentUser = UserSession.currentUser
+
+    val userName = remember(currentUser) {
+        val display = currentUser?.name ?: currentUser?.username
+        display?.trim()?.split(" ")?.firstOrNull()?.takeIf { it.isNotBlank() }
     }
     val greeting = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -89,6 +95,69 @@ fun HomeRoute(
     }
     val greetingText = if (userName != null) "$greeting, $userName 👋" else "$greeting 👋"
     val userInitial = userName?.firstOrNull()?.uppercaseChar() ?: 'S'
+
+    androidx.compose.runtime.LaunchedEffect(currentUser) {
+        if (currentUser != null && !UserSession.isProfilePromptDismissed(context, currentUser.id)) {
+            if (currentUser.houseAddress.isNullOrBlank() || currentUser.email.isNullOrBlank()) {
+                showProfilePrompt = true
+            }
+        }
+    }
+
+    if (showProfilePrompt) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                showProfilePrompt = false
+                currentUser?.id?.let { UserSession.setProfilePromptDismissed(context, it) }
+            },
+            title = { Text("Complete Your Profile") },
+            text = { Text("Add your email and address to get personalized solar recommendations.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showProfilePrompt = false
+                    currentUser?.id?.let { UserSession.setProfilePromptDismissed(context, it) }
+                    onNavigateToProfile()
+                }) {
+                    Text("Complete Now")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showProfilePrompt = false
+                    currentUser?.id?.let { UserSession.setProfilePromptDismissed(context, it) }
+                }) {
+                    Text("Later")
+                }
+            }
+        )
+    }
+
+    if (showAccountPreview) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAccountPreview = false },
+            title = { Text("Account Details") },
+            text = {
+                Column {
+                    Text(text = "Name: ${currentUser?.name ?: "Not set"}", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Google Account: ${currentUser?.email ?: "Not set"}")
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showAccountPreview = false
+                    onNavigateToProfile()
+                }) {
+                    Text("View Profile")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showAccountPreview = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = BackgroundColor,
@@ -111,7 +180,7 @@ fun HomeRoute(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── 1. Personal Header ──────────────────────────────────
-            HeaderSection(userInitial = userInitial)
+            HeaderSection(userInitial = userInitial, onAvatarClick = { showAccountPreview = true })
 
             Spacer(modifier = Modifier.height(28.dp))
             
@@ -201,7 +270,7 @@ fun HomeRoute(
 // ─── Header ─────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun HeaderSection(userInitial: Char) {
+private fun HeaderSection(userInitial: Char, onAvatarClick: () -> Unit = {}) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -261,7 +330,8 @@ private fun HeaderSection(userInitial: Char) {
             modifier = Modifier
                 .size(42.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFE8F5E9)),
+                .background(Color(0xFFE8F5E9))
+                .clickable { onAvatarClick() },
             contentAlignment = Alignment.Center
         ) {
             Text(

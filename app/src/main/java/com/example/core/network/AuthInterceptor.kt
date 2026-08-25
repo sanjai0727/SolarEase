@@ -1,8 +1,9 @@
 package com.example.core.network
 
-import com.example.core.session.UserSession
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
+import android.util.Log
 
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -13,10 +14,12 @@ class AuthInterceptor : Interceptor {
             return chain.proceed(original)
         }
 
-        val token = UserSession.accessToken
+        val token = runBlocking { FirebaseTokenProvider.getFirebaseIdToken() }
         val requestBuilder = original.newBuilder()
-        if (token != null) {
+        if (!token.isNullOrEmpty()) {
             requestBuilder.header("Authorization", "Bearer $token")
+        } else {
+            Log.w("AuthInterceptor", "Firebase ID token is null or empty, proceeding without Authorization header")
         }
         return chain.proceed(requestBuilder.build())
     }

@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from src.core.config import settings
 from src.core.database import Base
 import src.modules.auth.models  # Import models for Alembic autogenerate
+import src.modules.lens.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

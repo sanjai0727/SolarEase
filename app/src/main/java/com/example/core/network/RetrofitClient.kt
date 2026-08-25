@@ -30,4 +30,13 @@ object RetrofitClient {
             .build()
             .create(ApiService::class.java)
     }
+
+    val lensApi: com.example.feature.lens.data.LensApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(com.example.feature.lens.data.LensApi::class.java)
+    }
 }

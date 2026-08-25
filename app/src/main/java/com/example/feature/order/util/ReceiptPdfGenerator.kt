@@ -49,7 +49,7 @@ object ReceiptPdfGenerator {
         
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         paint.textSize = 14f
-        canvas.drawText("Name: ${state.customerName}", 50f, 225f, paint)
+        canvas.drawText("Name: ${state.username}", 50f, 225f, paint)
         canvas.drawText("Mobile: ${state.mobileNumber}", 50f, 245f, paint)
         canvas.drawText("Address: ${state.installationAddress}", 50f, 265f, paint)
 

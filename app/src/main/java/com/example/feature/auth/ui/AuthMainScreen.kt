@@ -11,7 +11,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -38,6 +41,11 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 
+
+enum class AuthMode {
+    SIGN_UP, SIGN_IN
+}
+
 @Composable
 fun AuthMainRoute(
     onNavigateToPhoneAuth: () -> Unit,
@@ -48,14 +56,18 @@ fun AuthMainRoute(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var fullName by rememberSaveable { mutableStateOf("") }
+    var authMode by rememberSaveable { mutableStateOf(AuthMode.SIGN_UP) }
+    var username by rememberSaveable { mutableStateOf("") }
 
-    val isFullNameValid = fullName.isBlank() || (fullName.trim().length in 3..60 &&
-        fullName.all { it.isLetter() || it.isWhitespace() || it == '.' })
+    var usernameError by rememberSaveable { mutableStateOf<String?>(null) }
+    
+    val usernameRegex = "^(?=.*[a-zA-Z])[a-zA-Z0-9_]{3,30}$".toRegex()
+    val isUsernameValid = usernameError == null
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success && (uiState as AuthUiState.Success).message == null) {
             viewModel.resetState()
+            Log.d("AuthFlow", "Navigating to Home")
             onNavigateToHome()
         }
     }
@@ -70,9 +82,7 @@ fun AuthMainRoute(
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
-        StepProgress(currentStep = 1, totalSteps = 11)
-
-        Spacer(modifier = Modifier.height(32.dp))
+        
 
         Box(
             modifier = Modifier
@@ -92,7 +102,7 @@ fun AuthMainRoute(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Welcome to SolarEase",
+            text = if (authMode == AuthMode.SIGN_UP) "Create Your Account" else "Welcome Back",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1E1E1E),
@@ -100,16 +110,28 @@ fun AuthMainRoute(
         )
 
         Text(
-            text = "Enter your details to start your solar journey.",
+            text = if (authMode == AuthMode.SIGN_UP) "Join SolarEase and start your solar journey" else "Sign in to continue your solar journey",
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF666666),
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
         OutlinedTextField(
-            value = fullName,
-            onValueChange = { fullName = it },
-            label = { Text("Full Name *") },
+            value = username,
+            onValueChange = { newUsername ->
+                username = newUsername
+                if (usernameError != null && usernameRegex.matches(newUsername.trim())) {
+                    usernameError = null
+                }
+            },
+            label = { Text("Enter your username") },
+            leadingIcon = {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Person,
+                    contentDescription = "User Icon",
+                    tint = primaryGreen
+                )
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -117,10 +139,10 @@ fun AuthMainRoute(
                 focusedLabelColor = primaryGreen
             ),
             modifier = Modifier.fillMaxWidth(),
-            isError = fullName.isNotEmpty() && !isFullNameValid,
+            isError = usernameError != null,
             supportingText = {
-                if (fullName.isNotEmpty() && !isFullNameValid) {
-                    Text("Enter a valid name")
+                if (usernameError != null) {
+                    Text(usernameError!!)
                 }
             }
         )
@@ -135,19 +157,24 @@ fun AuthMainRoute(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Text(
-            text = "Continue with",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF888888),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
+        
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Surface(
             onClick = {
-                val activity = context as? Activity
+                
+                if (authMode == AuthMode.SIGN_UP) {
+                    val trimmed = username.trim()
+                    if (!usernameRegex.matches(trimmed)) {
+                        usernameError = "Username must be 3–30 characters and can contain letters, numbers, and underscores."
+                        return@Surface
+                    }
+                    usernameError = null
+                }
+                Log.d("AuthFlow", "Username validation passed")
+                Log.d("AuthFlow", "Google authentication started")
+val activity = context as? Activity
                 if (activity != null) {
                     coroutineScope.launch {
                         viewModel.setLoading()
@@ -175,7 +202,7 @@ fun AuthMainRoute(
                             ) {
                                 val googleIdTokenCredential =
                                     GoogleIdTokenCredential.createFrom(credential.data)
-                                viewModel.signInWithGoogle(googleIdTokenCredential.idToken)
+                                viewModel.signInWithGoogle(googleIdTokenCredential.idToken, username, authMode == AuthMode.SIGN_UP)
                             } else {
                                 Log.e("AuthMainRoute", "Unexpected credential type")
                                 viewModel.setError("Unexpected credential type")
@@ -204,7 +231,7 @@ fun AuthMainRoute(
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(100.dp),
-            color = Color.White,
+            color = primaryGreen,
             shadowElevation = 2.dp,
             enabled = uiState !is AuthUiState.Loading
         ) {
@@ -216,7 +243,15 @@ fun AuthMainRoute(
                 if (uiState is AuthUiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = primaryGreen
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (authMode == AuthMode.SIGN_UP) "Signing up..." else "Signing in...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
                     )
                 } else {
                     Image(
@@ -226,10 +261,10 @@ fun AuthMainRoute(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Sign in with Google",
+                        text = if (authMode == AuthMode.SIGN_UP) "Sign up with Google" else "Continue with Google",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1E1E1E)
+                        color = Color.White
                     )
                 }
             }
@@ -239,7 +274,17 @@ fun AuthMainRoute(
 
         Surface(
             onClick = {
-                Log.d("AuthMainRoute", "Sign in with Facebook clicked (Not Implemented)")
+                
+                if (authMode == AuthMode.SIGN_UP) {
+                    val trimmed = username.trim()
+                    if (!usernameRegex.matches(trimmed)) {
+                        usernameError = "Username must be 3–30 characters and can contain letters, numbers, and underscores."
+                        return@Surface
+                    }
+                    usernameError = null
+                }
+                Log.d("AuthFlow", "Username validation passed")
+Log.d("AuthMainRoute", "Sign in with Facebook clicked (Not Implemented)")
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -254,42 +299,63 @@ fun AuthMainRoute(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxSize()
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_facebook),
-                    contentDescription = "Facebook Icon",
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Sign in with Facebook",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1E1E1E)
-                )
+                if (uiState is AuthUiState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = primaryGreen,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (authMode == AuthMode.SIGN_UP) "Signing up..." else "Signing in...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1E1E1E)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_facebook),
+                        contentDescription = "Facebook Icon",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (authMode == AuthMode.SIGN_UP) "Sign up with Facebook" else "Continue with Facebook",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1E1E1E)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        val termsText = buildAnnotatedString {
-            append("By continuing, you agree to our\n")
-            withStyle(style = SpanStyle(color = primaryGreen, fontWeight = FontWeight.Medium)) {
-                append("Terms of Service")
-            }
-            append(" and ")
-            withStyle(style = SpanStyle(color = primaryGreen, fontWeight = FontWeight.Medium)) {
-                append("Privacy Policy")
-            }
-            append(".")
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (authMode == AuthMode.SIGN_UP) "Already have an account? " else "Don't have an account? ",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF666666)
+            )
+            Text(
+                text = if (authMode == AuthMode.SIGN_UP) "Sign in" else "Sign up",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = primaryGreen,
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    authMode = if (authMode == AuthMode.SIGN_UP) AuthMode.SIGN_IN else AuthMode.SIGN_UP
+                }
+            )
         }
-
-        Text(
-            text = termsText,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF888888),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }

@@ -46,7 +46,7 @@ fun FinancialRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Financials" else "Financial", style = MaterialTheme.typography.titleLarge)
                         Text("Track your investment and savings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

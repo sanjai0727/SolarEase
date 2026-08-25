@@ -43,7 +43,7 @@ fun PerformanceRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Performance" else "Performance", style = MaterialTheme.typography.titleLarge)
                         Text("Monitor your solar energy production", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

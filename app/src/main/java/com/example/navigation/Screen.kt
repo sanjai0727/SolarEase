@@ -31,6 +31,18 @@ sealed class Screen {
     data object SolarEaseLens : Screen()
     
     @Serializable
+    data object LensMain : Screen()
+    
+    @Serializable
+    data object LensCamera : Screen()
+
+    @Serializable
+    data object LensDetails : Screen()
+
+    @Serializable
+    data object LensResult : Screen()
+    
+    @Serializable
     data object TnebBillStatus : Screen()
     
     @Serializable
@@ -50,4 +62,7 @@ sealed class Screen {
     
     @Serializable
     data object Environmental : Screen()
+
+    @Serializable
+    data object Profile : Screen()
 }

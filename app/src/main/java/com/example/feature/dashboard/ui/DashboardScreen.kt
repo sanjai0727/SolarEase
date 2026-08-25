@@ -173,7 +173,7 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
             val greeting = if (currentHour < 12) "Good Morning" else if (currentHour < 18) "Good Afternoon" else "Good Evening"
             
             Text(text = greeting, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = dashboardData.customerName, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text(text = dashboardData.username, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Your solar system is generating clean energy.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))

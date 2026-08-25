@@ -1,10 +1,12 @@
 from fastapi import APIRouter
 from src.modules.auth.router import router as auth_router
 from src.modules.chatbot.router import router as chatbot_router
+from src.modules.lens.router import router as lens_router
 
 router = APIRouter()
 router.include_router(auth_router)
 router.include_router(chatbot_router)
+router.include_router(lens_router)
 
 @router.get("/")
 def read_root():

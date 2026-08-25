@@ -23,7 +23,7 @@ data class OrderConfirmationUiState(
     val netPayable: Double = 0.0,
     val orderDate: String = "",
     val surveyDate: String = "",
-    val customerName: String = com.example.core.session.UserSession.currentUser?.customerName ?: "Valued Customer",
+    val username: String = com.example.core.session.UserSession.currentUser?.username ?: "Valued Customer",
     val mobileNumber: String = com.example.core.session.UserSession.currentUser?.mobileNumber ?: "N/A",
     val installationAddress: String = "123 Solar Way, Green City",
     val panelType: String = ""

@@ -42,7 +42,7 @@ fun EnvironmentalRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Environmental Impact" else "Environmental Impact", style = MaterialTheme.typography.titleLarge)
                         Text("See how your solar system helps the planet", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
