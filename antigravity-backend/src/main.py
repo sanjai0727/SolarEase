@@ -17,6 +17,7 @@ from src.api.routes import router as api_router
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize Firebase Admin SDK
@@ -25,15 +26,23 @@ async def lifespan(app: FastAPI):
     except ValueError:
         try:
             from firebase_admin import credentials
+
             # Uses GOOGLE_APPLICATION_CREDENTIALS explicitly from settings
-            cred = credentials.Certificate(settings.GOOGLE_APPLICATION_CREDENTIALS)
+            cred = credentials.Certificate(
+                settings.GOOGLE_APPLICATION_CREDENTIALS
+            )
             firebase_admin.initialize_app(cred)
+
             logger.info("Firebase Admin SDK initialized successfully.")
+
         except Exception as e:
-            logger.error("Failed to initialize Firebase Admin SDK. Please check configuration.")
+            logger.error(
+                "Failed to initialize Firebase Admin SDK. Please check configuration."
+            )
             raise e
+
     yield
-    # Cleanup on shutdown (if any)
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -42,11 +51,17 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
+    # Health check for Render
+    @app.get("/healthz")
+    async def health_check():
+        return {"status": "healthy"}
+
     setup_middleware(app)
 
-    # Include root router
+    # Include API router
     app.include_router(api_router)
 
     return app
+
 
 app = create_app()
