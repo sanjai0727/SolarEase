@@ -22,14 +22,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 data class DetectedAppliance(
+    val trackingId: Int?,
     val boundingBox: Rect,
+    val boundingBoxRelative: android.graphics.RectF,
     val label: String,
     val powerEstimateStr: String,
     val powerWatts: Float
 )
 
 class ApplianceAnalyzer(
-    private val onApplianceDetected: (DetectedAppliance?) -> Unit
+    private val onAppliancesDetected: (List<DetectedAppliance>) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     // Use single image mode to ensure we process one frame at a time and avoid backlog
@@ -61,33 +63,43 @@ class ApplianceAnalyzer(
                     // 1. Detect objects to get bounding boxes
                     val objects = objectDetector.process(image).await()
                     
-                    var bestDetection: DetectedAppliance? = null
-                    var largestArea = 0
+                    val detections = mutableListOf<DetectedAppliance>()
+                    
+                    val rawBitmap = imageProxy.toBitmap()
+                    val rotatedBitmap = if (rawBitmap != null) {
+                        val matrix = Matrix().apply { postRotate(imageProxy.imageInfo.rotationDegrees.toFloat()) }
+                        Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true)
+                    } else null
 
-                    for (detectedObject in objects) {
-                        val boundingBox = detectedObject.boundingBox
-                        val area = boundingBox.width() * boundingBox.height()
-                        
-                        // We only process large enough objects to save compute
-                        if (area > 10000 && area > largestArea) {
+                    if (rotatedBitmap != null) {
+                        for (detectedObject in objects) {
+                            val boundingBox = detectedObject.boundingBox
+                            val trackingId = detectedObject.trackingId
+                            val area = boundingBox.width() * boundingBox.height()
                             
-                            // 2. Crop the image to the bounding box
-                            val bitmap = imageProxy.toBitmap()
-                            if (bitmap != null) {
+                            // Calculate relative bounding box
+                            val leftRel = boundingBox.left.toFloat() / rotatedBitmap.width
+                            val topRel = boundingBox.top.toFloat() / rotatedBitmap.height
+                            val rightRel = boundingBox.right.toFloat() / rotatedBitmap.width
+                            val bottomRel = boundingBox.bottom.toFloat() / rotatedBitmap.height
+                            val boundingBoxRelative = android.graphics.RectF(leftRel, topRel, rightRel, bottomRel)
+                            
+                            // We only process large enough objects to save compute
+                            if (area > 10000) {
                                 // Ensure bounds are within bitmap
                                 val safeLeft = boundingBox.left.coerceAtLeast(0)
                                 val safeTop = boundingBox.top.coerceAtLeast(0)
-                                val safeRight = boundingBox.right.coerceAtMost(bitmap.width)
-                                val safeBottom = boundingBox.bottom.coerceAtMost(bitmap.height)
+                                val safeRight = boundingBox.right.coerceAtMost(rotatedBitmap.width)
+                                val safeBottom = boundingBox.bottom.coerceAtMost(rotatedBitmap.height)
                                 
                                 if (safeRight > safeLeft && safeBottom > safeTop) {
                                     val croppedBitmap = Bitmap.createBitmap(
-                                        bitmap, safeLeft, safeTop, 
+                                        rotatedBitmap, safeLeft, safeTop, 
                                         safeRight - safeLeft, safeBottom - safeTop
                                     )
                                     
-                                    // 3. Label the cropped image
-                                    val croppedInput = InputImage.fromBitmap(croppedBitmap, imageProxy.imageInfo.rotationDegrees)
+                                    // 3. Label the cropped image (rotation is 0 since we manually rotated the bitmap)
+                                    val croppedInput = InputImage.fromBitmap(croppedBitmap, 0)
                                     val labels = imageLabeler.process(croppedInput).await()
                                     
                                     val validLabel = labels.firstOrNull { label ->
@@ -98,12 +110,15 @@ class ApplianceAnalyzer(
                                         val powerWatts = PowerEstimation.estimatePowerForAppliance(validLabel.text)
                                         val powerEstimateStr = PowerEstimation.getDisplayEstimate(validLabel.text)
                                         
-                                        largestArea = area
-                                        bestDetection = DetectedAppliance(
-                                            boundingBox = boundingBox,
-                                            label = validLabel.text,
-                                            powerEstimateStr = powerEstimateStr,
-                                            powerWatts = powerWatts
+                                        detections.add(
+                                            DetectedAppliance(
+                                                trackingId = trackingId,
+                                                boundingBox = boundingBox,
+                                                boundingBoxRelative = boundingBoxRelative,
+                                                label = validLabel.text,
+                                                powerEstimateStr = powerEstimateStr,
+                                                powerWatts = powerWatts
+                                            )
                                         )
                                     }
                                 }
@@ -111,10 +126,10 @@ class ApplianceAnalyzer(
                         }
                     }
                     
-                    onApplianceDetected(bestDetection)
+                    onAppliancesDetected(detections)
                     
                 } catch (e: Exception) {
-                    // Ignore errors during analysis to keep frame rate smooth
+                    android.util.Log.e("ApplianceAnalyzer", "Error analyzing image", e)
                 } finally {
                     imageProxy.close()
                 }

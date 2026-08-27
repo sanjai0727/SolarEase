@@ -133,7 +133,7 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 LensScreen(
                     viewModel = lensViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToDetails = { navController.navigate(Screen.LensDetails) }
+                    onNavigateToResult = { navController.navigate(Screen.LensResult) }
                 )
             }
             
@@ -207,7 +207,12 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
 
         composable<Screen.Profile> {
             com.example.feature.profile.ui.ProfileRoute(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onSignOut = {
+                    navController.navigate(Screen.AuthGraph) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
             )
         }
     }

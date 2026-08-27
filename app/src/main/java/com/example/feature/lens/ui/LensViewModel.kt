@@ -24,19 +24,84 @@ sealed class LensUiState {
     data class Saving(val appliance: ApplianceCreateRequest) : LensUiState()
     data class Result(val appliance: Appliance) : LensUiState()
     data class Error(val message: String) : LensUiState()
+    data class Analytics(val appliances: List<ScannedAppliance>, val scanDurationMillis: Long) : LensUiState()
 }
+
+data class ScannedAppliance(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val label: String,
+    val powerWatts: Float,
+    val powerEstimateStr: String,
+    val lastTrackingId: Int?,
+    val lastSeenTimestamp: Long
+)
 
 class LensViewModel(private val repository: LensRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LensUiState>(LensUiState.Scanning)
     val uiState: StateFlow<LensUiState> = _uiState.asStateFlow()
 
-    private val _currentDetection = MutableStateFlow<DetectedAppliance?>(null)
-    val currentDetection: StateFlow<DetectedAppliance?> = _currentDetection.asStateFlow()
+    private val _currentFrameDetections = MutableStateFlow<List<DetectedAppliance>>(emptyList())
+    val currentFrameDetections: StateFlow<List<DetectedAppliance>> = _currentFrameDetections.asStateFlow()
 
-    fun updateDetection(detection: DetectedAppliance?) {
+    private val _scanSession = MutableStateFlow<List<ScannedAppliance>>(emptyList())
+    val scanSession: StateFlow<List<ScannedAppliance>> = _scanSession.asStateFlow()
+
+    private var scanStartTime = System.currentTimeMillis()
+
+    fun updateDetections(detections: List<DetectedAppliance>) {
+        if (_uiState.value !is LensUiState.Scanning) return
+
+        _currentFrameDetections.value = detections
+
+        val currentTime = System.currentTimeMillis()
+        val currentSession = _scanSession.value.toMutableList()
+        var sessionUpdated = false
+
+        for (detection in detections) {
+            var matchedIndex = -1
+            // Try to match by tracking ID
+            if (detection.trackingId != null) {
+                matchedIndex = currentSession.indexOfFirst { it.lastTrackingId == detection.trackingId }
+            }
+            
+            // Fallback: match by label and recent time (e.g. within 3 seconds) to prevent duplicate counting if tracker lost it briefly
+            if (matchedIndex == -1) {
+                matchedIndex = currentSession.indexOfFirst { 
+                    it.label == detection.label && (currentTime - it.lastSeenTimestamp) < 3000
+                }
+            }
+
+            if (matchedIndex != -1) {
+                val existing = currentSession[matchedIndex]
+                currentSession[matchedIndex] = existing.copy(
+                    lastTrackingId = detection.trackingId,
+                    lastSeenTimestamp = currentTime
+                )
+                sessionUpdated = true
+            } else {
+                currentSession.add(
+                    ScannedAppliance(
+                        label = detection.label,
+                        powerWatts = detection.powerWatts,
+                        powerEstimateStr = detection.powerEstimateStr,
+                        lastTrackingId = detection.trackingId,
+                        lastSeenTimestamp = currentTime
+                    )
+                )
+                sessionUpdated = true
+            }
+        }
+
+        if (sessionUpdated) {
+            _scanSession.value = currentSession
+        }
+    }
+
+    fun stopScanning() {
         if (_uiState.value is LensUiState.Scanning) {
-            _currentDetection.value = detection
+            val duration = System.currentTimeMillis() - scanStartTime
+            _uiState.value = LensUiState.Analytics(_scanSession.value, duration)
         }
     }
 
@@ -99,7 +164,9 @@ class LensViewModel(private val repository: LensRepository) : ViewModel() {
     }
 
     fun restartScanning() {
-        _currentDetection.value = null
+        _currentFrameDetections.value = emptyList()
+        _scanSession.value = emptyList()
+        scanStartTime = System.currentTimeMillis()
         _uiState.value = LensUiState.Scanning
     }
 }

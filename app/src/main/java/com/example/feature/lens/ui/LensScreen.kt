@@ -44,7 +44,7 @@ import java.util.concurrent.Executors
 fun LensScreen(
     viewModel: LensViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToDetails: () -> Unit
+    onNavigateToResult: () -> Unit
 ) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
@@ -55,7 +55,7 @@ fun LensScreen(
     }
 
     if (cameraPermissionState.status.isGranted) {
-        LensCameraContent(viewModel, onNavigateBack, onNavigateToDetails)
+        LensCameraContent(viewModel, onNavigateBack, onNavigateToResult)
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -78,11 +78,20 @@ fun LensScreen(
 private fun LensCameraContent(
     viewModel: LensViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToDetails: () -> Unit
+    onNavigateToResult: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val currentDetection by viewModel.currentDetection.collectAsState()
+    
+    val uiState by viewModel.uiState.collectAsState()
+    val currentFrameDetections by viewModel.currentFrameDetections.collectAsState()
+    val scanSession by viewModel.scanSession.collectAsState()
+
+    LaunchedEffect(uiState) {
+        if (uiState is LensUiState.Analytics) {
+            onNavigateToResult()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -128,8 +137,8 @@ private fun LensCameraContent(
                             .also {
                                 it.setAnalyzer(
                                     Executors.newSingleThreadExecutor(),
-                                    ApplianceAnalyzer { detection ->
-                                        viewModel.updateDetection(detection)
+                                    ApplianceAnalyzer { detections ->
+                                        viewModel.updateDetections(detections)
                                     }
                                 )
                             }
@@ -155,78 +164,103 @@ private fun LensCameraContent(
             )
 
             // Overlay for bounding boxes
-            currentDetection?.let { detection ->
-                // Map the detection coordinates (which are in image space) to the view space.
-                // For simplicity in this implementation, we draw a generic box in the center,
-                // or if we had complex coordinate mapping, we'd map it here.
-                // Assuming the bounding box is a relative area to the preview screen.
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable {
-                            viewModel.selectAppliance(detection)
-                            onNavigateToDetails()
-                        }
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        // Drawing a simple centered box as an approximation since mapping from
-                        // imageProxy resolution to PreviewView is complex without exact matrix.
-                        val width = size.width * 0.6f
-                        val height = size.height * 0.4f
-                        val left = (size.width - width) / 2
-                        val top = (size.height - height) / 2
+            Box(modifier = Modifier.fillMaxSize()) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    for (detection in currentFrameDetections) {
+                        val relRect = detection.boundingBoxRelative
+                        
+                        // Scale relative coordinates to canvas size
+                        val left = relRect.left * size.width
+                        val top = relRect.top * size.height
+                        val right = relRect.right * size.width
+                        val bottom = relRect.bottom * size.height
                         
                         drawRect(
                             color = Color(0xFF4CAF50),
                             topLeft = Offset(left, top),
-                            size = Size(width, height),
+                            size = Size(right - left, bottom - top),
                             style = Stroke(width = 8f)
                         )
                     }
+                }
 
-                    // Label Overlay
+                // Render Labels above bounding boxes
+                for (detection in currentFrameDetections) {
+                    val relRect = detection.boundingBoxRelative
+                    
+                    // Simple offset placement
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .fillMaxWidth() // we will control position below
+                                .padding(
+                                    // Use BoxWithConstraints or simple estimation
+                                    // We will use standard modifiers, but this is a simplified overlay
+                                ),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {}
+                    }
+                }
+            }
+
+            // A cleaner way to render labels using BoxWithConstraints
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                for (detection in currentFrameDetections) {
+                    val relRect = detection.boundingBoxRelative
+                    val left = relRect.left * maxWidth.value
+                    val bottom = relRect.bottom * maxHeight.value
+                    
                     Column(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .offset(y = 100.dp)
+                            .offset(x = left.dp, y = (bottom + 8).dp)
                             .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                            .padding(16.dp),
+                            .padding(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = detection.label.replaceFirstChar { it.uppercase() },
                             color = Color.White,
-                            fontSize = 20.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = detection.powerEstimateStr,
                             color = Color(0xFF4CAF50),
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Tap to select",
-                            color = Color.White.copy(alpha = 0.7f),
                             fontSize = 12.sp
                         )
                     }
                 }
             }
             
-            if (currentDetection == null) {
+            // Status overlay and Stop Scanning button
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
-                    text = "Point the camera at an appliance",
+                    text = "Unique Appliances Found: ${scanSession.size}",
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 64.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
                         .padding(horizontal = 24.dp, vertical = 12.dp),
                     color = Color.White,
                     fontSize = 16.sp
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Button(
+                    onClick = { viewModel.stopScanning() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier.fillMaxWidth(0.8f).height(56.dp)
+                ) {
+                    Text("Stop Scanning", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
         }
     }

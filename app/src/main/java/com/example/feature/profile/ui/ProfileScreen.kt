@@ -34,9 +34,33 @@ import androidx.compose.ui.graphics.Color
 @Composable
 fun ProfileRoute(
     onNavigateBack: () -> Unit,
+    onSignOut: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showSignOutDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out") },
+            text = { Text("Are you sure you want to sign out?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutDialog = false
+                    viewModel.signOut(context, onSignOut)
+                }) {
+                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -71,7 +95,8 @@ fun ProfileRoute(
                         user = state.user,
                         onSave = { name, username, mobile, address, lat, lng ->
                             viewModel.updateProfile(name, username, mobile, address, lat, lng)
-                        }
+                        },
+                        onSignOutClick = { showSignOutDialog = true }
                     )
                 }
             }
@@ -82,7 +107,8 @@ fun ProfileRoute(
 @Composable
 fun ProfileContent(
     user: User,
-    onSave: (String, String, String, String, Double?, Double?) -> Unit
+    onSave: (String, String, String, String, Double?, Double?) -> Unit,
+    onSignOutClick: () -> Unit
 ) {
     var isEditing by remember { mutableStateOf(false) }
 
@@ -271,6 +297,17 @@ fun ProfileContent(
             ) {
                 Text("Save Changes", fontSize = MaterialTheme.typography.titleMedium.fontSize)
             }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        OutlinedButton(
+            onClick = onSignOutClick,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(100.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text("Sign Out", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.Bold)
         }
     }
 }

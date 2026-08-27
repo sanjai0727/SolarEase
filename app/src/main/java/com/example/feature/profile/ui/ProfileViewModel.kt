@@ -109,4 +109,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
+    fun signOut(context: android.content.Context, onComplete: () -> Unit) {
+        com.example.core.session.UserSession.clear(context)
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+        onComplete()
+    }
 }
