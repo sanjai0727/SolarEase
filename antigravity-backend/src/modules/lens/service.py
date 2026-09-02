@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from fastapi import HTTPException
 import uuid
@@ -12,44 +12,44 @@ import json
 
 class ApplianceService:
     @staticmethod
-    async def create_appliance(db: AsyncSession, user_id: uuid.UUID, appliance_in: ApplianceCreate) -> Appliance:
+    def create_appliance(db: Session, user_id: uuid.UUID, appliance_in: ApplianceCreate) -> Appliance:
         db_appliance = Appliance(
             user_id=user_id,
             **appliance_in.model_dump()
         )
         db.add(db_appliance)
-        await db.commit()
-        await db.refresh(db_appliance)
+        db.commit()
+        db.refresh(db_appliance)
         return db_appliance
 
     @staticmethod
-    async def get_appliances(db: AsyncSession, user_id: uuid.UUID) -> List[Appliance]:
-        result = await db.execute(select(Appliance).where(Appliance.user_id == user_id))
+    def get_appliances(db: Session, user_id: uuid.UUID) -> List[Appliance]:
+        result = db.execute(select(Appliance).where(Appliance.user_id == user_id))
         return result.scalars().all()
 
     @staticmethod
-    async def get_appliance(db: AsyncSession, user_id: uuid.UUID, appliance_id: uuid.UUID) -> Appliance:
-        result = await db.execute(select(Appliance).where(Appliance.id == appliance_id, Appliance.user_id == user_id))
+    def get_appliance(db: Session, user_id: uuid.UUID, appliance_id: uuid.UUID) -> Appliance:
+        result = db.execute(select(Appliance).where(Appliance.id == appliance_id, Appliance.user_id == user_id))
         db_appliance = result.scalar_one_or_none()
         if not db_appliance:
             raise HTTPException(status_code=404, detail="Appliance not found")
         return db_appliance
 
     @staticmethod
-    async def update_appliance(db: AsyncSession, user_id: uuid.UUID, appliance_id: uuid.UUID, appliance_in: ApplianceUpdate) -> Appliance:
-        db_appliance = await ApplianceService.get_appliance(db, user_id, appliance_id)
+    def update_appliance(db: Session, user_id: uuid.UUID, appliance_id: uuid.UUID, appliance_in: ApplianceUpdate) -> Appliance:
+        db_appliance = ApplianceService.get_appliance(db, user_id, appliance_id)
         update_data = appliance_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_appliance, field, value)
-        await db.commit()
-        await db.refresh(db_appliance)
+        db.commit()
+        db.refresh(db_appliance)
         return db_appliance
 
     @staticmethod
-    async def delete_appliance(db: AsyncSession, user_id: uuid.UUID, appliance_id: uuid.UUID) -> None:
-        db_appliance = await ApplianceService.get_appliance(db, user_id, appliance_id)
-        await db.delete(db_appliance)
-        await db.commit()
+    def delete_appliance(db: Session, user_id: uuid.UUID, appliance_id: uuid.UUID) -> None:
+        db_appliance = ApplianceService.get_appliance(db, user_id, appliance_id)
+        db.delete(db_appliance)
+        db.commit()
 
 class ApplianceAnalysisService:
     @staticmethod

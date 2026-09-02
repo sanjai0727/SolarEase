@@ -107,8 +107,8 @@ class ApplianceAnalyzer(
                                     }
                                     
                                     if (validLabel != null) {
-                                        val powerWatts = PowerEstimation.estimatePowerForAppliance(validLabel.text)
-                                        val powerEstimateStr = PowerEstimation.getDisplayEstimate(validLabel.text)
+                                        val powerWatts = ApplianceMaster.getDefaultWattage(validLabel.text)
+                                        val powerEstimateStr = if (powerWatts > 0f) "Est. ~${powerWatts.toInt()} W" else "Power Unknown"
                                         
                                         detections.add(
                                             DetectedAppliance(
