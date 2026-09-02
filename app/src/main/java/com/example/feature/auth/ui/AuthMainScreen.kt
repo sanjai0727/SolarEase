@@ -116,11 +116,15 @@ fun AuthMainRoute(
                             .addCredentialOption(googleIdOption)
                             .build()
 
+                        Log.d("AuthFlowDiagnose", "AUTH STEP 1: Google credential request started")
                         try {
-                            val result = credentialManager.getCredential(
-                                request = request,
-                                context = activity
-                            )
+                            val result = kotlinx.coroutines.withTimeout(15000L) {
+                                credentialManager.getCredential(
+                                    request = request,
+                                    context = activity
+                                )
+                            }
+                            Log.d("AuthFlowDiagnose", "AUTH STEP 2: Google credential received")
                             val credential = result.credential
 
                             if (credential is androidx.credentials.CustomCredential &&
@@ -133,7 +137,13 @@ fun AuthMainRoute(
                                 Log.e("AuthMainRoute", "Unexpected credential type")
                                 viewModel.setError("Unexpected credential type")
                             }
+                        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR: TimeoutCancellationException (Credential Manager timed out)")
+                            viewModel.setError("Sign in timed out. Please try again.")
                         } catch (e: GetCredentialException) {
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR: GetCredentialException")
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
                             Log.e(
                                 "AuthMainRoute",
                                 "GetCredentialException: type=${e::class.java.name}, message=${e.message}, errorMessage=${e.errorMessage}",
@@ -143,6 +153,9 @@ fun AuthMainRoute(
                                 e.errorMessage?.toString() ?: "Sign in cancelled"
                             )
                         } catch (e: Exception) {
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR: General Exception in Google Auth")
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
+                            Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
                             Log.e(
                                 "AuthMainRoute",
                                 "Exception: type=${e::class.java.name}, message=${e.message}",
@@ -162,7 +175,7 @@ fun AuthMainRoute(
         }
         if (uiState is AuthUiState.Success && (uiState as AuthUiState.Success).message == null) {
             viewModel.resetState()
-            Log.d("AuthFlow", "Navigating to Home")
+            Log.d("AuthFlowDiagnose", "AUTH STEP 12: Navigating to Home")
             onNavigateToHome()
         }
     }

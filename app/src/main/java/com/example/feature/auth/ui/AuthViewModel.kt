@@ -139,15 +139,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun handleFirebaseUser(user: FirebaseUser?, username: String? = null, isSignUp: Boolean = false) {
-        Log.d("AuthFlow", "Firebase current user available")
+        Log.d("AuthFlowDiagnose", "AUTH STEP 5: Firebase user obtained")
         if (user != null) {
-            // Obtain the ID token
-            user.getIdToken(true).addOnCompleteListener { tokenTask ->
+            Log.d("AuthFlowDiagnose", "AUTH STEP 6: Firebase token request started (getIdToken(false))")
+            user.getIdToken(false).addOnCompleteListener { tokenTask ->
                 if (tokenTask.isSuccessful) {
                     val idToken = tokenTask.result?.token
                     if (idToken != null) {
-                        Log.d("AuthFlow", "Firebase ID token obtained, length: ${idToken.length}")
-                        Log.d("AuthFlow", "Sending token to backend")
+                        Log.d("AuthFlowDiagnose", "AUTH STEP 7: Firebase token obtained")
+                        Log.d("AuthFlowDiagnose", "AUTH STEP 8: Backend /auth/firebase request started")
                         viewModelScope.launch {
                             try {
                                 val response = com.example.core.network.RetrofitClient.apiService.verifyFirebaseToken(
@@ -158,8 +158,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                         is_signup = isSignUp
                                     )
                                 )
+                                Log.d("AuthFlowDiagnose", "AUTH STEP 9: Backend response received. Code: ${response.code()}")
                                 if (response.isSuccessful) {
-                                    Log.d("AuthFlow", "Backend verification successful")
                                     val body = response.body()
                                     if (body != null) {
                                         com.example.core.session.UserSession.saveTokens(getApplication(), body.accessToken, body.refreshToken)
@@ -172,9 +172,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                             houseAddress = body.user.houseAddress
                                         )
                                         com.example.core.session.UserSession.saveUser(getApplication(), sessionUser)
-                                        Log.d("AuthFlow", "User session created")
+                                        Log.d("AuthFlowDiagnose", "AUTH STEP 10: Session saved")
+                                        Log.d("AuthFlowDiagnose", "AUTH STEP 11: Authentication success")
                                         _uiState.value = AuthUiState.Success()
                                     } else {
+                                        Log.e("AuthFlowDiagnose", "AUTH ERROR: Invalid backend response body")
                                         _uiState.value = AuthUiState.Error("Invalid backend response")
                                     }
                                 } else {
@@ -194,16 +196,25 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                     } catch (e: Exception) {
                                         // ignore parsing error
                                     }
+                                    Log.e("AuthFlowDiagnose", "AUTH ERROR: Backend HTTP error")
+                                    Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: $errorMessage")
                                     _uiState.value = AuthUiState.Error(errorMessage)
                                 }
                             } catch (e: Exception) {
+                                Log.e("AuthFlowDiagnose", "AUTH ERROR: Network exception")
+                                Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
+                                Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
                                 _uiState.value = AuthUiState.Error(e.message ?: "Network error connecting to backend")
                             }
                         }
                     } else {
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR: ID token is null")
                         _uiState.value = AuthUiState.Error("Failed to obtain Firebase ID token")
                     }
                 } else {
+                    Log.e("AuthFlowDiagnose", "AUTH ERROR: getIdToken task failed")
+                    Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${tokenTask.exception?.javaClass?.name}")
+                    Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${tokenTask.exception?.message}")
                     _uiState.value = AuthUiState.Error(tokenTask.exception?.message ?: "Failed to get Firebase ID token")
                 }
             }
@@ -213,17 +224,18 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun signInWithGoogle(googleIdToken: String, username: String? = null, isSignUp: Boolean = false) {
-        Log.d("AuthLifecycle", "signInWithGoogle() called on ViewModel")
+        Log.d("AuthFlowDiagnose", "AUTH STEP 3: Firebase sign-in started")
         val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val user = task.result?.user
-                    Log.d("AuthFlow", "Google credential received")
-                    Log.d("AuthFlow", "Firebase authentication successful")
+                    Log.d("AuthFlowDiagnose", "AUTH STEP 4: Firebase sign-in successful")
                     handleFirebaseUser(user, username, isSignUp)
                 } else {
-                    Log.e("AuthLifecycle", "signInWithGoogle failed")
+                    Log.e("AuthFlowDiagnose", "AUTH ERROR: Firebase sign in failed")
+                    Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${task.exception?.javaClass?.name}")
+                    Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${task.exception?.message}")
                     if (task.exception is FirebaseAuthException) {
                         val e = task.exception as FirebaseAuthException
                         Log.e("AuthLifecycle", "ErrorCode: ${e.errorCode}, Message: ${e.message}")
