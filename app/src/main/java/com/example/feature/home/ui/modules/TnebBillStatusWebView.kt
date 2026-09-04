@@ -19,6 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun TnebBillStatusWebView(
@@ -27,6 +32,8 @@ fun TnebBillStatusWebView(
 ) {
     // Keep a single instance of WebView across recompositions
     val webView = rememberWebViewWithLifecycle()
+    val reloadTrigger by viewModel.reloadTrigger.collectAsState()
+    var lastTrigger by remember { mutableIntStateOf(reloadTrigger) }
 
     Box(modifier = modifier) {
         AndroidView(
@@ -101,9 +108,11 @@ fun TnebBillStatusWebView(
                 }
             },
             update = { view ->
-                // Do not blindly reload here on every recomposition.
-                // The reload logic is handled by a refresh trigger if needed.
-                // For Phase 2A, the user triggers reload manually by calling view.reload().
+                // Reload the WebView exactly once per user refresh action
+                if (reloadTrigger > lastTrigger) {
+                    lastTrigger = reloadTrigger
+                    view.reload()
+                }
             }
         )
     }

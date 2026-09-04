@@ -29,6 +29,9 @@ class TnebBillStatusViewModel : ViewModel() {
     private val _pageLoadError = MutableStateFlow(false)
     val pageLoadError: StateFlow<Boolean> = _pageLoadError.asStateFlow()
 
+    private val _reloadTrigger = MutableStateFlow(0)
+    val reloadTrigger: StateFlow<Int> = _reloadTrigger.asStateFlow()
+
     fun updateServiceConnectionNumber(number: String) {
         _serviceConnectionNumber.value = number
         validate()
@@ -87,10 +90,11 @@ class TnebBillStatusViewModel : ViewModel() {
     }
 
     fun requestCaptchaRefresh() {
-        // In Phase 2A, the WebView will be reloaded. We reset the captcha state here
-        // so the UI shows the loading indicator again.
+        // Clear current CAPTCHA to show loading state
         _captchaImageBase64.value = null
         _captchaInput.value = ""
         _pageLoadError.value = false
+        // Trigger the WebView to reload
+        _reloadTrigger.value++
     }
 }

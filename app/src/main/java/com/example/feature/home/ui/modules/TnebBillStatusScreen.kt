@@ -41,6 +41,7 @@ fun TnebBillStatusRoute(
     val isValid by viewModel.isValid.collectAsState()
     val isChecking by viewModel.isChecking.collectAsState()
     val captchaImageBase64 by viewModel.captchaImageBase64.collectAsState()
+    val captchaInput by viewModel.captchaInput.collectAsState()
     val pageLoadError by viewModel.pageLoadError.collectAsState()
 
     Scaffold(
@@ -245,7 +246,6 @@ fun TnebBillStatusRoute(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        val captchaInput by viewModel.captchaInput.collectAsState()
                         OutlinedTextField(
                             value = captchaInput,
                             onValueChange = { viewModel.updateCaptchaInput(it) },
@@ -331,12 +331,21 @@ fun TnebBillStatusRoute(
             Spacer(modifier = Modifier.height(32.dp))
 
             // ── Primary CTA ───────────────────────────────────────────────
+            val isInitialCheckEnabled = isValid && !isChecking && captchaImageBase64 == null
+            val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotEmpty()
+            
             Button(
-                onClick = { viewModel.checkBillStatus() },
+                onClick = { 
+                    if (isInitialCheckEnabled) {
+                        viewModel.checkBillStatus() 
+                    } else if (isSubmitCaptchaEnabled) {
+                        // Phase 2B will handle submission.
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                enabled = isValid && !isChecking && captchaImageBase64 == null,
+                enabled = isInitialCheckEnabled || isSubmitCaptchaEnabled,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF1E7038),
