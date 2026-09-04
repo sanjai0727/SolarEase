@@ -333,6 +333,7 @@ fun TnebBillStatusRoute(
             // ── Primary CTA ───────────────────────────────────────────────
             val isInitialCheckEnabled = isValid && !isChecking && captchaImageBase64 == null
             val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotEmpty()
+            val hasCaptcha = captchaImageBase64 != null || isChecking
             
             Button(
                 onClick = { 
@@ -355,7 +356,7 @@ fun TnebBillStatusRoute(
                 )
             ) {
                 Text(
-                    text = "Check Bill",
+                    text = if (hasCaptcha) "Check Bill" else "Get CAPTCHA",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
