@@ -102,6 +102,7 @@ fun ElectricityChatbotRoute(
             if (uiState.messages.isEmpty()) {
                 EmptyWelcomeState(
                     language = uiState.currentLanguage,
+                    modifier = Modifier.weight(1f),
                     onSuggestionClicked = { suggestion ->
                         viewModel.sendMessage(suggestion)
                     }
@@ -193,7 +194,11 @@ fun ConfigurationBar(
 }
 
 @Composable
-fun EmptyWelcomeState(language: String, onSuggestionClicked: (String) -> Unit) {
+fun EmptyWelcomeState(
+    language: String,
+    modifier: Modifier = Modifier,
+    onSuggestionClicked: (String) -> Unit
+) {
     val isEnglish = language == "en"
     
     val title = if (isEnglish) "Welcome to SolarEase" else "SolarEase-க்கு வரவேற்கிறோம்"
@@ -208,34 +213,40 @@ fun EmptyWelcomeState(language: String, onSuggestionClicked: (String) -> Unit) {
         listOf("சூரிய ஆற்றல் என்றால் என்ன?", "மின்சாரத்தை எவ்வாறு சேமிப்பது?", "EV சார்ஜர் என்றால் என்ன?")
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Info,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
-        )
-
-        suggestions.forEach { suggestion ->
+        item {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(64.dp)
+                    .padding(bottom = 16.dp)
+            )
+        }
+        item {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+        }
+        item {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            )
+        }
+        items(suggestions) { suggestion ->
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -361,7 +372,6 @@ fun ChatInputBar(
     ) {
         Row(
             modifier = Modifier
-                .navigationBarsPadding() // Respect safe area / keyboard
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.Bottom

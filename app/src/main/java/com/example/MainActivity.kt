@@ -17,10 +17,6 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     com.example.core.session.UserSession.init(this)
-    
-    if (BuildConfig.DEBUG) {
-        com.example.core.session.UserSession.clear(this)
-    }
     enableEdgeToEdge()
     setContent {
       SolarEaseTheme {

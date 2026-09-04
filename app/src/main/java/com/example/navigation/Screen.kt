@@ -40,6 +40,9 @@ sealed class Screen {
     data object LensDetails : Screen()
 
     @Serializable
+    data object LensReview : Screen()
+
+    @Serializable
     data object LensResult : Screen()
     
     @Serializable

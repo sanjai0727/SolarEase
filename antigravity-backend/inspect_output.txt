@@ -1,0 +1,200 @@
+[0]: SOLAR GPT – ENERGY FOR EVERYONE
+[1]: 1,600 COMPLETE BILINGUAL Q&A ANSWER BANK
+[2]: Citizen → Student → Professional → Engineering | English + தமிழ்
+[3]: Preference 1 selected: the 1,600-question roadmap is expanded into a four-depth answer bank. Each Q&A contains English and Tamil questions plus Citizen, Student, Professional and Engineering response modes.
+[4]: Electricity Fundamentals | மின்சார அடிப்படைகள்
+[5]: Q1. What is electricity?
+[6]: தமிழ் கேள்வி: electricity என்றால் என்ன?
+[7]: Citizen Mode – English
+[8]: electricity is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Define it simply, give the unit or purpose, and one everyday example.
+[9]: Citizen Mode – தமிழ்
+[10]: electricity என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். electricity என்றால் என்ன? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[11]: Student Mode – English
+[12]: Student view: Define electricity, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Define it simply, give the unit or purpose, and one everyday example.
+[13]: Student Mode – தமிழ்
+[14]: மாணவர் நிலை: electricity-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Define it simply, give the unit or purpose, and one everyday example.
+[15]: Professional Mode – English
+[16]: Professional view: Evaluate electricity using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Define it simply, give the unit or purpose, and one everyday example.
+[17]: Professional Mode – தமிழ்
+[18]: Professional நிலை: electricity-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Define it simply, give the unit or purpose, and one everyday example.
+[19]: Engineering Mode – English
+[20]: Engineering view: Treat electricity as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Define it simply, give the unit or purpose, and one everyday example.
+[21]: Engineering Mode – தமிழ்
+[22]: Engineering நிலை: electricity-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Define it simply, give the unit or purpose, and one everyday example.
+[23]: Q2. Why is electricity important?
+[24]: தமிழ் கேள்வி: electricity ஏன் முக்கியம்?
+[25]: Citizen Mode – English
+[26]: electricity important is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Explain its practical value, where it matters, and one consequence of ignoring it.
+[27]: Citizen Mode – தமிழ்
+[28]: electricity important என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். electricity ஏன் முக்கியம்? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[29]: Student Mode – English
+[30]: Student view: Define electricity important, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Explain its practical value, where it matters, and one consequence of ignoring it.
+[31]: Student Mode – தமிழ்
+[32]: மாணவர் நிலை: electricity important-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Explain its practical value, where it matters, and one consequence of ignoring it.
+[33]: Professional Mode – English
+[34]: Professional view: Evaluate electricity important using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Explain its practical value, where it matters, and one consequence of ignoring it.
+[35]: Professional Mode – தமிழ்
+[36]: Professional நிலை: electricity important-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Explain its practical value, where it matters, and one consequence of ignoring it.
+[37]: Engineering Mode – English
+[38]: Engineering view: Treat electricity important as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Explain its practical value, where it matters, and one consequence of ignoring it.
+[39]: Engineering Mode – தமிழ்
+[40]: Engineering நிலை: electricity important-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Explain its practical value, where it matters, and one consequence of ignoring it.
+[41]: Q3. How does electricity work?
+[42]: தமிழ் கேள்வி: electricity எப்படி வேலை செய்கிறது?
+[43]: Citizen Mode – English
+[44]: electricity work is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Explain the working principle in plain language, then add the key technical mechanism.
+[45]: Citizen Mode – தமிழ்
+[46]: electricity work என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். electricity எப்படி வேலை செய்கிறது? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[47]: Student Mode – English
+[48]: Student view: Define electricity work, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Explain the working principle in plain language, then add the key technical mechanism.
+[49]: Student Mode – தமிழ்
+[50]: மாணவர் நிலை: electricity work-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Explain the working principle in plain language, then add the key technical mechanism.
+[51]: Professional Mode – English
+[52]: Professional view: Evaluate electricity work using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Explain the working principle in plain language, then add the key technical mechanism.
+[53]: Professional Mode – தமிழ்
+[54]: Professional நிலை: electricity work-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Explain the working principle in plain language, then add the key technical mechanism.
+[55]: Engineering Mode – English
+[56]: Engineering view: Treat electricity work as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Explain the working principle in plain language, then add the key technical mechanism.
+[57]: Engineering Mode – தமிழ்
+[58]: Engineering நிலை: electricity work-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Explain the working principle in plain language, then add the key technical mechanism.
+[59]: Q4. Where is electricity used?
+[60]: தமிழ் கேள்வி: electricity எங்கு பயன்படுத்தப்படுகிறது?
+[61]: Citizen Mode – English
+[62]: electricity used is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[63]: Citizen Mode – தமிழ்
+[64]: electricity used என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். electricity எங்கு பயன்படுத்தப்படுகிறது? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[65]: Student Mode – English
+[66]: Student view: Define electricity used, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[67]: Student Mode – தமிழ்
+[68]: மாணவர் நிலை: electricity used-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[69]: Professional Mode – English
+[70]: Professional view: Evaluate electricity used using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[71]: Professional Mode – தமிழ்
+[72]: Professional நிலை: electricity used-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[73]: Engineering Mode – English
+[74]: Engineering view: Treat electricity used as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[75]: Engineering Mode – தமிழ்
+[76]: Engineering நிலை: electricity used-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[77]: Q5. How do I understand electricity as a beginner?
+[78]: தமிழ் கேள்வி: தொடக்கநிலையிலுள்ளவர் electricity-ஐ எப்படி புரிந்துகொள்வது?
+[79]: Citizen Mode – English
+[80]: electricity as a beginner is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[81]: Citizen Mode – தமிழ்
+[82]: electricity as a beginner என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். தொடக்கநிலையிலுள்ளவர் electricity-ஐ எப்படி புரிந்துகொள்வது? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[83]: Student Mode – English
+[84]: Student view: Define electricity as a beginner, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[85]: Student Mode – தமிழ்
+[86]: மாணவர் நிலை: electricity as a beginner-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[87]: Professional Mode – English
+[88]: Professional view: Evaluate electricity as a beginner using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[89]: Professional Mode – தமிழ்
+[90]: Professional நிலை: electricity as a beginner-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[91]: Engineering Mode – English
+[92]: Engineering view: Treat electricity as a beginner as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[93]: Engineering Mode – தமிழ்
+[94]: Engineering நிலை: electricity as a beginner-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[95]: Q6. What is voltage?
+[96]: தமிழ் கேள்வி: voltage என்றால் என்ன?
+[97]: Citizen Mode – English
+[98]: voltage is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Define it simply, give the unit or purpose, and one everyday example.
+[99]: Citizen Mode – தமிழ்
+[100]: voltage என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். voltage என்றால் என்ன? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[101]: Student Mode – English
+[102]: Student view: Define voltage, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Define it simply, give the unit or purpose, and one everyday example.
+[103]: Student Mode – தமிழ்
+[104]: மாணவர் நிலை: voltage-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Define it simply, give the unit or purpose, and one everyday example.
+[105]: Professional Mode – English
+[106]: Professional view: Evaluate voltage using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Define it simply, give the unit or purpose, and one everyday example.
+[107]: Professional Mode – தமிழ்
+[108]: Professional நிலை: voltage-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Define it simply, give the unit or purpose, and one everyday example.
+[109]: Engineering Mode – English
+[110]: Engineering view: Treat voltage as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Define it simply, give the unit or purpose, and one everyday example.
+[111]: Engineering Mode – தமிழ்
+[112]: Engineering நிலை: voltage-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Define it simply, give the unit or purpose, and one everyday example.
+[113]: Q7. Why is voltage important?
+[114]: தமிழ் கேள்வி: voltage ஏன் முக்கியம்?
+[115]: Citizen Mode – English
+[116]: voltage important is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Explain its practical value, where it matters, and one consequence of ignoring it.
+[117]: Citizen Mode – தமிழ்
+[118]: voltage important என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். voltage ஏன் முக்கியம்? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[119]: Student Mode – English
+[120]: Student view: Define voltage important, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Explain its practical value, where it matters, and one consequence of ignoring it.
+[121]: Student Mode – தமிழ்
+[122]: மாணவர் நிலை: voltage important-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Explain its practical value, where it matters, and one consequence of ignoring it.
+[123]: Professional Mode – English
+[124]: Professional view: Evaluate voltage important using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Explain its practical value, where it matters, and one consequence of ignoring it.
+[125]: Professional Mode – தமிழ்
+[126]: Professional நிலை: voltage important-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Explain its practical value, where it matters, and one consequence of ignoring it.
+[127]: Engineering Mode – English
+[128]: Engineering view: Treat voltage important as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Explain its practical value, where it matters, and one consequence of ignoring it.
+[129]: Engineering Mode – தமிழ்
+[130]: Engineering நிலை: voltage important-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Explain its practical value, where it matters, and one consequence of ignoring it.
+[131]: Q8. How does voltage work?
+[132]: தமிழ் கேள்வி: voltage எப்படி வேலை செய்கிறது?
+[133]: Citizen Mode – English
+[134]: voltage work is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Explain the working principle in plain language, then add the key technical mechanism.
+[135]: Citizen Mode – தமிழ்
+[136]: voltage work என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். voltage எப்படி வேலை செய்கிறது? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[137]: Student Mode – English
+[138]: Student view: Define voltage work, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Explain the working principle in plain language, then add the key technical mechanism.
+[139]: Student Mode – தமிழ்
+[140]: மாணவர் நிலை: voltage work-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Explain the working principle in plain language, then add the key technical mechanism.
+[141]: Professional Mode – English
+[142]: Professional view: Evaluate voltage work using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Explain the working principle in plain language, then add the key technical mechanism.
+[143]: Professional Mode – தமிழ்
+[144]: Professional நிலை: voltage work-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Explain the working principle in plain language, then add the key technical mechanism.
+[145]: Engineering Mode – English
+[146]: Engineering view: Treat voltage work as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Explain the working principle in plain language, then add the key technical mechanism.
+[147]: Engineering Mode – தமிழ்
+[148]: Engineering நிலை: voltage work-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Explain the working principle in plain language, then add the key technical mechanism.
+[149]: Q9. Where is voltage used?
+[150]: தமிழ் கேள்வி: voltage எங்கு பயன்படுத்தப்படுகிறது?
+[151]: Citizen Mode – English
+[152]: voltage used is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[153]: Citizen Mode – தமிழ்
+[154]: voltage used என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். voltage எங்கு பயன்படுத்தப்படுகிறது? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[155]: Student Mode – English
+[156]: Student view: Define voltage used, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[157]: Student Mode – தமிழ்
+[158]: மாணவர் நிலை: voltage used-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[159]: Professional Mode – English
+[160]: Professional view: Evaluate voltage used using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[161]: Professional Mode – தமிழ்
+[162]: Professional நிலை: voltage used-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[163]: Engineering Mode – English
+[164]: Engineering view: Treat voltage used as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[165]: Engineering Mode – தமிழ்
+[166]: Engineering நிலை: voltage used-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. List common household, commercial, industrial, solar, BESS or EV uses as relevant.
+[167]: Q10. How do I understand voltage as a beginner?
+[168]: தமிழ் கேள்வி: தொடக்கநிலையிலுள்ளவர் voltage-ஐ எப்படி புரிந்துகொள்வது?
+[169]: Citizen Mode – English
+[170]: voltage as a beginner is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[171]: Citizen Mode – தமிழ்
+[172]: voltage as a beginner என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். தொடக்கநிலையிலுள்ளவர் voltage-ஐ எப்படி புரிந்துகொள்வது? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[173]: Student Mode – English
+[174]: Student view: Define voltage as a beginner, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[175]: Student Mode – தமிழ்
+[176]: மாணவர் நிலை: voltage as a beginner-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[177]: Professional Mode – English
+[178]: Professional view: Evaluate voltage as a beginner using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[179]: Professional Mode – தமிழ்
+[180]: Professional நிலை: voltage as a beginner-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[181]: Engineering Mode – English
+[182]: Engineering view: Treat voltage as a beginner as a design/operating variable. Define inputs, ratings, boundary conditions and assumptions; apply the relevant equation or rating logic; check efficiency, derating, voltage/current limits, protection, controls, thermal conditions and interfaces; then validate against manufacturer data, applicable standards and utility requirements. Preliminary estimates must not be presented as final approved designs. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[183]: Engineering Mode – தமிழ்
+[184]: Engineering நிலை: voltage as a beginner-ஐ design/operation variable ஆக அணுக வேண்டும். Inputs, ratings, boundary conditions மற்றும் assumptions-ஐ வரையறுத்து, பொருத்தமான equation/rating logic பயன்படுத்த வேண்டும். Efficiency, derating, voltage/current limits, protection, controls, thermal conditions மற்றும் interfaces சரிபார்க்கப்பட்டு manufacturer data, applicable standards மற்றும் utility requirements மூலம் validation செய்ய வேண்டும். Preliminary estimate-ஐ final approved design ஆகக் கருதக்கூடாது. Use a water/traffic/storage analogy where appropriate and avoid jargon.
+[185]: Q11. What is current?
+[186]: தமிழ் கேள்வி: current என்றால் என்ன?
+[187]: Citizen Mode – English
+[188]: current is an important concept in electricity fundamentals | மின்சார அடிப்படைகள். In simple terms, understand what it is, what it does, and why it matters in everyday energy use. Define it simply, give the unit or purpose, and one everyday example.
+[189]: Citizen Mode – தமிழ்
+[190]: current என்பது Electricity Fundamentals | மின்சார அடிப்படைகள் பகுதியில் முக்கியமான கருத்தாகும். எளிமையாகச் சொன்னால், இது என்ன, என்ன செய்கிறது, ஏன் முக்கியம் என்பதைப் புரிந்துகொள்ள வேண்டும். current என்றால் என்ன? என்ற கேள்வியை நடைமுறை உதாரணத்துடன் புரிந்துகொள்ளலாம்.
+[191]: Student Mode – English
+[192]: Student view: Define current, explain its basic principle, identify the relevant unit or measurable quantity where applicable, and connect it to a simple example. Keep units consistent and state assumptions before calculating. Define it simply, give the unit or purpose, and one everyday example.
+[193]: Student Mode – தமிழ்
+[194]: மாணவர் நிலை: current-ன் வரையறை, அடிப்படை செயல்முறை, பொருந்தும் அளவீட்டு அலகு மற்றும் எளிய உதாரணத்தை இணைத்து விளக்க வேண்டும். கணக்கிடும்போது units மற்றும் assumptions தெளிவாக இருக்க வேண்டும். Define it simply, give the unit or purpose, and one everyday example.
+[195]: Professional Mode – English
+[196]: Professional view: Evaluate current using operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact and applicable utility/project requirements. Use actual site or load data when the decision affects design or investment. Define it simply, give the unit or purpose, and one everyday example.
+[197]: Professional Mode – தமிழ்
+[198]: Professional நிலை: current-ஐ operating conditions, equipment interfaces, performance, losses, reliability, maintenance, commercial impact மற்றும் applicable utility/project requirements அடிப்படையில் மதிப்பிட வேண்டும். Design அல்லது investment முடிவுகளுக்கு actual site/load data பயன்படுத்த வேண்டும். Define it simply, give the unit or purpose, and one everyday example.
+[199]: Engineering Mode – English

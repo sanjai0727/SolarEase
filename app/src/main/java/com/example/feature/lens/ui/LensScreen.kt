@@ -44,7 +44,7 @@ import java.util.concurrent.Executors
 fun LensScreen(
     viewModel: LensViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToResult: () -> Unit
+    onNavigateToReview: () -> Unit
 ) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
@@ -55,7 +55,7 @@ fun LensScreen(
     }
 
     if (cameraPermissionState.status.isGranted) {
-        LensCameraContent(viewModel, onNavigateBack, onNavigateToResult)
+        LensCameraContent(viewModel, onNavigateBack, onNavigateToReview)
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -78,7 +78,7 @@ fun LensScreen(
 private fun LensCameraContent(
     viewModel: LensViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToResult: () -> Unit
+    onNavigateToReview: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -88,8 +88,8 @@ private fun LensCameraContent(
     val scanSession by viewModel.scanSession.collectAsState()
 
     LaunchedEffect(uiState) {
-        if (uiState is LensUiState.Analytics) {
-            onNavigateToResult()
+        if (uiState is LensUiState.Review) {
+            onNavigateToReview()
         }
     }
 

@@ -27,7 +27,8 @@ import com.example.feature.lens.utils.LensConstants
 fun ApplianceResultScreen(
     viewModel: LensViewModel,
     onNavigateBack: () -> Unit,
-    onScanAnother: () -> Unit
+    onScanAnother: () -> Unit,
+    onNavigateHome: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -113,7 +114,14 @@ fun ApplianceResultScreen(
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Scan Another Appliance")
+                            Text("Scan Again")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onNavigateHome,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Back to Home")
                         }
                     }
                 }
@@ -139,7 +147,8 @@ fun ApplianceResultScreen(
                         onScanAgain = {
                             viewModel.restartScanning()
                             onScanAnother()
-                        }
+                        },
+                        onNavigateHome = onNavigateHome
                     )
                 }
                 else -> {}
@@ -165,7 +174,8 @@ private fun monthlyCost(appliance: EditableAppliance): Float {
 @Composable
 private fun AnalyticsContent(
     state: LensUiState.Analytics,
-    onScanAgain: () -> Unit
+    onScanAgain: () -> Unit,
+    onNavigateHome: () -> Unit
 ) {
     val appliances = state.appliances
 
@@ -465,6 +475,22 @@ private fun AnalyticsContent(
                         fontSize = 15.sp
                     )
                 }
+            }
+        }
+
+        item {
+            OutlinedButton(
+                onClick = onNavigateHome,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    "Back to Home",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp
+                )
             }
         }
 

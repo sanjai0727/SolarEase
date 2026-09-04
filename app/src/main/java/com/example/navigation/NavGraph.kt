@@ -133,7 +133,7 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 LensScreen(
                     viewModel = lensViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToResult = { navController.navigate(Screen.LensResult) }
+                    onNavigateToReview = { navController.navigate(Screen.LensReview) }
                 )
             }
             
@@ -149,6 +149,22 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 )
             }
 
+            composable<Screen.LensReview> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.SolarEaseLens>()
+                }
+                val lensViewModel: LensViewModel = viewModel(parentEntry)
+                com.example.feature.lens.ui.ApplianceReviewScreen(
+                    viewModel = lensViewModel,
+                    onNavigateBack = { 
+                        // Returning from Review discards the scan and goes back to Main
+                        lensViewModel.restartScanning()
+                        navController.popBackStack(Screen.LensMain, false) 
+                    },
+                    onNavigateToResult = { navController.navigate(Screen.LensResult) }
+                )
+            }
+
             composable<Screen.LensResult> { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry<Screen.SolarEaseLens>()
@@ -159,6 +175,11 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                     onNavigateBack = { navController.popBackStack() },
                     onScanAnother = { 
                         navController.popBackStack(Screen.LensMain, false)
+                    },
+                    onNavigateHome = {
+                        navController.navigate(Screen.Home) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                        }
                     }
                 )
             }
