@@ -99,11 +99,76 @@ fun TnebBillStatusRoute(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "Check your latest TNPDCL bill securely. We don't store your connection details.",
+                text = "Check your latest TNPDCL bill securely. Your details are used securely to retrieve your TNPDCL bill.",
                 fontSize = 15.sp,
                 color = Color(0xFF7D8492),
                 lineHeight = 22.sp
             )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // ── Input Fields ──────────────────────────────────────────────
+            OutlinedTextField(
+                value = serviceConnectionNumber,
+                onValueChange = { viewModel.updateServiceConnectionNumber(it) },
+                label = { Text("Service Connection Number") },
+                placeholder = { Text("e.g. 04234567891") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF1E7038),
+                    focusedLabelColor = Color(0xFF1E7038),
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = registeredMobileNumber,
+                onValueChange = { viewModel.updateRegisteredMobileNumber(it) },
+                label = { Text("Registered Mobile Number") },
+                placeholder = { Text("10-digit mobile number") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF1E7038),
+                    focusedLabelColor = Color(0xFF1E7038),
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White
+                )
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // ── Important Disclaimer ──────────────────────────────────────
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFFF8E1)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = Color(0xFFFFA000),
+                        modifier = Modifier.size(20.dp).padding(top = 2.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "The mobile number must exactly match the number registered with this service connection on TNPDCL.",
+                        fontSize = 13.sp,
+                        color = Color(0xFF5D4037),
+                        lineHeight = 18.sp
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -265,71 +330,6 @@ fun TnebBillStatusRoute(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── Input Fields ──────────────────────────────────────────────
-            OutlinedTextField(
-                value = serviceConnectionNumber,
-                onValueChange = { viewModel.updateServiceConnectionNumber(it) },
-                label = { Text("Service Connection Number") },
-                placeholder = { Text("e.g. 04234567891") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF1E7038),
-                    focusedLabelColor = Color(0xFF1E7038),
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = registeredMobileNumber,
-                onValueChange = { viewModel.updateRegisteredMobileNumber(it) },
-                label = { Text("Registered Mobile Number") },
-                placeholder = { Text("10-digit mobile number") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF1E7038),
-                    focusedLabelColor = Color(0xFF1E7038),
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White
-                )
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // ── Important Disclaimer ──────────────────────────────────────
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFF8E1)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = Color(0xFFFFA000),
-                        modifier = Modifier.size(20.dp).padding(top = 2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "The mobile number must exactly match the number registered with this service connection on TNPDCL.",
-                        fontSize = 13.sp,
-                        color = Color(0xFF5D4037),
-                        lineHeight = 18.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
             // ── Primary CTA ───────────────────────────────────────────────
             val isInitialCheckEnabled = isValid && !isChecking && captchaImageBase64 == null
             val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotEmpty()
@@ -356,7 +356,7 @@ fun TnebBillStatusRoute(
                 )
             ) {
                 Text(
-                    text = if (hasCaptcha) "Check Bill" else "Get CAPTCHA",
+                    text = if (hasCaptcha) "Check Bill Status" else "Get CAPTCHA",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
