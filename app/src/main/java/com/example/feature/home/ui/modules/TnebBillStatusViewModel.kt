@@ -6,6 +6,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+enum class SubmitState {
+    IDLE,
+    SUBMITTING,
+    SUCCESS,
+    INVALID_CAPTCHA,
+    INVALID_DETAILS,
+    ERROR
+}
+
 class TnebBillStatusViewModel : ViewModel() {
 
     private val _serviceConnectionNumber = MutableStateFlow("")
@@ -32,61 +41,71 @@ class TnebBillStatusViewModel : ViewModel() {
     private val _reloadTrigger = MutableStateFlow(0)
     val reloadTrigger: StateFlow<Int> = _reloadTrigger.asStateFlow()
 
+    private val _submitState = MutableStateFlow(SubmitState.IDLE)
+    val submitState: StateFlow<SubmitState> = _submitState.asStateFlow()
+
+    private val _submitTrigger = MutableStateFlow(0)
+    val submitTrigger: StateFlow<Int> = _submitTrigger.asStateFlow()
+
     fun updateServiceConnectionNumber(number: String) {
         _serviceConnectionNumber.value = number
         validate()
     }
 
     fun updateRegisteredMobileNumber(number: String) {
-        val digitsOnly = number.filter { it.isDigit() }
-        _registeredMobileNumber.value = digitsOnly
+        _registeredMobileNumber.value = number
         validate()
     }
 
     fun updateCaptchaInput(input: String) {
-        _captchaInput.value = input.trim()
+        _captchaInput.value = input
     }
 
     private fun validate() {
-        val scn = _serviceConnectionNumber.value.trim()
-        val rmn = _registeredMobileNumber.value.trim()
-
-        val isValidScn = scn.isNotEmpty()
-        val isValidRmn = rmn.length == 10 && rmn.all { it.isDigit() }
-
+        val isValidScn = _serviceConnectionNumber.value.isNotBlank()
+        val isValidRmn = _registeredMobileNumber.value.length == 10 && _registeredMobileNumber.value.all { it.isDigit() }
         _isValid.value = isValidScn && isValidRmn
     }
 
     fun checkBillStatus() {
         if (_isValid.value) {
-            _isChecking.value = true
-            _pageLoadError.value = false
-            _captchaImageBase64.value = null
-            _captchaInput.value = ""
+            if (_captchaImageBase64.value == null) {
+                // Phase 2A: Load TNPDCL and get CAPTCHA
+                _isChecking.value = true
+                _pageLoadError.value = false
+                _submitState.value = SubmitState.IDLE
+            } else if (_captchaInput.value.isNotEmpty()) {
+                // Phase 2B: Submit form
+                _submitState.value = SubmitState.SUBMITTING
+                _submitTrigger.value++
+            }
         }
     }
 
     fun resetValidationState() {
         _isChecking.value = false
         _captchaImageBase64.value = null
-        _pageLoadError.value = false
         _captchaInput.value = ""
+        _pageLoadError.value = false
+        _submitState.value = SubmitState.IDLE
     }
 
-    fun onCaptchaReceived(base64: String) {
+    fun onCaptchaReceived(base64Data: String) {
         // Strip the data URL prefix if present
-        val cleanBase64 = if (base64.contains(",")) {
-            base64.substringAfter(",")
+        val cleanBase64 = if (base64Data.startsWith("data:image")) {
+            base64Data.substringAfter("base64,")
         } else {
-            base64
+            base64Data
         }
         _captchaImageBase64.value = cleanBase64
     }
 
     fun onPageLoadError() {
         _pageLoadError.value = true
-        _isChecking.value = false
-        _captchaImageBase64.value = null
+        _isChecking.value = true // Ensure error UI is shown
+        if (_submitState.value == SubmitState.SUBMITTING) {
+            _submitState.value = SubmitState.ERROR
+        }
     }
 
     fun requestCaptchaRefresh() {
@@ -94,7 +113,18 @@ class TnebBillStatusViewModel : ViewModel() {
         _captchaImageBase64.value = null
         _captchaInput.value = ""
         _pageLoadError.value = false
+        _submitState.value = SubmitState.IDLE
         // Trigger the WebView to reload
         _reloadTrigger.value++
+    }
+
+    fun onSubmissionResult(result: String) {
+        when (result) {
+            "SUCCESS" -> _submitState.value = SubmitState.SUCCESS
+            "INVALID_CAPTCHA" -> _submitState.value = SubmitState.INVALID_CAPTCHA
+            "INVALID_DETAILS" -> _submitState.value = SubmitState.INVALID_DETAILS
+            "ERROR" -> _submitState.value = SubmitState.ERROR
+            else -> _submitState.value = SubmitState.ERROR
+        }
     }
 }

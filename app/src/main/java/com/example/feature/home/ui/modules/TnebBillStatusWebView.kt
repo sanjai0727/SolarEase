@@ -35,6 +35,15 @@ fun TnebBillStatusWebView(
     val reloadTrigger by viewModel.reloadTrigger.collectAsState()
     var lastTrigger by remember { mutableIntStateOf(reloadTrigger) }
 
+    val submitTrigger by viewModel.submitTrigger.collectAsState()
+    var lastSubmitTrigger by remember { mutableIntStateOf(submitTrigger) }
+    
+    val submitState by viewModel.submitState.collectAsState()
+    
+    val serviceConnectionNumber by viewModel.serviceConnectionNumber.collectAsState()
+    val registeredMobileNumber by viewModel.registeredMobileNumber.collectAsState()
+    val captchaInput by viewModel.captchaInput.collectAsState()
+
     Box(modifier = modifier) {
         AndroidView(
             factory = { context ->
@@ -51,34 +60,70 @@ fun TnebBillStatusWebView(
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView, url: String) {
                             super.onPageFinished(view, url)
-                            // Inject JavaScript to extract the CAPTCHA image
-                            val js = """
-                                javascript:(function() {
-                                    function processCaptcha(img) {
+                            
+                            val currentState = viewModel.submitState.value
+                            
+                            if (currentState == SubmitState.SUBMITTING) {
+                                // We just submitted the form. Check the resulting DOM for errors or success.
+                                val checkResultJs = """
+                                    javascript:(function() {
                                         try {
-                                            var canvas = document.createElement('canvas');
-                                            canvas.width = img.naturalWidth || img.width || 120;
-                                            canvas.height = img.naturalHeight || img.height || 40;
-                                            var ctx = canvas.getContext('2d');
-                                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                                            var dataURL = canvas.toDataURL('image/png');
-                                            AndroidCaptchaBridge.onCaptchaExtracted(dataURL);
+                                            var errorSummary = document.querySelector('.ui-messages-error-summary');
+                                            var errorDetail = document.querySelector('.ui-messages-error-detail');
+                                            var errorText = (errorSummary ? errorSummary.innerText : '') + ' ' + (errorDetail ? errorDetail.innerText : '');
+                                            
+                                            if (errorText) {
+                                                if (errorText.toLowerCase().includes('captcha')) {
+                                                    AndroidCaptchaBridge.onSubmissionResult('INVALID_CAPTCHA');
+                                                } else {
+                                                    AndroidCaptchaBridge.onSubmissionResult('INVALID_DETAILS');
+                                                }
+                                            } else {
+                                                // If no error, assume success in Phase 2B. 
+                                                // We can look for table elements as a strong indicator.
+                                                var hasTable = document.querySelector('.ui-datatable') != null || document.querySelector('table') != null;
+                                                if (hasTable || document.body.innerText.toLowerCase().includes('bill')) {
+                                                    AndroidCaptchaBridge.onSubmissionResult('SUCCESS');
+                                                } else {
+                                                    AndroidCaptchaBridge.onSubmissionResult('ERROR');
+                                                }
+                                            }
                                         } catch(e) {
-                                            // Handle cross-origin issues or errors silently as per security rules
+                                            AndroidCaptchaBridge.onSubmissionResult('ERROR');
                                         }
-                                    }
-
-                                    var img = document.getElementById('imgCaptchaId');
-                                    if (img) {
-                                        if (img.complete && img.naturalWidth > 0) {
-                                            processCaptcha(img);
-                                        } else {
-                                            img.onload = function() { processCaptcha(img); };
+                                    })();
+                                """.trimIndent()
+                                view.evaluateJavascript(checkResultJs, null)
+                            } else if (currentState == SubmitState.IDLE) {
+                                // Inject JavaScript to extract the CAPTCHA image
+                                val js = """
+                                    javascript:(function() {
+                                        function processCaptcha(img) {
+                                            try {
+                                                var canvas = document.createElement('canvas');
+                                                canvas.width = img.naturalWidth || img.width || 120;
+                                                canvas.height = img.naturalHeight || img.height || 40;
+                                                var ctx = canvas.getContext('2d');
+                                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                                var dataURL = canvas.toDataURL('image/png');
+                                                AndroidCaptchaBridge.onCaptchaExtracted(dataURL);
+                                            } catch(e) {
+                                                // Handle cross-origin issues or errors silently as per security rules
+                                            }
                                         }
-                                    }
-                                })();
-                            """.trimIndent()
-                            view.evaluateJavascript(js, null)
+    
+                                        var img = document.getElementById('imgCaptchaId');
+                                        if (img) {
+                                            if (img.complete && img.naturalWidth > 0) {
+                                                processCaptcha(img);
+                                            } else {
+                                                img.onload = function() { processCaptcha(img); };
+                                            }
+                                        }
+                                    })();
+                                """.trimIndent()
+                                view.evaluateJavascript(js, null)
+                            }
                         }
 
                         override fun onReceivedError(
@@ -98,7 +143,6 @@ fun TnebBillStatusWebView(
                             error: SslError?
                         ) {
                             // STRICT SSL RULE: Do NOT call handler.proceed().
-                            // The user explicitly requested to reject invalid/expired certificates.
                             handler?.cancel()
                             viewModel.onPageLoadError()
                         }
@@ -113,8 +157,46 @@ fun TnebBillStatusWebView(
                     lastTrigger = reloadTrigger
                     view.reload()
                 }
+                
+                // Submit the form
+                if (submitTrigger > lastSubmitTrigger) {
+                    lastSubmitTrigger = submitTrigger
+                    // Safely escape values before injection to prevent XSS or JS injection attacks
+                    val safeScn = serviceConnectionNumber.replace("'", "\\'").replace("\"", "\\\"")
+                    val safeMob = registeredMobileNumber.replace("'", "\\'").replace("\"", "\\\"")
+                    val safeCap = captchaInput.replace("'", "\\'").replace("\"", "\\\"")
+                    
+                    val submitJs = """
+                        javascript:(function() {
+                            try {
+                                document.getElementById('serviceno').value = '$safeScn';
+                                document.getElementById('mob').value = '$safeMob';
+                                document.getElementById('cap').value = '$safeCap';
+                                document.getElementById('submit3').click();
+                            } catch(e) {
+                                AndroidCaptchaBridge.onSubmissionResult('ERROR');
+                            }
+                        })();
+                    """.trimIndent()
+                    view.evaluateJavascript(submitJs, null)
+                }
             }
         )
+    }
+}
+
+/**
+ * JavaScript interface to pass the CAPTCHA base64 string to the ViewModel.
+ */
+class AndroidCaptchaBridge(private val viewModel: TnebBillStatusViewModel) {
+    @JavascriptInterface
+    fun onCaptchaExtracted(base64Data: String) {
+        viewModel.onCaptchaReceived(base64Data)
+    }
+    
+    @JavascriptInterface
+    fun onSubmissionResult(result: String) {
+        viewModel.onSubmissionResult(result)
     }
 }
 
@@ -138,12 +220,3 @@ fun rememberWebViewWithLifecycle(): WebView {
     return webView
 }
 
-/**
- * JavaScript interface to pass the CAPTCHA base64 string to the ViewModel.
- */
-class AndroidCaptchaBridge(private val viewModel: TnebBillStatusViewModel) {
-    @JavascriptInterface
-    fun onCaptchaExtracted(base64: String) {
-        viewModel.onCaptchaReceived(base64)
-    }
-}

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -172,6 +173,8 @@ fun TnebBillStatusRoute(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            val submitState by viewModel.submitState.collectAsState()
+
             // ── Temporary Validation State (Phase 1) ──────────────────────
             if (isChecking && captchaImageBase64 == null && !pageLoadError) {
                 Card(
@@ -209,8 +212,8 @@ fun TnebBillStatusRoute(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── Error State ──────────────────────────────────────────────
-            if (pageLoadError) {
+            // ── Error State (Page Load Error or General Error) ─────────────
+            if (pageLoadError || submitState == SubmitState.ERROR) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
@@ -229,18 +232,100 @@ fun TnebBillStatusRoute(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Unable to load TNPDCL Bill Status.",
+                                text = "Unable to connect to TNPDCL. Please try again.",
                                 color = Color(0xFFB71C1C),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "The official website might be down, or the security certificate is invalid/expired. Please try again later.",
-                                color = Color(0xFFD32F2F),
-                                fontSize = 12.sp
-                            )
                         }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // ── Invalid CAPTCHA State ──────────────────────────────────────
+            if (submitState == SubmitState.INVALID_CAPTCHA) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFFD32F2F),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Invalid CAPTCHA. Please refresh the CAPTCHA and try again.",
+                            color = Color(0xFFB71C1C),
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+            
+            // ── Invalid Details State ──────────────────────────────────────
+            if (submitState == SubmitState.INVALID_DETAILS) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFFD32F2F),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "The details you entered do not match TNPDCL records.",
+                            color = Color(0xFFB71C1C),
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+            
+            // ── Success State ──────────────────────────────────────────────
+            if (submitState == SubmitState.SUCCESS) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Bill details retrieved successfully.",
+                            color = Color(0xFF1B5E20),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -332,15 +417,13 @@ fun TnebBillStatusRoute(
 
             // ── Primary CTA ───────────────────────────────────────────────
             val isInitialCheckEnabled = isValid && !isChecking && captchaImageBase64 == null
-            val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotEmpty()
+            val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotEmpty() && submitState != SubmitState.SUBMITTING
             val hasCaptcha = captchaImageBase64 != null || isChecking
             
             Button(
                 onClick = { 
-                    if (isInitialCheckEnabled) {
+                    if (isInitialCheckEnabled || isSubmitCaptchaEnabled) {
                         viewModel.checkBillStatus() 
-                    } else if (isSubmitCaptchaEnabled) {
-                        // Phase 2B will handle submission.
                     }
                 },
                 modifier = Modifier
@@ -355,17 +438,25 @@ fun TnebBillStatusRoute(
                     disabledContentColor = Color.White
                 )
             ) {
-                Text(
-                    text = if (hasCaptcha) "Check Bill Status" else "Get CAPTCHA",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
+                if (submitState == SubmitState.SUBMITTING) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = if (hasCaptcha) "Check Bill Status" else "Get CAPTCHA",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
