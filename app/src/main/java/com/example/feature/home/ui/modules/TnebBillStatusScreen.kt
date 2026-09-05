@@ -37,6 +37,21 @@ fun TnebBillStatusRoute(
     onNavigateBack: () -> Unit,
     viewModel: TnebBillStatusViewModel = viewModel()
 ) {
+    val submitState by viewModel.submitState.collectAsState()
+
+    if (submitState == SubmitState.SUCCESS) {
+        TnebBillDashboard(onNavigateBack = onNavigateBack, viewModel = viewModel)
+    } else {
+        TnebBillStatusForm(onNavigateBack = onNavigateBack, viewModel = viewModel)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TnebBillStatusForm(
+    onNavigateBack: () -> Unit,
+    viewModel: TnebBillStatusViewModel
+) {
     val serviceConnectionNumber by viewModel.serviceConnectionNumber.collectAsState()
     val registeredMobileNumber by viewModel.registeredMobileNumber.collectAsState()
     val isValid by viewModel.isValid.collectAsState()
@@ -116,6 +131,7 @@ fun TnebBillStatusRoute(
                 placeholder = { Text("e.g. 04234567891") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF1E7038),
@@ -134,7 +150,7 @@ fun TnebBillStatusRoute(
                 placeholder = { Text("10-digit mobile number") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF1E7038),
@@ -213,7 +229,7 @@ fun TnebBillStatusRoute(
             }
 
             // ── Error State (Page Load Error or General Error) ─────────────
-            if (pageLoadError || submitState == SubmitState.ERROR) {
+            if (pageLoadError) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
@@ -232,7 +248,7 @@ fun TnebBillStatusRoute(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Unable to connect to TNPDCL. Please try again.",
+                                text = "Failed to load the official TNPDCL page.",
                                 color = Color(0xFFB71C1C),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
@@ -301,35 +317,7 @@ fun TnebBillStatusRoute(
                 Spacer(modifier = Modifier.height(24.dp))
             }
             
-            // ── Success State ──────────────────────────────────────────────
-            if (submitState == SubmitState.SUCCESS) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color(0xFF2E7D32),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Bill details retrieved successfully.",
-                            color = Color(0xFF1B5E20),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+
 
             // ── CAPTCHA Display & Input ──────────────────────────────────
             if (captchaImageBase64 != null) {
@@ -352,6 +340,7 @@ fun TnebBillStatusRoute(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Row(
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
@@ -371,8 +360,10 @@ fun TnebBillStatusRoute(
                                     bitmap = bitmap,
                                     contentDescription = "CAPTCHA Image",
                                     modifier = Modifier
-                                        .height(50.dp)
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .width(200.dp)
+                                        .aspectRatio(3f)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
                                 )
                             } else {
                                 Text("Failed to decode CAPTCHA", color = Color.Red)
@@ -383,13 +374,14 @@ fun TnebBillStatusRoute(
                             IconButton(
                                 onClick = { viewModel.requestCaptchaRefresh() },
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .background(Color(0xFFF5F7FB), CircleShape)
+                                    .size(56.dp)
+                                    .background(Color(0xFFF5F7FB), RoundedCornerShape(8.dp))
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Refresh CAPTCHA",
-                                    tint = Color(0xFF1E7038)
+                                    tint = Color(0xFF1E7038),
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                         }
@@ -417,7 +409,7 @@ fun TnebBillStatusRoute(
 
             // ── Primary CTA ───────────────────────────────────────────────
             val isInitialCheckEnabled = isValid && !isChecking && captchaImageBase64 == null
-            val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotEmpty() && submitState != SubmitState.SUBMITTING
+            val isSubmitCaptchaEnabled = isValid && isChecking && captchaImageBase64 != null && captchaInput.isNotBlank() && submitState != SubmitState.SUBMITTING
             val hasCaptcha = captchaImageBase64 != null || isChecking
             
             Button(
