@@ -1,12 +1,14 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from fastapi import HTTPException
+import asyncio
 import uuid
 from typing import List
 import json
 import logging
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
 from src.core.config import settings
 from .models import Appliance
 from .schemas import ApplianceCreate, ApplianceUpdate, DetectionResult, Detection, BoundingBox
@@ -112,74 +114,88 @@ class ApplianceAnalysisService:
         Those values belong to SolarEase's existing appliance/energy system and user review process.
         """
         
-        try:
-            logger.info(f"[LENS DIAG] 4. Gemini request started (Model: {LENS_MODEL})")
-            response = client.models.generate_content(
-                model=LENS_MODEL,
-                contents=[
-                    prompt,
-                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema={
-                        "type": "OBJECT",
-                        "properties": {
-                            "detections": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "label": {
-                                            "type": "STRING",
-                                            "enum": ["LED Tube Light", "Ceiling Fan", "Air Conditioner", "Refrigerator", "Television"]
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"[LENS DIAG] 4. Gemini request started (Model: {LENS_MODEL}, Attempt: {attempt})")
+                response = client.models.generate_content(
+                    model=LENS_MODEL,
+                    contents=[
+                        prompt,
+                        types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+                    ],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema={
+                            "type": "OBJECT",
+                            "properties": {
+                                "detections": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": {
+                                            "label": {
+                                                "type": "STRING",
+                                                "enum": ["LED Tube Light", "Ceiling Fan", "Air Conditioner", "Refrigerator", "Television"]
+                                            },
+                                            "confidence": {"type": "NUMBER"},
+                                            "box_2d": {
+                                                "type": "ARRAY",
+                                                "items": {"type": "INTEGER"}
+                                            }
                                         },
-                                        "confidence": {"type": "NUMBER"},
-                                        "box_2d": {
-                                            "type": "ARRAY",
-                                            "items": {"type": "INTEGER"}
-                                        }
-                                    },
-                                    "required": ["label", "confidence", "box_2d"]
+                                        "required": ["label", "confidence", "box_2d"]
+                                    }
                                 }
-                            }
+                            },
+                            "required": ["detections"]
                         },
-                        "required": ["detections"]
-                    },
-                    temperature=0.2
+                        temperature=0.2
+                    )
                 )
-            )
-            logger.info(f"[LENS DIAG] 5. Gemini request completed. Response text length: {len(response.text) if hasattr(response, 'text') and response.text else 0}")
-            
-            logger.info(f"[LENS DIAG] 6. Response parsing started")
-            result_text = response.text
-            data = json.loads(result_text)
-            
-            parsed_detections = []
-            for det in data.get("detections", []):
-                # box_2d is [ymin, xmin, ymax, xmax] normalized from 0-1000
-                box = det.get("box_2d", [0, 0, 0, 0])
-                if len(box) == 4:
-                    ymin, xmin, ymax, xmax = box
-                    b_box = BoundingBox(
-                        left=xmin / 1000.0,
-                        top=ymin / 1000.0,
-                        right=xmax / 1000.0,
-                        bottom=ymax / 1000.0
-                    )
-                    parsed_detections.append(
-                        Detection(
-                            id=f"det_{uuid.uuid4().hex[:8]}",
-                            label=det.get("label"),
-                            confidence=float(det.get("confidence", 0.0)),
-                            source=source,
-                            bounding_box=b_box
-                        )
-                    )
+                logger.info(f"[LENS DIAG] 5. Gemini request completed. Response text length: {len(response.text) if hasattr(response, 'text') and response.text else 0}")
 
-            logger.info(f"[LENS DIAG] 7. Detections returned: {len(parsed_detections)}")
-            return DetectionResult(detections=parsed_detections)
-            
-        except Exception as e:
-            logger.exception(f"[LENS DIAG] 8. Lens analysis failed with exception. Type: {e.__class__.__name__}")
-            raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+                logger.info(f"[LENS DIAG] 6. Response parsing started")
+                result_text = response.text
+                data = json.loads(result_text)
+
+                parsed_detections = []
+                for det in data.get("detections", []):
+                    # box_2d is [ymin, xmin, ymax, xmax] normalized from 0-1000
+                    box = det.get("box_2d", [0, 0, 0, 0])
+                    if len(box) == 4:
+                        ymin, xmin, ymax, xmax = box
+                        b_box = BoundingBox(
+                            left=xmin / 1000.0,
+                            top=ymin / 1000.0,
+                            right=xmax / 1000.0,
+                            bottom=ymax / 1000.0
+                        )
+                        parsed_detections.append(
+                            Detection(
+                                id=f"det_{uuid.uuid4().hex[:8]}",
+                                label=det.get("label"),
+                                confidence=float(det.get("confidence", 0.0)),
+                                source=source,
+                                bounding_box=b_box
+                            )
+                        )
+
+                logger.info(f"[LENS DIAG] 7. Detections returned: {len(parsed_detections)}")
+                return DetectionResult(detections=parsed_detections)
+            except APIError as e:
+                error_code = getattr(e, "code", None) or getattr(e, "status_code", None) or 500
+                if error_code == 503 and attempt < max_attempts:
+                    delay = 2 ** (attempt - 1)  # 1s, 2s
+                    logger.warning(f"[LENS DIAG] 8. Gemini 503 UNAVAILABLE. Retrying in {delay}s (Attempt {attempt}/{max_attempts})")
+                    await asyncio.sleep(delay)
+                    continue
+                else:
+                    logger.exception(f"[LENS DIAG] 8. Lens analysis failed with APIError: {e}")
+                    if error_code == 503:
+                        raise HTTPException(status_code=503, detail="Solar Lens analysis is temporarily unavailable due to high capacity. Please try again.")
+                    raise HTTPException(status_code=error_code, detail=f"API Error: {str(e)}")
+
+            except Exception as e:
+                logger.exception(f"[LENS DIAG] 8. Lens analysis failed with exception. Type: {e.__class__.__name__}")
+                raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
