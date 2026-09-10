@@ -6,11 +6,12 @@ from src.core.security import decode_token
 from src.modules.auth.repository import AuthRepository
 from src.modules.auth.models import User
 import uuid
-import firebase_admin.auth
+from firebase_admin import auth as firebase_auth
+import logging
 from typing import Any, Optional
-from src.modules.auth.schemas import FirebaseTokenRequest
 security = HTTPBearer()
 firebase_security = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 def get_verified_firebase_token(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(firebase_security)
@@ -19,9 +20,14 @@ def get_verified_firebase_token(
     Verifies a Firebase ID token sent in the Authorization header.
     Returns the decoded Firebase claims if valid.
     """
-    token = None
-    if credentials:
-        token = credentials.credentials
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Firebase authentication token missing.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials.strip()
 
     if not token:
         raise HTTPException(
@@ -31,27 +37,28 @@ def get_verified_firebase_token(
         )
 
     try:
-        decoded_token = firebase_admin.auth.verify_id_token(token)
-        return decoded_token
-    except Exception as e:
-        import logging
-        logger = logging.getLogger("firebase_diag")
-        app = firebase_admin.get_app()
-        logger.error(f"Firebase token verification failed. Exception: {e.__class__.__name__}, Message: {str(e)}")
-        logger.error(f"Firebase Admin app name: {app.name}")
-        logger.error(f"Firebase Project ID: {app.project_id}")
-        
-        # Try to extract unverified claims just for logging issuer/audience
-        try:
-            from jose import jwt
-            unverified_claims = jwt.get_unverified_claims(token)
-            logger.error(f"Token Issuer (iss): {unverified_claims.get('iss')}")
-            logger.error(f"Token Audience (aud): {unverified_claims.get('aud')}")
-        except Exception as jwt_e:
-            logger.error(f"Could not extract unverified claims: {jwt_e}")
-
-        # Catching generic Exception from firebase_admin.auth to prevent
-        # exposing internal Firebase errors or stack traces to the client.
+        return firebase_auth.verify_id_token(token, check_revoked=True)
+    except firebase_auth.CertificateFetchError:
+        logger.error("Firebase public-key retrieval failed during ID token verification.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase authentication is temporarily unavailable.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except (
+        firebase_auth.ExpiredIdTokenError,
+        firebase_auth.RevokedIdTokenError,
+        firebase_auth.UserDisabledError,
+        firebase_auth.InvalidIdTokenError,
+    ) as error:
+        logger.info("Firebase ID token rejected: %s", error.__class__.__name__)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Firebase authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as error:
+        logger.error("Firebase ID token verification failed: %s", error.__class__.__name__)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired Firebase authentication token.",

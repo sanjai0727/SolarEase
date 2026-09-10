@@ -9,7 +9,7 @@ object FirebaseTokenProvider {
 
     suspend fun getFirebaseIdToken(forceRefresh: Boolean = false): String? {
         val currentUser = FirebaseAuth.getInstance().currentUser
-        Log.d(TAG, "Current Firebase user exists: ${currentUser != null}")
+        Log.d(TAG, "[LENS AUTH] Firebase user available: ${currentUser != null}")
         
         if (currentUser == null) {
             return null
@@ -18,14 +18,10 @@ object FirebaseTokenProvider {
         return try {
             val result = currentUser.getIdToken(forceRefresh).await()
             val token = result.token
-            Log.d(TAG, "Token successfully obtained: ${token != null}")
-            if (token != null) {
-                Log.d(TAG, "Token length: ${token.length}")
-                Log.d(TAG, "User UID: ${currentUser.uid}")
-            }
+            Log.d(TAG, "[LENS AUTH] Firebase token available: ${!token.isNullOrEmpty()}")
             token
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get Firebase token", e)
+            Log.w(TAG, "[LENS AUTH] Firebase ID token request failed: ${e.javaClass.simpleName}")
             null
         }
     }

@@ -65,7 +65,7 @@ def delete_appliance(
 @router.post("/analyze", response_model=AnalysisResponse)
 async def analyze_appliance_image(
     image: UploadFile = File(...),
-    current_user: User = Depends(get_user_from_firebase)
+    _firebase_token: dict = Depends(get_verified_firebase_token)
 ):
     if not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File provided is not an image")
