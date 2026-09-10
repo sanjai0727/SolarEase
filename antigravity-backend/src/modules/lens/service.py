@@ -59,16 +59,16 @@ class ApplianceService:
 class ApplianceAnalysisService:
     @staticmethod
     async def analyze_image(image_bytes: bytes, mime_type: str, source: str = "PHOTO") -> DetectionResult:
-        if not settings.GEMINI_LENS_API_KEY:
+        if not settings.GEMINI_API_KEY:
             raise HTTPException(
                 status_code=500,
-                detail="GEMINI_LENS_API_KEY is missing. Solar Lens requires its dedicated Gemini API key."
+                detail="GEMINI_API_KEY is missing. Solar Lens requires a Gemini API key."
             )
         
         logger.info(f"[LENS] Lens service started")
         logger.info(f"[LENS] Gemini model: {LENS_MODEL}")
         
-        client = genai.Client(api_key=settings.GEMINI_LENS_API_KEY)
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
         
         prompt = """
         You are the visual detection engine for SolarEase, a household energy analysis application.
