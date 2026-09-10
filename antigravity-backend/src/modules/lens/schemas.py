@@ -32,7 +32,18 @@ class ApplianceResponse(ApplianceBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-class AnalysisResponse(BaseModel):
-    detected_appliance: str
-    confidence: str
-    suggested_power_watts: float
+class BoundingBox(BaseModel):
+    left: float
+    top: float
+    right: float
+    bottom: float
+
+class Detection(BaseModel):
+    id: str
+    label: str
+    confidence: float
+    source: str
+    bounding_box: BoundingBox
+
+class DetectionResult(BaseModel):
+    detections: list[Detection]
