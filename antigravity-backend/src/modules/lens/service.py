@@ -197,8 +197,6 @@ class ApplianceAnalysisService:
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         image_data_url = f"data:{mime_type};base64,{image_b64}"
 
-        logger.info(f"[LENS DIAG] 4. OpenRouter request started (Model: {OPENROUTER_MODEL})")
-
         headers = {
             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
@@ -229,71 +227,154 @@ class ApplianceAnalysisService:
             "max_tokens": 1000,
         }
 
-        start_time = time.monotonic()
+        max_retries = 3
+        backoff_factor = 1.0
 
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    OPENROUTER_API_URL,
-                    headers=headers,
-                    json=payload,
-                )
+        for attempt in range(1, max_retries + 1):
+            logger.info(f"[LENS DIAG] 4. OpenRouter request started (Model: {OPENROUTER_MODEL}), Attempt {attempt}/{max_retries}")
+            start_time = time.monotonic()
 
-            elapsed_ms = int((time.monotonic() - start_time) * 1000)
-            logger.info(f"[LENS DIAG] 5. OpenRouter response received. Status: {response.status_code}, Latency: {elapsed_ms}ms")
-
-            # Handle OpenRouter HTTP errors
-            if response.status_code == 401:
-                logger.error("[LENS] OpenRouter authentication failed (401)")
-                raise HTTPException(status_code=500, detail="AI provider authentication failed. Please check server configuration.")
-
-            if response.status_code == 429:
-                logger.warning("[LENS] OpenRouter rate limit exceeded (429)")
-                raise HTTPException(status_code=503, detail="Solar Lens analysis is temporarily unavailable due to rate limits. Please try again.")
-
-            if response.status_code >= 500:
-                logger.error(f"[LENS] OpenRouter server error ({response.status_code})")
-                raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
-
-            if response.status_code != 200:
-                logger.error(f"[LENS] OpenRouter unexpected status: {response.status_code}")
-                raise HTTPException(status_code=500, detail=f"AI provider returned unexpected status: {response.status_code}")
-
-            # Parse OpenRouter response
             try:
-                resp_data = response.json()
-            except json.JSONDecodeError:
-                logger.error("[LENS] OpenRouter response is not valid JSON")
-                raise HTTPException(status_code=500, detail="AI provider returned an invalid response.")
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(
+                        OPENROUTER_API_URL,
+                        headers=headers,
+                        json=payload,
+                    )
 
-            # Extract the model's text content from the Chat Completions response
-            choices = resp_data.get("choices", [])
-            if not choices:
-                logger.warning("[LENS] OpenRouter response contains no choices")
-                return DetectionResult(detections=[])
+                elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                logger.info(f"[LENS DIAG] 5. OpenRouter response received. Status: {response.status_code}, Latency: {elapsed_ms}ms")
 
-            message = choices[0].get("message", {})
-            content_text = message.get("content", "")
+                # Permanent errors
+                if response.status_code == 401:
+                    logger.error("[LENS] OpenRouter authentication failed (401)")
+                    raise HTTPException(status_code=500, detail="AI provider authentication failed. Please check server configuration.")
 
-            if not content_text:
-                logger.warning("[LENS] OpenRouter response content is empty")
-                return DetectionResult(detections=[])
+                if response.status_code == 400:
+                    logger.error("[LENS] OpenRouter bad request (400)")
+                    try:
+                        err_data = response.json()
+                        logger.error(f"[LENS] OpenRouter error details: {err_data.get('error', {})}")
+                    except Exception:
+                        pass
+                    raise HTTPException(status_code=400, detail="AI provider rejected the request.")
 
-            response_length = len(content_text)
-            logger.info(f"[LENS DIAG] 5. OpenRouter content length: {response_length}")
-            logger.info(f"[LENS DIAG] 6. Response parsing started")
+                # Retryable HTTP errors
+                if response.status_code in (429, 502, 503, 504) or response.status_code >= 500:
+                    logger.warning(f"[LENS] OpenRouter retryable error status {response.status_code} on attempt {attempt}")
+                    if attempt == max_retries:
+                        raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
+                    await asyncio.sleep(backoff_factor * attempt)
+                    continue
 
-            return _parse_detections_json(content_text, source)
+                if response.status_code != 200:
+                    logger.error(f"[LENS] OpenRouter unexpected status: {response.status_code}")
+                    raise HTTPException(status_code=500, detail=f"AI provider returned unexpected status: {response.status_code}")
 
-        except HTTPException:
-            raise
-        except httpx.TimeoutException:
-            elapsed_ms = int((time.monotonic() - start_time) * 1000)
-            logger.error(f"[LENS] OpenRouter request timed out after {elapsed_ms}ms")
-            raise HTTPException(status_code=504, detail="Solar Lens analysis timed out. Please try again.")
-        except httpx.RequestError as e:
-            logger.error(f"[LENS] OpenRouter network error: {e.__class__.__name__}")
-            raise HTTPException(status_code=502, detail="Solar Lens could not reach the AI provider. Please check your connection.")
-        except Exception as e:
-            logger.exception(f"[LENS DIAG] 8. OpenRouter analysis failed with exception. Type: {e.__class__.__name__}")
-            raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+                # Parse OpenRouter response
+                try:
+                    resp_data = response.json()
+                except json.JSONDecodeError:
+                    logger.error("[LENS] OpenRouter response is not valid JSON")
+                    if attempt == max_retries:
+                        raise HTTPException(status_code=500, detail="AI provider returned an invalid response.")
+                    await asyncio.sleep(backoff_factor * attempt)
+                    continue
+
+                # Check for error field in response body (OpenRouter sometimes returns 200 with error object)
+                if "error" in resp_data:
+                    err_obj = resp_data["error"]
+                    err_code = err_obj.get("code") if isinstance(err_obj, dict) else None
+                    err_msg = err_obj.get("message", "unknown") if isinstance(err_obj, dict) else str(err_obj)
+                    err_meta = err_obj.get("metadata", {}) if isinstance(err_obj, dict) else {}
+                    err_type = err_meta.get("error_type", "") if isinstance(err_meta, dict) else ""
+
+                    logger.warning(
+                        f"[LENS] OpenRouter body-level error on attempt {attempt}/{max_retries}. "
+                        f"Model: {OPENROUTER_MODEL}, error.code: {err_code}, "
+                        f"error.message: {err_msg}, error_type: {err_type}"
+                    )
+
+                    # Permanent errors — do NOT retry regardless of attempt number
+                    _PERMANENT_ERROR_TYPES = {
+                        "authentication",         # invalid/revoked API key
+                        "permission_denied",      # key lacks permission
+                        "payment_required",       # account out of credits
+                        "invalid_request",        # malformed request / unsupported param
+                        "not_found",              # model does not exist
+                        "invalid_prompt",         # prompt rejected
+                        "precondition_failed",    # request precondition not met
+                        "unprocessable",          # request cannot be processed
+                    }
+                    _PERMANENT_HTTP_CODES = {401, 402, 403, 404, 422}
+
+                    is_permanent = (
+                        err_type in _PERMANENT_ERROR_TYPES
+                        or (isinstance(err_code, int) and err_code in _PERMANENT_HTTP_CODES)
+                    )
+
+                    if is_permanent:
+                        logger.error(
+                            f"[LENS] Permanent OpenRouter error — not retrying. "
+                            f"error_type: {err_type}, error.code: {err_code}"
+                        )
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"AI provider error: {err_msg}"
+                        )
+
+                    # Retryable errors — provider_unavailable, rate_limit, server, timeout, etc.
+                    if attempt == max_retries:
+                        raise HTTPException(
+                            status_code=503,
+                            detail="Solar Lens AI provider is temporarily unavailable. Please try again."
+                        )
+                    await asyncio.sleep(backoff_factor * attempt)
+                    continue
+
+                # Extract the model's text content from the Chat Completions response
+                choices = resp_data.get("choices", [])
+                if not choices:
+                    err_info = resp_data.get("error", "No choices returned")
+                    logger.warning(f"[LENS] OpenRouter response contains no choices. Error/Info: {err_info}")
+                    if attempt == max_retries:
+                        raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
+                    await asyncio.sleep(backoff_factor * attempt)
+                    continue
+
+                message = choices[0].get("message", {})
+                content_text = message.get("content", "")
+
+                if not content_text:
+                    logger.warning(f"[LENS] OpenRouter response content is empty on attempt {attempt}")
+                    if attempt == max_retries:
+                        raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
+                    await asyncio.sleep(backoff_factor * attempt)
+                    continue
+
+                response_length = len(content_text)
+                logger.info(f"[LENS DIAG] 5. OpenRouter content length: {response_length}")
+                logger.info(f"[LENS DIAG] 6. Response parsing started")
+
+                return _parse_detections_json(content_text, source)
+
+            except HTTPException:
+                raise
+            except httpx.TimeoutException:
+                elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                logger.error(f"[LENS] OpenRouter request timed out after {elapsed_ms}ms on attempt {attempt}")
+                if attempt == max_retries:
+                    raise HTTPException(status_code=504, detail="Solar Lens analysis timed out. Please try again.")
+                await asyncio.sleep(backoff_factor * attempt)
+            except httpx.RequestError as e:
+                logger.error(f"[LENS] OpenRouter network error on attempt {attempt}: {e.__class__.__name__}")
+                if attempt == max_retries:
+                    raise HTTPException(status_code=502, detail="Solar Lens could not reach the AI provider. Please check your connection.")
+                await asyncio.sleep(backoff_factor * attempt)
+            except Exception as e:
+                logger.exception(f"[LENS DIAG] 8. OpenRouter analysis failed with exception on attempt {attempt}. Type: {e.__class__.__name__}")
+                if attempt == max_retries:
+                    raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+                await asyncio.sleep(backoff_factor * attempt)
+
+        raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable after multiple attempts.")
