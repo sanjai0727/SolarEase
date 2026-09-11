@@ -118,7 +118,8 @@ class ApplianceAnalysisService:
         for attempt in range(1, max_attempts + 1):
             try:
                 logger.info(f"[LENS DIAG] 4. Gemini request started (Model: {LENS_MODEL}, Attempt: {attempt})")
-                response = client.models.generate_content(
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
                     model=LENS_MODEL,
                     contents=[
                         prompt,
