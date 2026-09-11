@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     # Gemini
     GEMINI_API_KEY: str = ""
 
+    # OpenRouter (temporary testing provider)
+    OPENROUTER_API_KEY: str = ""
+
+    # AI Provider configuration is removed as Solar Lens uses OpenRouter exclusively
+
     @property
     def get_cors_origins(self) -> list[str]:
         try:
