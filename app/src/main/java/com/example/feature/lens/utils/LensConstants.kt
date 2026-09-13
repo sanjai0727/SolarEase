@@ -1,5 +1,10 @@
 package com.example.feature.lens.utils
 
 object LensConstants {
-    const val DEFAULT_TARIFF_RATE = 6.0f
+    @Deprecated(
+        message = "Use ApplianceMaster.authoritativeTariffRate or calculateMonthlyCost directly",
+        replaceWith = ReplaceWith("ApplianceMaster.authoritativeTariffRate.toFloat()", "com.example.feature.lens.utils.ApplianceMaster")
+    )
+    val DEFAULT_TARIFF_RATE: Float
+        get() = ApplianceMaster.authoritativeTariffRate.toFloat()
 }

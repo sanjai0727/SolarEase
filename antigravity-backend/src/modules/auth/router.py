@@ -140,18 +140,9 @@ def logout(
     response_model=UserResponse
 )
 def get_me(
-    firebase_claims: dict = Depends(get_verified_firebase_token),
-    service: AuthService = Depends(get_auth_service),
+    current_user: User = Depends(get_current_user),
 ):
-    firebase_uid = firebase_claims.get("uid")
-    user = service.repository.get_user_by_firebase_uid(firebase_uid)
-    if not user:
-        from fastapi import HTTPException, status
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found."
-        )
-    return user
+    return current_user
 
 
 from src.modules.auth.schemas import UserUpdateRequest
@@ -161,18 +152,10 @@ from src.modules.auth.schemas import UserUpdateRequest
 )
 def update_me(
     request: UserUpdateRequest,
-    firebase_claims: dict = Depends(get_verified_firebase_token),
+    current_user: User = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
 ):
-    firebase_uid = firebase_claims.get("uid")
-    user = service.repository.get_user_by_firebase_uid(firebase_uid)
-    if not user:
-        from fastapi import HTTPException, status
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found."
-        )
-    return service.update_profile(user, request)
+    return service.update_profile(current_user, request)
 
 
 @router.get("/session")

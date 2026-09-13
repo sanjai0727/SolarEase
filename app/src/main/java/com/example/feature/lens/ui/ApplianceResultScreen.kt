@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,7 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.feature.lens.utils.LensConstants
+import com.example.feature.lens.utils.ApplianceMaster
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +38,10 @@ fun ApplianceResultScreen(
             TopAppBar(
                 title = { Text("Analysis Result") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        viewModel.returnToReview()
+                        onNavigateBack()
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -148,7 +152,8 @@ fun ApplianceResultScreen(
                             viewModel.restartScanning()
                             onScanAnother()
                         },
-                        onNavigateHome = onNavigateHome
+                        onNavigateHome = onNavigateHome,
+                        onRetrySave = { viewModel.retrySaveFailed() }
                     )
                 }
                 else -> {}
@@ -157,17 +162,18 @@ fun ApplianceResultScreen(
     }
 }
 
-// ── Analytics Constants ───────────────────────────────────────────
-
-// TARIFF_RATE is now imported from LensConstants
-
 // ── Computation helpers ───────────────────────────────────────────
 private fun monthlyKwh(appliance: EditableAppliance): Float {
-    return (appliance.powerWatts * appliance.usageHoursPerDay * appliance.monthlyUsageDays * appliance.quantity) / 1000f
+    return ApplianceMaster.calculateMonthlyKwh(
+        powerWatts = appliance.powerWatts,
+        dailyUsageHours = appliance.usageHoursPerDay,
+        monthlyUsageDays = appliance.monthlyUsageDays,
+        quantity = appliance.quantity
+    )
 }
 
 private fun monthlyCost(appliance: EditableAppliance): Float {
-    return monthlyKwh(appliance) * LensConstants.DEFAULT_TARIFF_RATE
+    return ApplianceMaster.calculateMonthlyCost(monthlyKwh(appliance))
 }
 
 // ── Analytics Content ─────────────────────────────────────────────
@@ -175,7 +181,8 @@ private fun monthlyCost(appliance: EditableAppliance): Float {
 private fun AnalyticsContent(
     state: LensUiState.Analytics,
     onScanAgain: () -> Unit,
-    onNavigateHome: () -> Unit
+    onNavigateHome: () -> Unit,
+    onRetrySave: () -> Unit
 ) {
     val appliances = state.appliances
 
@@ -189,7 +196,7 @@ private fun AnalyticsContent(
         totalConnectedLoad += (a.powerWatts * a.quantity)
         totalMonthlyKwh += monthlyKwh(a)
     }
-    val totalMonthlyCost = totalMonthlyKwh * LensConstants.DEFAULT_TARIFF_RATE
+    val totalMonthlyCost = ApplianceMaster.calculateMonthlyCost(totalMonthlyKwh)
 
     LazyColumn(
         modifier = Modifier
@@ -199,40 +206,144 @@ private fun AnalyticsContent(
     ) {
         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-        // ── Scan Complete Banner ──
+        // ── Save Status / Scan Complete Banner ──
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Column {
-                        Text(
-                            text = "Scan Complete",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Duration: ${state.scanDurationMillis / 1000} seconds",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            when (state.saveStatus) {
+                SaveStatus.SAVING -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(26.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.5.dp
+                            )
+                            Column {
+                                Text(
+                                    text = "Saving to profile...",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Persisting confirmed appliances to your profile",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                SaveStatus.SUCCESS -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Scan Complete",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Duration: ${state.scanDurationMillis / 1000} seconds • Saved to profile",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                SaveStatus.FAILED, SaveStatus.PARTIAL_FAILURE -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (state.saveStatus == SaveStatus.FAILED) {
+                                            "Failed to save to profile"
+                                        } else {
+                                            "Partially saved to profile (${state.savedApplianceIds.size}/${appliances.size} saved)"
+                                        },
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Text(
+                                        text = state.errorMessage ?: "Could not persist appliances to database.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                            Button(
+                                onClick = onRetrySave,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Retry Save", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                     }
                 }
             }
@@ -440,7 +551,7 @@ private fun AnalyticsContent(
         // ── Tariff Note ──
         item {
             Text(
-                text = "Tariff used for calculation: ₹${String.format("%.2f", LensConstants.DEFAULT_TARIFF_RATE)} per kWh (Average domestic tariff)",
+                text = "Tariff used for calculation: ₹${String.format("%.2f", ApplianceMaster.authoritativeTariffRate)} per kWh (SolarEase standard domestic tariff)",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 4.dp)

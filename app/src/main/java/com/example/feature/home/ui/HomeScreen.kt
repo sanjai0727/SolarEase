@@ -12,6 +12,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.example.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -170,13 +175,24 @@ fun HomeRoute(
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(BrandGreen.copy(alpha = 0.08f), Color.Transparent),
+                        startY = 0f,
+                        endY = 800f
+                    )
+                )
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+            ) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── 1. Personal Header ──────────────────────────────────
@@ -207,9 +223,10 @@ fun HomeRoute(
                     title = "Bill Calculator",
                     description = "Estimate your bill",
                     icon = Icons.Default.Calculate,
-                    backgroundColor = Color(0xFFEEF7EE),
-                    accentColor = Color(0xFF2C7D38),
-                    decorationType = DecorationType.LEAVES,
+                    backgroundColor = Color(0xFFE6F4EA), // Stronger green
+                    accentColor = Color(0xFF1E8E3E),
+                    decorationResId = R.drawable.ic_decor_bar_graph,
+                    decorationAlpha = 0.25f,
                     onClick = onNavigateToBillCalculator,
                     modifier = Modifier.weight(1f)
                 )
@@ -217,9 +234,10 @@ fun HomeRoute(
                     title = "TNEB Status",
                     description = "Check payment status",
                     icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                    backgroundColor = Color(0xFFF0F5FF),
-                    accentColor = Color(0xFF1976D2),
-                    decorationType = DecorationType.WAVES,
+                    backgroundColor = Color(0xFFE8F0FE), // Stronger blue
+                    accentColor = Color(0xFF1A73E8),
+                    decorationResId = R.drawable.ic_decor_electricity_tower,
+                    decorationAlpha = 0.20f,
                     onClick = onNavigateToTnebBillStatus,
                     modifier = Modifier.weight(1f)
                 )
@@ -235,9 +253,10 @@ fun HomeRoute(
                     title = "Chatbot",
                     description = "Ask about electricity",
                     icon = Icons.AutoMirrored.Filled.Chat,
-                    backgroundColor = Color(0xFFE8FAF5),
+                    backgroundColor = Color(0xFFE0F2F1), // Stronger teal
                     accentColor = Color(0xFF00897B),
-                    decorationType = DecorationType.BUBBLES,
+                    decorationResId = R.drawable.ic_decor_chatbot,
+                    decorationAlpha = 0.20f,
                     onClick = onNavigateToElectricityChatbot,
                     modifier = Modifier.weight(1f)
                 )
@@ -245,9 +264,10 @@ fun HomeRoute(
                     title = "SolarEase Lens",
                     description = "Scan & analyze",
                     icon = Icons.Default.CameraAlt,
-                    backgroundColor = Color(0xFFF3EDFF),
-                    accentColor = Color(0xFF7E57C2),
-                    decorationType = DecorationType.LENS,
+                    backgroundColor = Color(0xFFF3E5F5), // Stronger purple
+                    accentColor = Color(0xFF8E24AA),
+                    decorationResId = R.drawable.ic_decor_frame,
+                    decorationAlpha = 0.25f,
                     onClick = onNavigateToSolarEaseLens,
                     modifier = Modifier.weight(1f)
                 )
@@ -263,6 +283,7 @@ fun HomeRoute(
             SolarJourneyCard(onClick = onNavigateToSolarPanel)
 
             Spacer(modifier = Modifier.height(40.dp)) // Extra padding for bottom nav
+        }
         }
     }
 }
@@ -376,56 +397,25 @@ private fun EnergyOverviewCard() {
             .background(
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFFFFF9E6), // Warm cream
-                        Color(0xFFFFECB3)  // Soft yellow
+                        Color(0xFFFFF3C4), // Stronger warm cream
+                        Color(0xFFFFD54F)  // Stronger yellow
                     ),
                     start = Offset(0f, 0f),
                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                 )
             )
     ) {
-        // Decorative Canvas Background
-        Canvas(modifier = Modifier.matchParentSize()) {
-            val width = size.width
-            val height = size.height
-
-            // Sun glow
-            drawCircle(
-                color = Color(0xFFFFD54F).copy(alpha = 0.4f),
-                radius = 120.dp.toPx(),
-                center = Offset(width * 0.85f, height * 0.2f)
-            )
-            // Sun core
-            drawCircle(
-                color = Color(0xFFFFCA28).copy(alpha = 0.8f),
-                radius = 40.dp.toPx(),
-                center = Offset(width * 0.85f, height * 0.2f)
-            )
-
-            // Soft hills
-            val hillPath = Path().apply {
-                moveTo(0f, height * 0.7f)
-                quadraticBezierTo(width * 0.3f, height * 0.6f, width * 0.6f, height * 0.8f)
-                quadraticBezierTo(width * 0.8f, height * 0.9f, width, height * 0.75f)
-                lineTo(width, height)
-                lineTo(0f, height)
-                close()
-            }
-            drawPath(hillPath, color = Color(0xFFFFE082).copy(alpha = 0.3f))
-            
-            // Soft clouds
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.6f),
-                topLeft = Offset(width * 0.55f, height * 0.35f),
-                size = Size(60.dp.toPx(), 16.dp.toPx()),
-                cornerRadius = CornerRadius(8.dp.toPx())
-            )
-            drawCircle(
-                color = Color.White.copy(alpha = 0.6f),
-                radius = 12.dp.toPx(),
-                center = Offset(width * 0.55f + 16.dp.toPx(), height * 0.35f + 4.dp.toPx())
-            )
-        }
+        // Decorative Background SVG
+        Image(
+            painter = painterResource(id = R.drawable.ic_decor_sun),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 40.dp, y = (-40).dp)
+                .size(200.dp),
+            contentScale = ContentScale.Fit
+            // Removed alpha to keep full color saturation of the sun
+        )
 
         // Content
         Column(
@@ -439,7 +429,14 @@ private fun EnergyOverviewCard() {
                     tint = Color(0xFFF57F17),
                     modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.ic_decor_energy),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                    // Removed alpha to keep strong yellow color
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Energy Overview",
                     fontSize = 15.sp,
@@ -548,12 +545,6 @@ private fun SectionLabel(text: String) {
     )
 }
 
-// ─── Action Card Types ──────────────────────────────────────────────────────────
-
-enum class DecorationType {
-    LEAVES, WAVES, BUBBLES, LENS
-}
-
 // ─── Action Card ────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -564,7 +555,8 @@ private fun ActionCard(
     icon: ImageVector,
     backgroundColor: Color,
     accentColor: Color,
-    decorationType: DecorationType,
+    decorationResId: Int,
+    decorationAlpha: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -580,43 +572,25 @@ private fun ActionCard(
         onClick = onClick,
         modifier = modifier
             .height(160.dp)
-            .scale(scale),
+            .scale(scale)
+            .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(24.dp)), // Colored border
         shape = RoundedCornerShape(24.dp),
         color = backgroundColor,
         interactionSource = interactionSource,
-        shadowElevation = 0.dp // Reference cards are flat/soft
+        shadowElevation = 0.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background Decoration
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val baseColor = accentColor.copy(alpha = 0.05f)
-                val w = size.width
-                val h = size.height
-                
-                when (decorationType) {
-                    DecorationType.LEAVES -> {
-                        drawCircle(color = baseColor, radius = 40.dp.toPx(), center = Offset(w * 0.8f, h * 0.3f))
-                        drawCircle(color = baseColor, radius = 25.dp.toPx(), center = Offset(w * 0.9f, h * 0.5f))
-                    }
-                    DecorationType.WAVES -> {
-                        val path = Path().apply {
-                            moveTo(w * 0.3f, h)
-                            quadraticBezierTo(w * 0.6f, h * 0.6f, w, h * 0.4f)
-                            lineTo(w, h)
-                            close()
-                        }
-                        drawPath(path, color = baseColor)
-                    }
-                    DecorationType.BUBBLES -> {
-                        drawCircle(color = baseColor, radius = 30.dp.toPx(), center = Offset(w * 0.7f, h * 0.4f))
-                        drawCircle(color = baseColor, radius = 15.dp.toPx(), center = Offset(w * 0.9f, h * 0.6f))
-                    }
-                    DecorationType.LENS -> {
-                        drawCircle(color = baseColor, radius = 45.dp.toPx(), center = Offset(w * 0.8f, h * 0.4f))
-                        drawCircle(color = Color.Transparent, radius = 35.dp.toPx(), center = Offset(w * 0.8f, h * 0.4f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx()))
-                    }
-                }
-            }
+            // Decorative SVG behind content, clipped by Surface
+            Image(
+                painter = painterResource(id = decorationResId),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 12.dp, y = 12.dp)
+                    .size(110.dp), // Larger so it's a visible background element
+                contentScale = ContentScale.Fit,
+                alpha = decorationAlpha // Individual opacity
+            )
 
             Column(
                 modifier = Modifier

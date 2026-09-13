@@ -27,9 +27,12 @@ data class DetectedAppliance(
     val boundingBoxRelative: android.graphics.RectF,
     val label: String,
     val powerEstimateStr: String,
-    val powerWatts: Float
+    val powerWatts: Float,
+    val isVerified: Boolean = false,
+    val isVerifying: Boolean = false
 )
 
+@Deprecated("Replaced by still-frame Camera Scan with OpenRouter/Nemotron AI analysis.")
 class ApplianceAnalyzer(
     private val onAppliancesDetected: (List<DetectedAppliance>) -> Unit
 ) : ImageAnalysis.Analyzer {

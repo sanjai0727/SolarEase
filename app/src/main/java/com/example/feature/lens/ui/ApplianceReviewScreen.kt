@@ -1,5 +1,6 @@
 package com.example.feature.lens.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,10 +31,99 @@ fun ApplianceReviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    BackHandler {
+        viewModel.resetToIdle()
+        onNavigateBack()
+    }
+
     LaunchedEffect(uiState) {
         if (uiState is LensUiState.Analytics) {
             onNavigateToResult()
         }
+    }
+
+    if (uiState is LensUiState.Processing) {
+        androidx.activity.compose.BackHandler {
+            viewModel.cancelAnalysis()
+        }
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(24.dp)
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = (uiState as LensUiState.Processing).message,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                OutlinedButton(onClick = { viewModel.cancelAnalysis() }) {
+                    Text("Cancel")
+                }
+            }
+        }
+        return
+    }
+
+    if (uiState is LensUiState.SavingReview) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(24.dp)
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = (uiState as LensUiState.SavingReview).message,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        return
+    }
+
+    if (uiState is LensUiState.Error) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete, // Or warning icon
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Couldn't analyze the images.",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = (uiState as LensUiState.Error).message,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = onNavigateBack) {
+                    Text("Go Back & Try Again")
+                }
+            }
+        }
+        return
+    }
+
+    if (uiState is LensUiState.Scanning || uiState is LensUiState.Idle) {
+        // If state reverted to idle or scanning, we shouldn't be on the review screen.
+        LaunchedEffect(Unit) {
+            onNavigateBack()
+        }
+        return
     }
 
     if (uiState !is LensUiState.Review) {
@@ -57,7 +147,10 @@ fun ApplianceReviewScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        viewModel.resetToIdle()
+                        onNavigateBack()
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -129,27 +222,58 @@ fun ApplianceReviewScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            item { Spacer(modifier = Modifier.height(4.dp)) }
-            items(appliances) { appliance ->
-                EditableApplianceCard(
-                    appliance = appliance,
-                    onUpdate = { id, label, watts, usageHours, monthlyDays, qty ->
-                        viewModel.updateReviewAppliance(id, label, watts, usageHours, monthlyDays, qty)
-                    },
-                    onRemove = { id ->
-                        viewModel.removeReviewAppliance(id)
+        if (appliances.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = "No supported appliances were detected.",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Try another photo or scan the room again.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(onClick = onNavigateBack) {
+                        Text("Try Again")
                     }
-                )
+                }
             }
-            item {
-                Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bar
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+                items(appliances) { appliance ->
+                    EditableApplianceCard(
+                        appliance = appliance,
+                        onUpdate = { id, label, watts, usageHours, monthlyDays, qty ->
+                            viewModel.updateReviewAppliance(id, label, watts, usageHours, monthlyDays, qty)
+                        },
+                        onRemove = { id ->
+                            viewModel.removeReviewAppliance(id)
+                        }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bar
+                }
             }
         }
     }

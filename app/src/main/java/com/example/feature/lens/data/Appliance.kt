@@ -28,3 +28,25 @@ data class ApplianceCreateRequest(
     @Json(name = "monthly_consumption_kwh") val monthlyConsumptionKwh: Float,
     @Json(name = "estimated_monthly_cost") val estimatedMonthlyCost: Float
 )
+
+@JsonClass(generateAdapter = true)
+data class BoundingBox(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float
+)
+
+@JsonClass(generateAdapter = true)
+data class Detection(
+    val id: String,
+    val label: String,
+    val confidence: Float,
+    val source: String,
+    @Json(name = "bounding_box") val boundingBox: BoundingBox
+)
+
+@JsonClass(generateAdapter = true)
+data class DetectionResult(
+    val detections: List<Detection>
+)

@@ -112,12 +112,28 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
         
         navigation<Screen.SolarEaseLens>(startDestination = Screen.LensMain) {
             composable<Screen.LensMain> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<Screen.SolarEaseLens>()
+                }
+                val lensViewModel: LensViewModel = viewModel(
+                    parentEntry,
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            return LensViewModel(LensRepository(RetrofitClient.lensApi)) as T
+                        }
+                    }
+                )
                 LensLandingScreen(
+                    viewModel = lensViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onOpenCamera = { navController.navigate(Screen.LensCamera) }
+                    onOpenCamera = {
+                        lensViewModel.resetToIdle()
+                        navController.navigate(Screen.LensCamera)
+                    },
+                    onNavigateToReview = { navController.navigate(Screen.LensReview) { launchSingleTop = true } }
                 )
             }
-            
+
             composable<Screen.LensCamera> { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry<Screen.SolarEaseLens>()
@@ -133,7 +149,12 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 LensScreen(
                     viewModel = lensViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToReview = { navController.navigate(Screen.LensReview) }
+                    onNavigateToReview = {
+                        navController.navigate(Screen.LensReview) {
+                            popUpTo(Screen.LensCamera) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
             
@@ -156,10 +177,10 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 val lensViewModel: LensViewModel = viewModel(parentEntry)
                 com.example.feature.lens.ui.ApplianceReviewScreen(
                     viewModel = lensViewModel,
-                    onNavigateBack = { 
+                    onNavigateBack = {
                         // Returning from Review discards the scan and goes back to Main
-                        lensViewModel.restartScanning()
-                        navController.popBackStack(Screen.LensMain, false) 
+                        lensViewModel.resetToIdle()
+                        navController.popBackStack(Screen.LensMain, false)
                     },
                     onNavigateToResult = { navController.navigate(Screen.LensResult) }
                 )

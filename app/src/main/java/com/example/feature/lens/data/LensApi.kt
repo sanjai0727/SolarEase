@@ -26,4 +26,11 @@ interface LensApi {
 
     @DELETE("lens/appliances/{id}")
     suspend fun deleteAppliance(@Path("id") id: String): Response<Unit>
+
+    @retrofit2.http.Multipart
+    @POST("lens/analyze")
+    suspend fun analyzeImage(
+        @retrofit2.http.Part image: okhttp3.MultipartBody.Part,
+        @retrofit2.http.Part("source") source: okhttp3.RequestBody
+    ): Response<DetectionResult>
 }

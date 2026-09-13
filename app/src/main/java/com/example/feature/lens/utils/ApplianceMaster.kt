@@ -51,4 +51,32 @@ object ApplianceMaster {
     fun getDefaultWattage(name: String): Float {
         return getDefaults(name)?.defaultWattage ?: 100f
     }
+
+    /**
+     * Authoritative calculation for appliance monthly energy consumption in kWh.
+     * Formula: (Wattage * Daily Usage Hours * Monthly Usage Days * Quantity) / 1000
+     */
+    fun calculateMonthlyKwh(
+        powerWatts: Float,
+        dailyUsageHours: Float,
+        monthlyUsageDays: Int,
+        quantity: Int = 1
+    ): Float {
+        val power = if (powerWatts > 0f) powerWatts else 1f
+        return (power * dailyUsageHours * monthlyUsageDays * quantity.coerceAtLeast(1)) / 1000f
+    }
+
+    /**
+     * Authoritative calculation for appliance estimated monthly cost in ₹.
+     * Uses SolarEase standard domestic grid tariff: EstimateConstants.TARIFF_PER_KWH (₹7.0/kWh).
+     */
+    fun calculateMonthlyCost(monthlyKwh: Float): Float {
+        return (monthlyKwh * com.example.feature.assessment.util.EstimateConstants.TARIFF_PER_KWH).toFloat()
+    }
+
+    /**
+     * Authoritative tariff rate in ₹ per kWh.
+     */
+    val authoritativeTariffRate: Double
+        get() = com.example.feature.assessment.util.EstimateConstants.TARIFF_PER_KWH
 }

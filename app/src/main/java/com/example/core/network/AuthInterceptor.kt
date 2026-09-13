@@ -12,12 +12,13 @@ class AuthInterceptor : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
-        
+
         // Skip auth for endpoints that don't need the SolarEase access token
         if (original.url.encodedPath.contains("/auth/firebase")) {
             return chain.proceed(original)
         }
 
+        // The /lens/analyze endpoint requires a Firebase ID token
         if (original.url.encodedPath.contains("/lens/analyze")) {
             val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
             Log.d(TAG, "[LENS AUTH] Firebase user available: ${currentUser != null}")
@@ -28,6 +29,7 @@ class AuthInterceptor : Interceptor {
             }
 
             val firebaseToken = runBlocking { FirebaseTokenProvider.getFirebaseIdToken() }
+
             Log.d(TAG, "[LENS AUTH] Firebase token available: ${!firebaseToken.isNullOrEmpty()}")
             if (firebaseToken.isNullOrEmpty()) {
                 Log.w(TAG, "[LENS AUTH] Authorization header present: false")
@@ -41,12 +43,12 @@ class AuthInterceptor : Interceptor {
             return chain.proceed(authenticatedRequest)
         }
 
-        val token = runBlocking { FirebaseTokenProvider.getFirebaseIdToken() }
+        val token = com.example.core.session.UserSession.accessToken
         val requestBuilder = original.newBuilder()
         if (!token.isNullOrEmpty()) {
             requestBuilder.header("Authorization", "Bearer $token")
         } else {
-            Log.w("AuthInterceptor", "Firebase ID token is null or empty, proceeding without Authorization header")
+            Log.w(TAG, "SolarEase access token is null or empty, proceeding without Authorization header")
         }
         return chain.proceed(requestBuilder.build())
     }

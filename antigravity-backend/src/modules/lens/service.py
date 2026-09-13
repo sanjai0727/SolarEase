@@ -109,6 +109,21 @@ class ApplianceService:
         db.commit()
 
 
+import random
+
+_PERMANENT_ERROR_TYPES = {
+    "authentication",         # invalid/revoked API key
+    "permission_denied",      # key lacks permission
+    "payment_required",       # account out of credits
+    "invalid_request",        # malformed request / unsupported param
+    "not_found",              # model does not exist
+    "invalid_prompt",         # prompt rejected
+    "precondition_failed",    # request precondition not met
+    "unprocessable",          # request cannot be processed
+}
+_PERMANENT_HTTP_CODES = {401, 402, 403, 404, 422}
+
+
 def _parse_detections_json(raw_text: str, source: str) -> DetectionResult:
     """Parse detection JSON from model response text.
 
@@ -116,7 +131,7 @@ def _parse_detections_json(raw_text: str, source: str) -> DetectionResult:
     - Clean JSON
     - Markdown code fences (```json ... ```)
     - Extraneous whitespace / newlines
-    - Malformed JSON (returns empty detections)
+    - Malformed JSON (raises ValueError to prevent masquerading as empty detections)
     """
     text = raw_text.strip()
 
@@ -135,10 +150,18 @@ def _parse_detections_json(raw_text: str, source: str) -> DetectionResult:
                 data = json.loads(obj_match.group(0))
             except json.JSONDecodeError:
                 logger.warning("[LENS] Failed to parse model response as JSON")
-                return DetectionResult(detections=[])
+                raise ValueError("AI provider returned invalid JSON in model response")
         else:
             logger.warning("[LENS] No JSON object found in model response")
-            return DetectionResult(detections=[])
+            raise ValueError("No JSON object found in AI provider model response")
+
+    if not isinstance(data, dict):
+        logger.warning("[LENS] Model response JSON root is not an object")
+        raise ValueError("AI provider response root is not a JSON object")
+
+    if "detections" not in data or not isinstance(data["detections"], list):
+        logger.warning("[LENS] Model response JSON missing 'detections' list")
+        raise ValueError("AI provider response missing 'detections' list")
 
     parsed_detections = []
     for det in data.get("detections", []):
@@ -228,7 +251,8 @@ class ApplianceAnalysisService:
         }
 
         max_retries = 3
-        backoff_factor = 1.0
+        base_backoff = 1.5
+        max_backoff = 8.0
 
         for attempt in range(1, max_retries + 1):
             logger.info(f"[LENS DIAG] 4. OpenRouter request started (Model: {OPENROUTER_MODEL}), Attempt {attempt}/{max_retries}")
@@ -259,12 +283,50 @@ class ApplianceAnalysisService:
                         pass
                     raise HTTPException(status_code=400, detail="AI provider rejected the request.")
 
-                # Retryable HTTP errors
+                # Retryable HTTP errors (429, 502, 503, 504, 5xx)
                 if response.status_code in (429, 502, 503, 504) or response.status_code >= 500:
-                    logger.warning(f"[LENS] OpenRouter retryable error status {response.status_code} on attempt {attempt}")
+                    err_code = None
+                    err_msg = ""
+                    err_type = ""
+                    try:
+                        err_data = response.json()
+                        if isinstance(err_data, dict) and "error" in err_data:
+                            err_obj = err_data["error"]
+                            if isinstance(err_obj, dict):
+                                err_code = err_obj.get("code")
+                                err_msg = err_obj.get("message", "")
+                                err_meta = err_obj.get("metadata", {})
+                                if isinstance(err_meta, dict):
+                                    err_type = err_meta.get("error_type", "")
+                            else:
+                                err_msg = str(err_obj)
+                    except Exception:
+                        err_msg = response.text[:200]
+
+                    logger.warning(
+                        f"[LENS] OpenRouter retryable error on attempt {attempt}/{max_retries}. "
+                        f"Status: {response.status_code}, error.code: {err_code}, "
+                        f"error_type: {err_type}, error.message: {err_msg}, Latency: {elapsed_ms}ms"
+                    )
+
+                    # Do not retry permanent error types
+                    if err_type in _PERMANENT_ERROR_TYPES or (isinstance(err_code, int) and err_code in _PERMANENT_HTTP_CODES):
+                        logger.error(
+                            f"[LENS] Permanent OpenRouter error encountered with status {response.status_code} — not retrying. "
+                            f"error_type: {err_type}, error.code: {err_code}"
+                        )
+                        raise HTTPException(status_code=500, detail=f"AI provider error: {err_msg}")
+
                     if attempt == max_retries:
-                        raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
-                    await asyncio.sleep(backoff_factor * attempt)
+                        raise HTTPException(
+                            status_code=503,
+                            detail="Solar Lens AI provider is temporarily unavailable. Please try again."
+                        )
+
+                    backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                    sleep_time = random.uniform(0.5, 1.0) * backoff
+                    logger.info(f"[LENS] Backoff sleep {sleep_time:.2f}s before attempt {attempt + 1}")
+                    await asyncio.sleep(sleep_time)
                     continue
 
                 if response.status_code != 200:
@@ -278,7 +340,9 @@ class ApplianceAnalysisService:
                     logger.error("[LENS] OpenRouter response is not valid JSON")
                     if attempt == max_retries:
                         raise HTTPException(status_code=500, detail="AI provider returned an invalid response.")
-                    await asyncio.sleep(backoff_factor * attempt)
+                    backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                    sleep_time = random.uniform(0.5, 1.0) * backoff
+                    await asyncio.sleep(sleep_time)
                     continue
 
                 # Check for error field in response body (OpenRouter sometimes returns 200 with error object)
@@ -292,21 +356,8 @@ class ApplianceAnalysisService:
                     logger.warning(
                         f"[LENS] OpenRouter body-level error on attempt {attempt}/{max_retries}. "
                         f"Model: {OPENROUTER_MODEL}, error.code: {err_code}, "
-                        f"error.message: {err_msg}, error_type: {err_type}"
+                        f"error.message: {err_msg}, error_type: {err_type}, Latency: {elapsed_ms}ms"
                     )
-
-                    # Permanent errors — do NOT retry regardless of attempt number
-                    _PERMANENT_ERROR_TYPES = {
-                        "authentication",         # invalid/revoked API key
-                        "permission_denied",      # key lacks permission
-                        "payment_required",       # account out of credits
-                        "invalid_request",        # malformed request / unsupported param
-                        "not_found",              # model does not exist
-                        "invalid_prompt",         # prompt rejected
-                        "precondition_failed",    # request precondition not met
-                        "unprocessable",          # request cannot be processed
-                    }
-                    _PERMANENT_HTTP_CODES = {401, 402, 403, 404, 422}
 
                     is_permanent = (
                         err_type in _PERMANENT_ERROR_TYPES
@@ -329,7 +380,9 @@ class ApplianceAnalysisService:
                             status_code=503,
                             detail="Solar Lens AI provider is temporarily unavailable. Please try again."
                         )
-                    await asyncio.sleep(backoff_factor * attempt)
+                    backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                    sleep_time = random.uniform(0.5, 1.0) * backoff
+                    await asyncio.sleep(sleep_time)
                     continue
 
                 # Extract the model's text content from the Chat Completions response
@@ -339,7 +392,9 @@ class ApplianceAnalysisService:
                     logger.warning(f"[LENS] OpenRouter response contains no choices. Error/Info: {err_info}")
                     if attempt == max_retries:
                         raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
-                    await asyncio.sleep(backoff_factor * attempt)
+                    backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                    sleep_time = random.uniform(0.5, 1.0) * backoff
+                    await asyncio.sleep(sleep_time)
                     continue
 
                 message = choices[0].get("message", {})
@@ -349,32 +404,52 @@ class ApplianceAnalysisService:
                     logger.warning(f"[LENS] OpenRouter response content is empty on attempt {attempt}")
                     if attempt == max_retries:
                         raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable. Please try again.")
-                    await asyncio.sleep(backoff_factor * attempt)
+                    backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                    sleep_time = random.uniform(0.5, 1.0) * backoff
+                    await asyncio.sleep(sleep_time)
                     continue
 
                 response_length = len(content_text)
                 logger.info(f"[LENS DIAG] 5. OpenRouter content length: {response_length}")
                 logger.info(f"[LENS DIAG] 6. Response parsing started")
 
-                return _parse_detections_json(content_text, source)
+                try:
+                    return _parse_detections_json(content_text, source)
+                except ValueError as ve:
+                    logger.warning(f"[LENS] Model response could not be parsed on attempt {attempt}/{max_retries}: {ve}")
+                    if attempt == max_retries:
+                        raise HTTPException(
+                            status_code=502,
+                            detail="AI provider returned an unparseable detection format. Please try again."
+                        )
+                    backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                    sleep_time = random.uniform(0.5, 1.0) * backoff
+                    await asyncio.sleep(sleep_time)
+                    continue
 
             except HTTPException:
                 raise
             except httpx.TimeoutException:
                 elapsed_ms = int((time.monotonic() - start_time) * 1000)
-                logger.error(f"[LENS] OpenRouter request timed out after {elapsed_ms}ms on attempt {attempt}")
+                logger.error(f"[LENS] OpenRouter request timed out after {elapsed_ms}ms on attempt {attempt}/{max_retries}")
                 if attempt == max_retries:
                     raise HTTPException(status_code=504, detail="Solar Lens analysis timed out. Please try again.")
-                await asyncio.sleep(backoff_factor * attempt)
+                backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                sleep_time = random.uniform(0.5, 1.0) * backoff
+                await asyncio.sleep(sleep_time)
             except httpx.RequestError as e:
-                logger.error(f"[LENS] OpenRouter network error on attempt {attempt}: {e.__class__.__name__}")
+                logger.error(f"[LENS] OpenRouter network error on attempt {attempt}/{max_retries}: {e.__class__.__name__}")
                 if attempt == max_retries:
                     raise HTTPException(status_code=502, detail="Solar Lens could not reach the AI provider. Please check your connection.")
-                await asyncio.sleep(backoff_factor * attempt)
+                backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                sleep_time = random.uniform(0.5, 1.0) * backoff
+                await asyncio.sleep(sleep_time)
             except Exception as e:
-                logger.exception(f"[LENS DIAG] 8. OpenRouter analysis failed with exception on attempt {attempt}. Type: {e.__class__.__name__}")
+                logger.exception(f"[LENS DIAG] 8. OpenRouter analysis failed with exception on attempt {attempt}/{max_retries}. Type: {e.__class__.__name__}")
                 if attempt == max_retries:
                     raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
-                await asyncio.sleep(backoff_factor * attempt)
+                backoff = min(base_backoff * (2 ** (attempt - 1)), max_backoff)
+                sleep_time = random.uniform(0.5, 1.0) * backoff
+                await asyncio.sleep(sleep_time)
 
         raise HTTPException(status_code=503, detail="Solar Lens AI provider is temporarily unavailable after multiple attempts.")
