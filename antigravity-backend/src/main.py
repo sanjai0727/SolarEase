@@ -27,13 +27,15 @@ async def lifespan(app: FastAPI):
         try:
             from firebase_admin import credentials
 
-            # Uses GOOGLE_APPLICATION_CREDENTIALS explicitly from settings
-            cred = credentials.Certificate(
-                settings.GOOGLE_APPLICATION_CREDENTIALS
-            )
-            firebase_admin.initialize_app(cred)
-
-            logger.info("Firebase Admin SDK initialized successfully.")
+            if os.path.exists(settings.GOOGLE_APPLICATION_CREDENTIALS):
+                cred = credentials.Certificate(
+                    settings.GOOGLE_APPLICATION_CREDENTIALS
+                )
+                firebase_admin.initialize_app(cred)
+                logger.info("Firebase Admin SDK initialized with certificate file.")
+            else:
+                firebase_admin.initialize_app()
+                logger.info("Firebase Admin SDK initialized with Application Default Credentials.")
 
         except Exception as e:
             logger.error(
