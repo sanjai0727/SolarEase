@@ -36,4 +36,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8080}/healthz || exit 1
 
 # Start Uvicorn bound to 0.0.0.0 on the dynamic Cloud Run $PORT
-CMD exec uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1
+CMD ["sh", "-c", "exec uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1"]
+
