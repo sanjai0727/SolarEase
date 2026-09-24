@@ -21,6 +21,8 @@ app/build/
 # =========================
 .env
 .env.*
+*.env
+*.env.*
 !.env.example
 
 debug.keystore
