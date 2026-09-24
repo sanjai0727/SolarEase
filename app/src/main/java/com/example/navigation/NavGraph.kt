@@ -24,7 +24,7 @@ import com.example.feature.home.ui.modules.ElectricityChatbotRoute
 import com.example.feature.lens.ui.LensLandingScreen
 import com.example.feature.lens.ui.LensScreen
 import com.example.feature.lens.ui.LensViewModel
-import com.example.feature.lens.ui.ApplianceDetailsScreen
+
 import com.example.feature.lens.ui.ApplianceResultScreen
 import com.example.core.network.RetrofitClient
 import com.example.feature.lens.data.LensRepository
@@ -103,7 +103,10 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
         }
         
         composable<Screen.BillCalculator> {
-            BillCalculatorRoute(onNavigateBack = { navController.popBackStack() })
+            BillCalculatorRoute(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSolarLens = { navController.navigate(Screen.SolarEaseLens) }
+            )
         }
         
         composable<Screen.ElectricityChatbot> {
@@ -127,10 +130,10 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                     viewModel = lensViewModel,
                     onNavigateBack = { navController.popBackStack() },
                     onOpenCamera = {
-                        lensViewModel.resetToIdle()
                         navController.navigate(Screen.LensCamera)
                     },
-                    onNavigateToReview = { navController.navigate(Screen.LensReview) { launchSingleTop = true } }
+                    onNavigateToReview = { navController.navigate(Screen.LensReview) { launchSingleTop = true } },
+                    onNavigateToAnalytics = { navController.navigate(Screen.LensResult) { launchSingleTop = true } }
                 )
             }
 
@@ -158,17 +161,7 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 )
             }
             
-            composable<Screen.LensDetails> { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry<Screen.SolarEaseLens>()
-                }
-                val lensViewModel: LensViewModel = viewModel(parentEntry)
-                ApplianceDetailsScreen(
-                    viewModel = lensViewModel,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToResult = { navController.navigate(Screen.LensResult) }
-                )
-            }
+
 
             composable<Screen.LensReview> { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
@@ -178,8 +171,6 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 com.example.feature.lens.ui.ApplianceReviewScreen(
                     viewModel = lensViewModel,
                     onNavigateBack = {
-                        // Returning from Review discards the scan and goes back to Main
-                        lensViewModel.resetToIdle()
                         navController.popBackStack(Screen.LensMain, false)
                     },
                     onNavigateToResult = { navController.navigate(Screen.LensResult) }
@@ -207,7 +198,10 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
         }
         
         composable<Screen.TnebBillStatus> {
-            TnebBillStatusRoute(onNavigateBack = { navController.popBackStack() })
+            TnebBillStatusRoute(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSolarLens = { navController.navigate(Screen.SolarEaseLens) }
+            )
         }
         
         composable<Screen.SolarPanel> {

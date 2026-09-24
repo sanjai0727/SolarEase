@@ -62,6 +62,7 @@ class MlKitApplianceDetector : ApplianceDetector {
                             trackingId = obj.trackingId,
                             boundingBox = box,
                             boundingBoxRelative = RectF(leftRel, topRel, rightRel, bottomRel),
+                            label = "Appliance",
                             confidence = null
                         )
                     )

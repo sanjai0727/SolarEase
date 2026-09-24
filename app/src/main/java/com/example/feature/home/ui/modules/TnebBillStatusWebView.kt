@@ -10,18 +10,14 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -33,7 +29,6 @@ fun TnebBillStatusWebView(
     val webView = rememberWebViewWithLifecycle()
     val reloadTrigger by viewModel.reloadTrigger.collectAsState()
     val submitTrigger by viewModel.submitTrigger.collectAsState()
-    val submitState by viewModel.submitState.collectAsState()
     
     val serviceConnectionNumber by viewModel.serviceConnectionNumber.collectAsState()
     val registeredMobileNumber by viewModel.registeredMobileNumber.collectAsState()
@@ -122,11 +117,11 @@ fun TnebBillStatusWebView(
 
     Box(modifier = modifier) {
         AndroidView(
-            factory = { context ->
+            factory = { _ ->
                 webView.apply {
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
-                    // Security: We do not disable SSL validation.
+                    // Security: Strict SSL validation preserved
 
                     addJavascriptInterface(
                         AndroidCaptchaBridge(viewModel),
@@ -147,57 +142,149 @@ fun TnebBillStatusWebView(
                             
                             if (currentState == SubmitState.SUBMITTING) {
                                 val currentSubmissionId = viewModel.submitTrigger.value
+                                android.util.Log.d("TNEB", "[TNEB] Bill page detected: ${url.take(60)}")
                                 android.util.Log.d("BillStatusDiagnostic", "HTML_EXTRACTION_STARTED")
-                                // We just submitted the form. Pass the resulting HTML to the native analyzer.
+                                
+                                // Extract structured DOM and fallback HTML
                                 val checkResultJs = """
                                     javascript:(function() {
                                         try {
-                                            var diag = [];
-                                            diag.push('DOC_TITLE=' + document.title);
-                                            diag.push('DOC_URL=' + window.location.href);
-                                            diag.push('BODY_LENGTH=' + (document.body ? document.body.innerText.length : 0));
-                                            diag.push('HTML_LENGTH=' + document.documentElement.outerHTML.length);
-                                            diag.push('FORM_COUNT=' + document.forms.length);
-                                            for (var i = 0; i < document.forms.length; i++) {
-                                                diag.push('FORM_' + i + '_ID=' + document.forms[i].id);
+                                            var result = {
+                                                isError: false,
+                                                errorMessage: '',
+                                                consumerName: '',
+                                                consumerNumber: '',
+                                                region: '',
+                                                circle: '',
+                                                section: '',
+                                                distribution: '',
+                                                serviceNumber: '',
+                                                address: '',
+                                                serviceStatus: '',
+                                                aadhar: '',
+                                                gst: '',
+                                                pan: '',
+                                                phase: '',
+                                                sanctionedLoad: '',
+                                                tempReducedLoad: '',
+                                                meterNumber: '',
+                                                securityDeposit: '',
+                                                mcdDeposit: '',
+                                                serviceCategory: '',
+                                                tariffCode: '',
+                                                consumerRating: '',
+                                                duesText: '',
+                                                isDuesNil: false,
+                                                records: []
+                                            };
+
+                                            var bText = document.body ? (document.body.innerText || '') : '';
+                                            
+                                            // Check for CAPTCHA or details errors
+                                            if (bText.toLowerCase().includes('invalid captcha')) {
+                                                result.isError = true;
+                                                result.errorMessage = 'INVALID_CAPTCHA';
                                             }
+
+                                            // Extract Consumer Name and Number
+                                            var nameM = bText.match(/CONSUMER\s*NAME\s*:\s*([^<\n\r]+)/i);
+                                            if (nameM) result.consumerName = nameM[1].trim();
+                                            var numM = bText.match(/CONSUMER\s*NUMBER\s*:\s*([0-9]+)/i);
+                                            if (numM) result.consumerNumber = numM[1].trim();
+
+                                            // Extract Dues Status
+                                            var duesM = bText.match(/DUES\s*TO\s*BE\s*PAID\s*IS\s*["']?([^"'\n\r<]+)["']?/i);
+                                            if (duesM) {
+                                                result.duesText = duesM[0].trim();
+                                                if (result.duesText.toUpperCase().includes('NIL')) result.isDuesNil = true;
+                                            } else if (bText.toUpperCase().includes('DUES TO BE PAID IS "NIL"')) {
+                                                result.duesText = 'DUES TO BE PAID IS "NIL"';
+                                                result.isDuesNil = true;
+                                            }
+
+                                            // Extract Tables
                                             var tables = document.getElementsByTagName('table');
-                                            diag.push('TABLE_COUNT=' + tables.length);
-                                            for (var i = 0; i < tables.length; i++) {
-                                                diag.push('TABLE_' + i + '_ID=' + tables[i].id + ' CLASS=' + tables[i].className);
-                                            }
-                                            diag.push('MARKER_consDetails=' + (document.getElementById('consDetails') != null));
-                                            diag.push('MARKER_ui-datatable=' + (document.querySelector('.ui-datatable') != null));
-                                            diag.push('MARKER_billData=' + (document.getElementById('billData') != null));
-                                            diag.push('MARKER_billStatus=' + (document.getElementById('billStatus') != null));
-                                            diag.push('MARKER_javax.faces.ViewState=' + (document.getElementsByName('javax.faces.ViewState').length > 0));
-                                            diag.push('MARKER_primefaces=' + document.documentElement.outerHTML.toLowerCase().includes('primefaces'));
-                                            
-                                            var labels = ['Consumer Name', 'Consumer No', 'Service No', 'Service Connection', 'Bill Amount', 'Amount Payable', 'Receipt No', 'Receipt Date', 'Bill Date', 'Current Reading', 'Previous Reading', 'Consumption', 'Units', 'Tariff', 'Due Date', 'Status'];
-                                            var bodyText = document.body ? document.body.innerText : '';
-                                            for (var i = 0; i < labels.length; i++) {
-                                                diag.push('LABEL_' + labels[i].replace(/ /g, '_') + '=' + bodyText.includes(labels[i]));
-                                            }
-                                            
-                                            var errors = ['.ui-messages-error', '.ui-messages-error-summary', '.ui-messages-error-detail'];
-                                            for (var i = 0; i < errors.length; i++) {
-                                                var els = document.querySelectorAll(errors[i]);
-                                                diag.push('ERR_' + errors[i] + '_EXISTS=' + (els.length > 0));
-                                                if (els.length > 0) {
-                                                    var txt = els[0].innerText.trim();
-                                                    diag.push('ERR_' + errors[i] + '_NON_EMPTY=' + (txt.length > 0));
-                                                    diag.push('ERR_' + errors[i] + '_LENGTH=' + txt.length);
-                                                    var cls = 'NONE';
-                                                    if (txt.toLowerCase().includes('captcha')) cls = 'CAPTCHA_ERROR';
-                                                    else if (txt.toLowerCase().includes('invalid') || txt.toLowerCase().includes('match')) cls = 'INVALID_DETAILS_ERROR';
-                                                    else if (txt.length > 0) cls = 'OTHER_ERROR';
-                                                    diag.push('ERR_CLASS=' + cls);
+                                            for (var t = 0; t < tables.length; t++) {
+                                                var tbl = tables[t];
+                                                var tblText = (tbl.innerText || '').toUpperCase();
+
+                                                // Consumer Ledger / Metadata Table
+                                                if (tblText.includes('REGION') || tblText.includes('SANCTIONED LOAD') || tblText.includes('TARIFF CODE')) {
+                                                    var rows = tbl.rows;
+                                                    for (var r = 0; r < rows.length; r++) {
+                                                        var cells = rows[r].cells;
+                                                        for (var c = 0; c < cells.length; c++) {
+                                                            var k = (cells[c].innerText || '').trim().toUpperCase();
+                                                            var v = (c + 1 < cells.length) ? (cells[c + 1].innerText || '').trim() : '';
+                                                            if (k === 'REGION' && v) result.region = v;
+                                                            else if (k === 'CIRCLE' && v) result.circle = v;
+                                                            else if (k === 'SECTION' && v) result.section = v;
+                                                            else if (k === 'DISTRIBUTION' && v) result.distribution = v;
+                                                            else if (k === 'SERVICE NUMBER' && v) result.serviceNumber = v;
+                                                            else if (k === 'ADDRESS' && v) result.address = v;
+                                                            else if (k === 'SERVICE STATUS' && v) result.serviceStatus = v;
+                                                            else if (k === 'AADHAR' && v) result.aadhar = v;
+                                                            else if (k === 'GST NUMBER' && v) result.gst = v;
+                                                            else if (k === 'PAN NUMBER' && v) result.pan = v;
+                                                            else if (k === 'PHASE' && v) result.phase = v;
+                                                            else if (k === 'SANCTIONED LOAD' && v) result.sanctionedLoad = v;
+                                                            else if (k === 'TEMPORARILY REDUCED LOAD' && v) result.tempReducedLoad = v;
+                                                            else if (k === 'METER NUMBER' && v) result.meterNumber = v;
+                                                            else if (k.indexOf('ACCD*') !== -1 && v) result.securityDeposit = v;
+                                                            else if (k.indexOf('MCD AS ON') !== -1 && v) result.mcdDeposit = v;
+                                                            else if (k === 'SERVICE CATEGORY' && v) result.serviceCategory = v;
+                                                            else if (k === 'TARIFF CODE' && v) result.tariffCode = v;
+                                                            else if (k === 'CONSUMER RATING' && v) result.consumerRating = v;
+                                                        }
+                                                    }
+                                                }
+
+                                                // Bill History Table (Consumption Charges and Collection Details)
+                                                if (tblText.includes('CONSUMPTION CHARGES') || tblText.includes('SPLITUP OF CHARGES') || (tblText.includes('ASSESSMENT') && tblText.includes('TOTAL CHARGES'))) {
+                                                    var rows = tbl.rows;
+                                                    for (var r = 0; r < rows.length; r++) {
+                                                        var cells = rows[r].cells;
+                                                        if (cells.length >= 18) {
+                                                            var d = (cells[0].innerText || '').trim();
+                                                            if (/\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(d)) {
+                                                                var getV = function(idx) { return (idx < cells.length) ? (cells[idx].innerText || '').trim() : ''; };
+                                                                result.records.push({
+                                                                    assessmentDate: getV(0),
+                                                                    entryDate: getV(1),
+                                                                    status: getV(2),
+                                                                    kwh: getV(3),
+                                                                    kvah: getV(4),
+                                                                    recordedDemand: getV(5),
+                                                                    powerFactor: getV(6),
+                                                                    units: getV(7),
+                                                                    ccCharges: getV(8),
+                                                                    electricityTax: getV(9),
+                                                                    weldingCharges: getV(10),
+                                                                    excessDemand: getV(11),
+                                                                    pfPenalty: getV(12),
+                                                                    fixedCharges: getV(13),
+                                                                    totalCharges: getV(14),
+                                                                    advancePaid: getV(15),
+                                                                    adjustment: getV(16),
+                                                                    amountDue: getV(17),
+                                                                    dueDate: getV(18),
+                                                                    amountPaid: getV(19),
+                                                                    receiptNumber: getV(20),
+                                                                    paymentDate: getV(21)
+                                                                });
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            AndroidCaptchaBridge.onDiagnosticLog("--- RESULT DOM DIAGNOSTICS ---\n" + diag.join('\n'));
+
+                                            // Send structured data to the bridge
+                                            AndroidCaptchaBridge.onParsedDataReceived(JSON.stringify(result), $currentSubmissionId);
                                         } catch (e) {
-                                            AndroidCaptchaBridge.onDiagnosticLog("RESULT_DIAG_ERROR=" + e.toString());
+                                            AndroidCaptchaBridge.onDiagnosticLog("DOM_EXTRACT_ERROR=" + e.toString());
                                         }
+
+                                        // Fallback: Send raw HTML string
                                         var html = document.documentElement.outerHTML;
                                         AndroidCaptchaBridge.onHtmlResponseReceived(html, $currentSubmissionId);
                                     })();
@@ -205,9 +292,7 @@ fun TnebBillStatusWebView(
                                 view.evaluateJavascript(checkResultJs, null)
                             } else if (currentState == SubmitState.IDLE) {
                                 val cookieManager = android.webkit.CookieManager.getInstance()
-                                val cookies = cookieManager.getCookie("https://www.tnebltd.gov.in")
-                                val fingerprint = cookies?.hashCode()?.toString(16) ?: "null"
-                                android.util.Log.d("BillStatusDiagnostic", "--- CAPTCHA SESSION DIAGNOSTICS ---\nCAPTCHA_SESSION_FINGERPRINT=$fingerprint")
+                                CookieManagerBridge.logSession(cookieManager)
                                 
                                 // Inject JavaScript to extract the CAPTCHA image
                                 val js = """
@@ -222,7 +307,7 @@ fun TnebBillStatusWebView(
                                                 var dataURL = canvas.toDataURL('image/png');
                                                 AndroidCaptchaBridge.onCaptchaExtracted(dataURL);
                                             } catch(e) {
-                                                // Handle cross-origin issues or errors silently as per security rules
+                                                // Handle cross-origin issues or errors silently
                                             }
                                         }
     
@@ -279,30 +364,42 @@ fun TnebBillStatusWebView(
                     loadUrl("https://www.tnebltd.gov.in/BillStatus/billstatus.xhtml")
                 }
             },
-            update = { view ->
-                // Handled imperatively via LaunchedEffect above
-            }
+            update = { _ -> }
         )
     }
 }
 
+private object CookieManagerBridge {
+    fun logSession(cookieManager: android.webkit.CookieManager) {
+        val cookies = cookieManager.getCookie("https://www.tnebltd.gov.in")
+        val fingerprint = cookies?.hashCode()?.toString(16) ?: "null"
+        android.util.Log.d("BillStatusDiagnostic", "--- CAPTCHA SESSION DIAGNOSTICS ---\nCAPTCHA_SESSION_FINGERPRINT=$fingerprint")
+    }
+}
+
 /**
- * JavaScript interface to pass the CAPTCHA base64 string to the ViewModel.
+ * JavaScript interface to bridge CAPTCHA, DOM-extracted JSON, and raw HTML to ViewModel.
  */
 class AndroidCaptchaBridge(private val viewModel: TnebBillStatusViewModel) {
     @JavascriptInterface
     fun onCaptchaExtracted(base64Data: String) {
         viewModel.onCaptchaReceived(base64Data)
     }
-    
+
     @JavascriptInterface
     fun onDiagnosticLog(log: String) {
         android.util.Log.d("BillStatusDiagnostic", "\n$log")
     }
 
     @JavascriptInterface
+    fun onParsedDataReceived(json: String, submissionId: Int) {
+        android.util.Log.d("TNEB", "[TNEB] onParsedDataReceived called with submissionId=$submissionId")
+        viewModel.onParsedDataReceived(json, submissionId)
+    }
+
+    @JavascriptInterface
     fun onHtmlResponseReceived(html: String, submissionId: Int) {
-        android.util.Log.d("BillStatusDiagnostic", "HTML_BRIDGE_RECEIVED, length: ${html.length}")
+        android.util.Log.d("TNEB", "[TNEB] onHtmlResponseReceived called with submissionId=$submissionId")
         viewModel.analyzeSubmissionResponse(html, submissionId)
     }
 }
@@ -326,4 +423,3 @@ fun rememberWebViewWithLifecycle(): WebView {
 
     return webView
 }
-

@@ -2,24 +2,30 @@ package com.example.feature.lens.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.feature.lens.ui.theme.LensColors
+import com.example.feature.lens.ui.theme.LensTypography
 import com.example.feature.lens.utils.ApplianceMaster
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,100 +36,18 @@ fun ApplianceReviewScreen(
     onNavigateToResult: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val rooms by viewModel.rooms.collectAsState()
 
     BackHandler {
-        viewModel.resetToIdle()
         onNavigateBack()
     }
 
     LaunchedEffect(uiState) {
-        if (uiState is LensUiState.Analytics) {
+        if (uiState is LensUiState.RoomOverview || uiState is LensUiState.RoomCompleted) {
+            onNavigateBack()
+        } else if (uiState is LensUiState.WholeHouseAnalytics) {
             onNavigateToResult()
         }
-    }
-
-    if (uiState is LensUiState.Processing) {
-        androidx.activity.compose.BackHandler {
-            viewModel.cancelAnalysis()
-        }
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(24.dp)
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = (uiState as LensUiState.Processing).message,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                OutlinedButton(onClick = { viewModel.cancelAnalysis() }) {
-                    Text("Cancel")
-                }
-            }
-        }
-        return
-    }
-
-    if (uiState is LensUiState.SavingReview) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(24.dp)
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = (uiState as LensUiState.SavingReview).message,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-        return
-    }
-
-    if (uiState is LensUiState.Error) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete, // Or warning icon
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Couldn't analyze the images.",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = (uiState as LensUiState.Error).message,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onNavigateBack) {
-                    Text("Go Back & Try Again")
-                }
-            }
-        }
-        return
-    }
-
-    if (uiState is LensUiState.Scanning || uiState is LensUiState.Idle) {
-        // If state reverted to idle or scanning, we shouldn't be on the review screen.
-        LaunchedEffect(Unit) {
-            onNavigateBack()
-        }
-        return
     }
 
     if (uiState !is LensUiState.Review) {
@@ -131,149 +55,296 @@ fun ApplianceReviewScreen(
     }
 
     val reviewState = uiState as LensUiState.Review
-    val appliances = reviewState.appliances
+    val appliances = reviewState.newAppliances
+    val room = reviewState.room
+
+    val sortedRooms = rooms.sortedBy { it.order }
+    val activeIdx = (sortedRooms.indexOfFirst { it.id == room.id } + 1).coerceAtLeast(1)
+    val totalRooms = sortedRooms.size.coerceAtLeast(4)
+
+    // Dynamic Live Calculations for Room Power Envelope
+    val roomPeakWatts = appliances.sumOf { (it.powerWatts * it.quantity).toDouble() }.toFloat()
+    val roomPeakKw = roomPeakWatts / 1000f
+    val roomMonthlyKwh = appliances.sumOf { it.monthlyKwh.toDouble() }.toFloat()
+    val roomMonthlyCost = ApplianceMaster.calculateMonthlyCost(roomMonthlyKwh)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Review Appliances")
-                        Text(
-                            text = "Review and edit the detected appliances",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = LensColors.Background,
+                border = BorderStroke(1.dp, LensColors.Outline)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = LensColors.SlateText)
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text(
+                                "Array Calibration",
+                                style = LensTypography.headlineSm.copy(fontSize = 15.sp),
+                                color = LensColors.SlateText
+                            )
+                            Text(
+                                "ROOM AUDIT: ${room.name.uppercase()}",
+                                style = LensTypography.labelCaps,
+                                color = LensColors.SlateCaption
+                            )
+                        }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.resetToIdle()
-                        onNavigateBack()
-                    }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(LensColors.Primary, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
                     }
                 }
-            )
+            }
         },
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                color = LensColors.SurfaceContainerLowest,
+                border = BorderStroke(1.dp, LensColors.Outline)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Outlined "Add Appliance" button
                     OutlinedButton(
                         onClick = { viewModel.addReviewAppliance() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
+                            .height(44.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
                     ) {
-                        Text(
-                            "+ Add Appliance",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
+                        Icon(Icons.Default.Add, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("+ Add Appliance", style = LensTypography.labelSm, color = LensColors.SlateText)
                     }
 
-                    // Filled "Confirm & View Analytics" button with trailing arrow
                     Button(
                         onClick = { viewModel.confirmReview() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Spacer(modifier = Modifier.width(24.dp))
                             Text(
-                                "Confirm & View Analytics",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp,
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.Center
+                                "Confirm ${room.name} & Continue",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                color = LensColors.OnPrimary
                             )
-                            Icon(
-                                Icons.Default.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
             }
-        }
+        },
+        containerColor = LensColors.Background
     ) { padding ->
-        if (appliances.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(24.dp)
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Step Progress Header
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(LensColors.Primary, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "Room $activeIdx of $totalRooms • Diagnostic Audit",
+                                style = LensTypography.labelCaps,
+                                color = LensColors.Primary
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = LensColors.SurfaceContainer
+                        ) {
+                            Text(
+                                "Phase A • 230V Balanced",
+                                style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                color = LensColors.SlateCaption,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    // 4-Step Linear Progress
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        for (i in 1..totalRooms) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(if (i <= activeIdx) LensColors.Primary else LensColors.SurfaceContainerHighest)
+                            )
+                        }
+                    }
+
+                    Text("Review Detected Appliances", style = LensTypography.headlineMd, color = LensColors.SlateText)
+                    Text("${room.name} • ${appliances.size} Electrical Loads Identified", style = LensTypography.bodyMd, color = LensColors.SlateCaption)
+                }
+            }
+
+            // Room Power Envelope Banner
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = LensColors.SurfaceContainerLow,
+                    border = BorderStroke(1.dp, LensColors.Outline)
                 ) {
-                    Text(
-                        text = "No supported appliances were detected.",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Try another photo or scan the room again.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = onNavigateBack) {
-                        Text("Try Again")
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Bed, contentDescription = null, tint = LensColors.SlateCaption, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "${room.name.uppercase()} POWER ENVELOPE",
+                                    style = LensTypography.labelCaps,
+                                    color = LensColors.SlateCaption
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.PrimaryFixed
+                            ) {
+                                Text(
+                                    "ACTIVE INFERENCE",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.Primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                color = LensColors.SurfaceContainerLowest
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text("Peak Connected Load", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(verticalAlignment = Alignment.Bottom) {
+                                        Text(
+                                            "%.2f".format(roomPeakKw),
+                                            style = LensTypography.metricValLg,
+                                            color = LensColors.SlateText
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("kW", style = LensTypography.labelSm, color = LensColors.SlateCaption)
+                                    }
+                                }
+                            }
+
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                color = LensColors.SurfaceContainerLowest
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text("Est. Room Consumption", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(verticalAlignment = Alignment.Bottom) {
+                                        Text(
+                                            "~${roomMonthlyKwh.toInt()}",
+                                            style = LensTypography.metricValLg,
+                                            color = LensColors.SlateText
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("kWh/mo", style = LensTypography.labelSm, color = LensColors.SlateCaption)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Calibrated tariff basis: ₹7.00 / kWh",
+                                style = LensTypography.labelSm.copy(fontSize = 11.sp),
+                                color = LensColors.SlateCaption
+                            )
+                            Text(
+                                "≈ ₹${roomMonthlyCost.toInt()} / mo",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                color = LensColors.SlateText
+                            )
+                        }
                     }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item { Spacer(modifier = Modifier.height(4.dp)) }
-                items(appliances) { appliance ->
-                    EditableApplianceCard(
-                        appliance = appliance,
-                        onUpdate = { id, label, watts, usageHours, monthlyDays, qty ->
-                            viewModel.updateReviewAppliance(id, label, watts, usageHours, monthlyDays, qty)
-                        },
-                        onRemove = { id ->
-                            viewModel.removeReviewAppliance(id)
-                        }
-                    )
-                }
-                item {
-                    Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bar
-                }
+
+            // Interactive Appliance Review Cards
+            items(appliances) { appliance ->
+                ApplianceCardStitch(
+                    appliance = appliance,
+                    onUpdate = { id, label, watts, hours, days, qty ->
+                        viewModel.updateReviewAppliance(id, label, watts, hours, days, qty)
+                    },
+                    onRemove = { id ->
+                        viewModel.removeReviewAppliance(id)
+                    }
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(30.dp))
             }
         }
     }
@@ -281,7 +352,7 @@ fun ApplianceReviewScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditableApplianceCard(
+private fun ApplianceCardStitch(
     appliance: EditableAppliance,
     onUpdate: (String, String, Float, Float, Int, Int) -> Unit,
     onRemove: (String) -> Unit
@@ -289,261 +360,186 @@ fun EditableApplianceCard(
     var expanded by remember { mutableStateOf(false) }
     val options = ApplianceMaster.appliances.map { it.name }
 
-    OutlinedCard(
+    val applianceIcon = when {
+        appliance.label.lowercase().contains("ac") || appliance.label.lowercase().contains("air conditioner") -> Icons.Default.AcUnit
+        appliance.label.lowercase().contains("fan") -> Icons.Default.WindPower
+        appliance.label.lowercase().contains("tv") || appliance.label.lowercase().contains("television") -> Icons.Default.Tv
+        appliance.label.lowercase().contains("fridge") || appliance.label.lowercase().contains("refrigerator") -> Icons.Default.Kitchen
+        appliance.label.lowercase().contains("light") || appliance.label.lowercase().contains("led") -> Icons.Default.Lightbulb
+        appliance.label.lowercase().contains("microwave") -> Icons.Default.Microwave
+        else -> Icons.Default.Power
+    }
+
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        shape = RoundedCornerShape(10.dp),
+        color = LensColors.SurfaceContainerLowest,
+        border = BorderStroke(1.dp, LensColors.Outline)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
-        ) {
-            // --- Row 1: "Appliance" label + Delete icon ---
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Header Row: Identification & Remove
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Appliance",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                IconButton(
-                    onClick = { onRemove(appliance.id) },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Remove appliance",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // --- Appliance Dropdown ---
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = appliance.label,
-                    onValueChange = { /* Read-only: dropdown only */ },
-                    readOnly = true,
-                    modifier = Modifier
-                        .fillMaxWidth(0.65f)
-                        .menuAnchor(),
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    options.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option, fontSize = 14.sp) },
-                            onClick = {
-                                val defaults = ApplianceMaster.getDefaults(option)
-                                // Auto-populate wattage, usage hours, monthly days. Quantity stays unchanged.
-                                onUpdate(
-                                    appliance.id,
-                                    option,
-                                    defaults?.defaultWattage ?: appliance.powerWatts,
-                                    defaults?.typicalUsageHoursPerDay ?: appliance.usageHoursPerDay,
-                                    defaults?.monthlyUsageDays ?: appliance.monthlyUsageDays,
-                                    appliance.quantity  // Quantity remains independent
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = LensColors.SurfaceContainerLow,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(applianceIcon, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(appliance.label, style = LensTypography.headlineSm.copy(fontSize = 15.sp), color = LensColors.SlateText)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(3.dp),
+                                color = LensColors.PrimaryFixed
+                            ) {
+                                Text(
+                                    "AI Detected (96%)",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.Primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
-                                expanded = false
                             }
-                        )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("• ${(appliance.monthlyKwh).toInt()} kWh/mo", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateCaption)
+                        }
                     }
                 }
+                IconButton(onClick = { onRemove(appliance.id) }, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = LensColors.SlateCaption, modifier = Modifier.size(18.dp))
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // --- Row 2: Wattage, Usage/Day, Monthly Days, Quantity — all on one row ---
+            // Quantitative Specs Controls (2-Column Grid)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.Top
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // -- Wattage --
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Wattage (W)",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 3.dp)
-                    )
-                    OutlinedTextField(
-                        value = if (appliance.powerWatts > 0) appliance.powerWatts.toInt().toString() else if (appliance.powerWatts == 0f) "" else "",
-                        onValueChange = { newVal ->
-                            if (newVal.isEmpty()) {
-                                onUpdate(appliance.id, appliance.label, 0f, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
-                            } else {
-                                val watts = newVal.toFloatOrNull()
-                                if (watts != null && watts >= 0f) {
-                                    onUpdate(appliance.id, appliance.label, watts, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
-                                }
+                // Quantity Stepper
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(6.dp),
+                    color = LensColors.SurfaceContainerLow
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text("QUANTITY", style = LensTypography.labelCaps.copy(fontSize = 9.sp), color = LensColors.SlateCaption)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .background(LensColors.SurfaceContainerLowest, RoundedCornerShape(4.dp))
+                                    .clickable {
+                                        if (appliance.quantity > 1) {
+                                            onUpdate(
+                                                appliance.id, appliance.label, appliance.powerWatts,
+                                                appliance.usageHoursPerDay, appliance.monthlyUsageDays,
+                                                appliance.quantity - 1
+                                            )
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = LensColors.SlateText, modifier = Modifier.size(14.dp))
                             }
-                        },
+                            Text("${appliance.quantity}", style = LensTypography.metricValMd, color = LensColors.SlateText)
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .background(LensColors.SurfaceContainerLowest, RoundedCornerShape(4.dp))
+                                    .clickable {
+                                        onUpdate(
+                                            appliance.id, appliance.label, appliance.powerWatts,
+                                            appliance.usageHoursPerDay, appliance.monthlyUsageDays,
+                                            appliance.quantity + 1
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Increase", tint = LensColors.SlateText, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+
+                // Rated Load Pill
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(6.dp),
+                    color = LensColors.SurfaceContainerLow
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text("RATED LOAD", style = LensTypography.labelCaps.copy(fontSize = 9.sp), color = LensColors.SlateCaption)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${appliance.powerWatts.toInt()} W", style = LensTypography.metricValMd, color = LensColors.SlateText)
+                            Surface(
+                                shape = RoundedCornerShape(3.dp),
+                                color = LensColors.PrimaryContainer
+                            ) {
+                                Text(
+                                    "SPEC",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.OnPrimary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Daily Duty Cycle Slider / Stepper
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(6.dp),
+                color = LensColors.SurfaceContainerLow
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(8.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-                    )
-                }
-
-                // -- Typical Usage / Day --
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Typical Usage / Day",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 3.dp),
-                        maxLines = 1
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
-                            value = if (appliance.usageHoursPerDay > 0) {
-                                val v = appliance.usageHoursPerDay
-                                if (v == v.toInt().toFloat()) v.toInt().toString() else String.format("%.1f", v).trimEnd('0').trimEnd('.')
-                            } else "",
-                            onValueChange = { newVal ->
-                                if (newVal.isEmpty()) {
-                                    onUpdate(appliance.id, appliance.label, appliance.powerWatts, 0f, appliance.monthlyUsageDays, appliance.quantity)
-                                } else {
-                                    val hours = newVal.toFloatOrNull()
-                                    if (hours != null && hours >= 0f && hours <= 24f) {
-                                        onUpdate(appliance.id, appliance.label, appliance.powerWatts, hours, appliance.monthlyUsageDays, appliance.quantity)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            shape = RoundedCornerShape(8.dp),
-                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-                        )
-                        Text(
-                            text = "h",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("DAILY RUNTIME", style = LensTypography.labelCaps.copy(fontSize = 9.sp), color = LensColors.SlateCaption)
+                        Text("${appliance.usageHoursPerDay} hrs/day", style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold), color = LensColors.SlateText)
                     }
-                }
-
-                // -- Monthly Usage Days --
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Monthly Usage Days",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 3.dp),
-                        maxLines = 1
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = if (appliance.monthlyUsageDays > 0) appliance.monthlyUsageDays.toString() else "",
-                            onValueChange = { newVal ->
-                                if (newVal.isEmpty()) {
-                                    onUpdate(appliance.id, appliance.label, appliance.powerWatts, appliance.usageHoursPerDay, 0, appliance.quantity)
-                                } else {
-                                    // Integer only, no decimals
-                                    val days = newVal.toIntOrNull()
-                                    if (days != null && days in 0..31) {
-                                        onUpdate(appliance.id, appliance.label, appliance.powerWatts, appliance.usageHoursPerDay, days, appliance.quantity)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            shape = RoundedCornerShape(8.dp),
-                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-                        )
-                        Text(
-                            text = "days",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // -- Quantity --
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Quantity",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 3.dp)
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Minus button
-                        OutlinedButton(
-                            onClick = {
-                                if (appliance.quantity > 1) {
-                                    onUpdate(appliance.id, appliance.label, appliance.powerWatts, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity - 1)
-                                }
-                            },
-                            modifier = Modifier.size(36.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                            contentPadding = PaddingValues(0.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
+                    Slider(
+                        value = appliance.usageHoursPerDay,
+                        onValueChange = { newHours ->
+                            val rounded = (Math.round(newHours * 2) / 2.0f).coerceIn(0.5f, 24f)
+                            onUpdate(
+                                appliance.id, appliance.label, appliance.powerWatts,
+                                rounded, appliance.monthlyUsageDays, appliance.quantity
                             )
-                        ) {
-                            Text("−", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        // Quantity value
-                        Text(
-                            text = appliance.quantity.toString(),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.widthIn(min = 16.dp),
-                            textAlign = TextAlign.Center
+                        },
+                        valueRange = 0.5f..24f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = LensColors.Primary,
+                            activeTrackColor = LensColors.Primary,
+                            inactiveTrackColor = LensColors.SurfaceContainerHighest
                         )
-
-                        // Plus button
-                        OutlinedButton(
-                            onClick = {
-                                onUpdate(appliance.id, appliance.label, appliance.powerWatts, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity + 1)
-                            },
-                            modifier = Modifier.size(36.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                            contentPadding = PaddingValues(0.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    )
                 }
             }
         }

@@ -16,6 +16,7 @@ data class DetectedCandidate(
     val trackingId: Int?,
     val boundingBox: Rect,
     val boundingBoxRelative: RectF,
+    val label: String,
     val confidence: Float? = null
 )
 

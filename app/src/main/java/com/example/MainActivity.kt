@@ -17,6 +17,7 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     com.example.core.session.UserSession.init(this)
+    com.example.feature.home.ui.modules.TnebBillCache.init(this)
     enableEdgeToEdge()
     setContent {
       SolarEaseTheme {
