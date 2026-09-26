@@ -8,8 +8,13 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 object RetrofitClient {
-    // 10.0.2.2 connects to localhost on the host machine from the Android Emulator
-    private const val BASE_URL = "https://solarease-backend.onrender.com/"
+    // Production Google Cloud Run backend
+    private const val BASE_URL = "https://solarease-backend-612667385200.asia-south1.run.app/"
+
+    // Rollback backend (Render):
+    // private const val BASE_URL = "https://solarease-backend.onrender.com/"
+    // Local emulator testing:
+    // private const val BASE_URL = "http://10.0.2.2:8000/"
 
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
