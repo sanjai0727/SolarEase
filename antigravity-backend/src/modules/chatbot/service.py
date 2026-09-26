@@ -18,15 +18,16 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 def get_gemini_client():
-    api_key = settings.GEMINI_API_KEY
-
-    if not api_key:
-        raise HTTPException(
-            status_code=500,
-            detail="Gemini API Key not configured"
-        )
-
-    return genai.Client(api_key=api_key)
+    try:
+        return genai.Client(vertexai=True, project="solarease-bf39c", location="asia-south1")
+    except Exception:
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini service not configured"
+            )
+        return genai.Client(api_key=api_key)
 
 
 # ============================================================
@@ -448,9 +449,12 @@ Answer the user's actual question now.
 
         generation_start = time.time()
 
+        is_vertex = getattr(getattr(client, "_api_client", None), "vertexai", False)
+        model_name = "gemini-2.5-flash" if is_vertex else "gemini-3.6-flash"
+
         response = client.models.generate_content(
 
-            model="gemini-3.6-flash",
+            model=model_name,
 
             contents=prompt,
 

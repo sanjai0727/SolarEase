@@ -19,7 +19,13 @@ MEDIUM_SIMILARITY_THRESHOLD = 0.50
 def get_client():
     global _client
     if _client is None:
-        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        try:
+            _client = genai.Client(vertexai=True, project="solarease-bf39c", location="asia-south1")
+        except Exception:
+            if settings.GEMINI_API_KEY:
+                _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            else:
+                raise
     return _client
 
 def load_index():
@@ -79,9 +85,8 @@ def retrieve_concepts(query: str, top_k: int = 3):
         import time
         emb_start = time.time()
         response = client.models.embed_content(
-            model='gemini-embedding-2',
-            contents=query,
-            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
+            model='text-embedding-005',
+            contents=query
         )
         print(f"query embedding completed in {time.time() - emb_start:.2f}s")
         query_embedding = np.array(response.embeddings[0].values, dtype=np.float32)
