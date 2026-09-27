@@ -175,7 +175,7 @@ fun LensLandingScreen(
                         onUploadClicked = {
                             photoPickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    ActivityResultContracts.PickVisualMedia.ImageAndVideo
                                 )
                             )
                         },

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.example.feature.lens.detector.LensScanDetector
 import com.example.feature.lens.detector.MlKitApplianceDetector
 import com.example.feature.lens.ui.theme.LensColors
 import com.example.feature.lens.ui.theme.LensTypography
@@ -141,7 +142,7 @@ private fun LensCameraContent(
     val currentFrameDetections by viewModel.currentFrameDetections.collectAsState()
     val scanSession by viewModel.scanSession.collectAsState()
 
-    val detector = remember { MlKitApplianceDetector() }
+    val scanDetector = remember { LensScanDetector() }
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     val analysisScope = remember { CoroutineScope(Dispatchers.Default) }
 
@@ -152,6 +153,7 @@ private fun LensCameraContent(
             try {
                 val cameraProvider = ProcessCameraProvider.getInstance(context).get()
                 cameraProvider.unbindAll()
+                scanDetector.close()
             } catch (e: Exception) {
                 Log.w("LensScreen", "Failed to unbind camera", e)
             }
@@ -278,7 +280,7 @@ private fun LensCameraContent(
                                     imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
                                         analysisScope.launch {
                                             try {
-                                                val candidates = detector.processFrame(imageProxy)
+                                                val candidates = scanDetector.processFrame(imageProxy)
                                                 viewModel.onLocalCandidatesDetected(candidates)
                                             } catch (e: Exception) {
                                                 Log.e("LensScreen", "Frame analysis failed", e)
@@ -493,7 +495,7 @@ private fun LensCameraContent(
                                         object : ImageCapture.OnImageSavedCallback {
                                             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                                                 val bytes = file.readBytes()
-                                                viewModel.processImagesAsync(listOf(bytes), "PHOTO", uiState.room)
+                                                viewModel.processPhotoScan(bytes, scanDetector, uiState.room)
                                             }
                                             override fun onError(exception: ImageCaptureException) {
                                                 Log.e("LensScreen", "Photo capture failed", exception)

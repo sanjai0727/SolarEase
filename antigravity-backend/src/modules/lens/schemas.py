@@ -33,10 +33,18 @@ class ApplianceResponse(ApplianceBase):
     model_config = ConfigDict(from_attributes=True)
 
 class BoundingBox(BaseModel):
-    left: float
-    top: float
-    right: float
-    bottom: float
+    left: float = 0.0
+    top: float = 0.0
+    right: float = 1.0
+    bottom: float = 1.0
+
+class DetectedAppliance(BaseModel):
+    appliance_type: str
+    appliance_name: str
+    quantity: int = 1
+    power_rating_watts: Optional[float] = None
+    confidence: float = 0.9
+    evidence: Optional[str] = None
 
 class Detection(BaseModel):
     id: str
@@ -44,6 +52,13 @@ class Detection(BaseModel):
     confidence: float
     source: str
     bounding_box: BoundingBox
+    power_rating_watts: Optional[float] = None
+    quantity: Optional[int] = 1
+    evidence: Optional[str] = None
+    appliance_type: Optional[str] = None
+    appliance_name: Optional[str] = None
 
 class DetectionResult(BaseModel):
     detections: list[Detection]
+    detected_appliances: Optional[list[DetectedAppliance]] = None
+

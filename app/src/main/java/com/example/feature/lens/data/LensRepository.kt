@@ -63,11 +63,20 @@ class LensRepository(private val api: LensApi) {
         }
     }
 
-    suspend fun analyzeImage(imageBytes: ByteArray, source: String): Result<DetectionResult> = withContext(Dispatchers.IO) {
+    suspend fun analyzeImage(imageBytes: ByteArray, source: String): Result<DetectionResult> {
+        return analyzeMedia(imageBytes, "image/jpeg", source)
+    }
+
+    suspend fun analyzeMedia(mediaBytes: ByteArray, mimeType: String, source: String): Result<DetectionResult> = withContext(Dispatchers.IO) {
         try {
-            val mediaTypeImage = "image/jpeg".toMediaTypeOrNull()
-            val requestBody = imageBytes.toRequestBody(mediaTypeImage)
-            val multipartBody = okhttp3.MultipartBody.Part.createFormData("image", "image.jpg", requestBody)
+            val extension = if (mimeType.startsWith("video/")) {
+                if (mimeType.contains("mp4")) "mp4" else if (mimeType.contains("webm")) "webm" else "mp4"
+            } else {
+                "jpg"
+            }
+            val filename = if (mimeType.startsWith("video/")) "video.$extension" else "image.$extension"
+            val requestBody = mediaBytes.toRequestBody(mimeType.toMediaTypeOrNull())
+            val multipartBody = okhttp3.MultipartBody.Part.createFormData("image", filename, requestBody)
 
             val mediaTypeText = "text/plain".toMediaTypeOrNull()
             val sourceBody = source.toRequestBody(mediaTypeText)
@@ -96,7 +105,7 @@ class LensRepository(private val api: LensApi) {
                     response.code() == 504 ->
                         "Solar Lens analysis timed out. Please try again."
                     response.code() == 400 ->
-                        errorDetail ?: "The uploaded image could not be processed. Please try another image."
+                        errorDetail ?: "The uploaded file could not be processed. Please try another file."
                     !errorDetail.isNullOrEmpty() ->
                         errorDetail
                     else ->
@@ -106,14 +115,15 @@ class LensRepository(private val api: LensApi) {
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e("LensRepository", "Error analyzing image", e)
+            Log.e("LensRepository", "Error analyzing media", e)
             val message = when (e) {
                 is java.net.UnknownHostException ->
                     "Unable to connect to SolarEase servers. Please check your internet connection."
                 is java.net.SocketTimeoutException ->
-                    "Connection timed out while analyzing image. Please try again."
-                is java.io.IOException if e.message?.contains("Firebase") == true ->
-                    e.message ?: "Authentication required. Please sign in again."
+                    "Connection timed out while analyzing media. Please try again."
+                is java.io.IOException ->
+                    if (e.message?.contains("Firebase") == true) e.message ?: "Authentication required. Please sign in again."
+                    else e.message ?: "Analysis failed due to a connection error. Please try again."
                 else ->
                     e.message ?: "Analysis failed due to a connection error. Please try again."
             }

@@ -32,7 +32,7 @@ data class DetectedAppliance(
     val isVerifying: Boolean = false
 )
 
-@Deprecated("Replaced by still-frame Camera Scan with OpenRouter/Nemotron AI analysis.")
+@Deprecated("Replaced by Solar Lens pipeline architecture.")
 class ApplianceAnalyzer(
     private val onAppliancesDetected: (List<DetectedAppliance>) -> Unit
 ) : ImageAnalysis.Analyzer {

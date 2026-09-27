@@ -53,7 +53,7 @@ def delete_appliance(
     ApplianceService.delete_appliance(db, current_user.id, appliance_id)
 
 @router.post("/analyze", response_model=DetectionResult)
-async def analyze_appliance_image(
+async def analyze_appliance_media(
     image: UploadFile = File(...),
     source: str = Form("PHOTO"),
     _firebase_token: dict = Depends(get_verified_firebase_token)
@@ -61,12 +61,16 @@ async def analyze_appliance_image(
     import logging
     logger = logging.getLogger("lens_diag")
     logger.info("[LENS DIAG] 1. Lens request entered (Firebase verification succeeded)")
-    logger.info(f"[LENS DIAG] 2. Image received: {image.filename}, type: {image.content_type}")
+    logger.info(f"[LENS DIAG] 2. Media received: {image.filename}, type: {image.content_type}")
 
-    if not image.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File provided is not an image")
+    content_type = image.content_type or ""
+    if not (content_type.startswith("image/") or content_type.startswith("video/")):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Unsupported file type: {content_type}. Expected image/* or video/*"
+        )
     
     content = await image.read()
-    logger.info(f"[LENS DIAG] 3. Image read completed. Byte size: {len(content)}")
+    logger.info(f"[LENS DIAG] 3. Media read completed. Byte size: {len(content)}")
 
-    return await ApplianceAnalysisService.analyze_image(content, image.content_type, source)
+    return await ApplianceAnalysisService.analyze_media(content, content_type, source)

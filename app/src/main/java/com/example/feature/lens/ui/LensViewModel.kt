@@ -103,12 +103,16 @@ data class ScannedAppliance(
     val powerEstimateStr: String,
     val boundingBox: android.graphics.RectF? = null,
     val lastTrackingId: Int? = null,
-    val lastSeenTimestamp: Long = System.currentTimeMillis()
+    val lastSeenTimestamp: Long = System.currentTimeMillis(),
+    val quantity: Int = 1,
+    val evidence: String? = null
 )
 
 class LensViewModel(
     private val repository: LensRepository
 ) : ViewModel() {
+
+    private val uploadAnalyzer = com.example.feature.lens.utils.LensUploadAnalyzer(repository)
 
     private val _uiState = MutableStateFlow<LensUiState>(LensUiState.Introduction)
     val uiState: StateFlow<LensUiState> = _uiState.asStateFlow()
@@ -311,13 +315,14 @@ class LensViewModel(
         val grouped = _scanSession.value.groupBy { it.label }
         val editableAppliances = grouped.map { (label, list) ->
             val defaults = ApplianceMaster.getDefaults(label)
+            val totalQty = list.sumOf { it.quantity }.coerceAtLeast(1)
             EditableAppliance(
                 id = java.util.UUID.randomUUID().toString(),
                 label = defaults?.name ?: label,
-                powerWatts = defaults?.defaultWattage ?: (list.firstOrNull()?.powerWatts ?: 100f),
+                powerWatts = list.firstOrNull()?.powerWatts ?: (defaults?.defaultWattage ?: 100f),
                 usageHoursPerDay = defaults?.typicalUsageHoursPerDay ?: 4f,
                 monthlyUsageDays = defaults?.monthlyUsageDays ?: 30,
-                quantity = list.size
+                quantity = totalQty
             )
         }
         
@@ -474,22 +479,26 @@ class LensViewModel(
     }
 
     fun processImagesAsync(images: List<ByteArray>, source: String, contextRoom: Room) {
-        _uiState.value = LensUiState.Processing(contextRoom, "Analyzing ${images.size} image(s)...")
+        _uiState.value = LensUiState.Processing(contextRoom, "Analyzing ${images.size} image(s) with Gemini 3.8 Flash...")
 
         activeAnalysisJob?.cancel()
         activeAnalysisJob = viewModelScope.launch {
             val currentSession = mutableListOf<ScannedAppliance>()
             for (imageBytes in images) {
                 if (!isActive) return@launch
-                val result = repository.analyzeImage(imageBytes, source)
+                val result = uploadAnalyzer.analyzeImage(imageBytes, source)
                 if (!isActive) return@launch
                 result.onSuccess { detectionResult ->
                     val currentTime = System.currentTimeMillis()
                     for (det in detectionResult.detections) {
-                        val label = det.label
+                        val label = det.applianceType ?: det.label
                         val defaults = ApplianceMaster.getDefaults(label)
-                        val powerWatts = defaults?.defaultWattage ?: 100f
-                        val powerEstimateStr = "Est. ~${powerWatts.toInt()} W"
+                        val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
+                        val powerEstimateStr = if (det.powerRatingWatts != null) {
+                            "${powerWatts.toInt()} W"
+                        } else {
+                            "Est. ~${powerWatts.toInt()} W"
+                        }
 
                         val rectF = android.graphics.RectF(
                             det.boundingBox.left,
@@ -498,17 +507,25 @@ class LensViewModel(
                             det.boundingBox.bottom
                         )
 
-                        val existingIndex = currentSession.indexOfFirst { it.label == label }
+                        val qty = det.quantity ?: 1
+                        val existingIndex = currentSession.indexOfFirst { it.label.equals(label, ignoreCase = true) }
                         if (existingIndex == -1) {
                             currentSession.add(
                                 ScannedAppliance(
-                                    label = label,
+                                    label = defaults?.name ?: label,
                                     powerWatts = powerWatts,
                                     powerEstimateStr = powerEstimateStr,
                                     boundingBox = rectF,
                                     lastTrackingId = null,
-                                    lastSeenTimestamp = currentTime
+                                    lastSeenTimestamp = currentTime,
+                                    quantity = qty,
+                                    evidence = det.evidence
                                 )
+                            )
+                        } else {
+                            val existing = currentSession[existingIndex]
+                            currentSession[existingIndex] = existing.copy(
+                                quantity = existing.quantity + qty
                             )
                         }
                     }
@@ -527,8 +544,103 @@ class LensViewModel(
             }
         }
     }
+
+    fun processVideoUploadAsync(context: android.content.Context, uri: android.net.Uri, contextRoom: Room) {
+        _uiState.value = LensUiState.Processing(contextRoom, "Analyzing video with Gemini 3.8 Flash...")
+
+        activeAnalysisJob?.cancel()
+        activeAnalysisJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val videoBytes = inputStream?.readBytes()
+                inputStream?.close()
+
+                if (videoBytes == null || videoBytes.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = LensUiState.Error("Could not read the selected video file.", LensUiState.RoomOverview(contextRoom))
+                    }
+                    return@launch
+                }
+
+                val mimeType = context.contentResolver.getType(uri) ?: "video/mp4"
+                val result = uploadAnalyzer.analyzeVideo(videoBytes, mimeType, "UPLOAD_VIDEO")
+
+                if (!isActive) return@launch
+
+                result.onSuccess { detectionResult ->
+                    val currentSession = mutableListOf<ScannedAppliance>()
+                    val currentTime = System.currentTimeMillis()
+                    for (det in detectionResult.detections) {
+                        val label = det.applianceType ?: det.label
+                        val defaults = ApplianceMaster.getDefaults(label)
+                        val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
+                        val powerEstimateStr = if (det.powerRatingWatts != null) {
+                            "${powerWatts.toInt()} W"
+                        } else {
+                            "Est. ~${powerWatts.toInt()} W"
+                        }
+
+                        val rectF = android.graphics.RectF(
+                            det.boundingBox.left,
+                            det.boundingBox.top,
+                            det.boundingBox.right,
+                            det.boundingBox.bottom
+                        )
+
+                        val qty = det.quantity ?: 1
+                        val existingIndex = currentSession.indexOfFirst { it.label.equals(label, ignoreCase = true) }
+                        if (existingIndex == -1) {
+                            currentSession.add(
+                                ScannedAppliance(
+                                    label = defaults?.name ?: label,
+                                    powerWatts = powerWatts,
+                                    powerEstimateStr = powerEstimateStr,
+                                    boundingBox = rectF,
+                                    lastTrackingId = null,
+                                    lastSeenTimestamp = currentTime,
+                                    quantity = qty,
+                                    evidence = det.evidence
+                                )
+                            )
+                        } else {
+                            val existing = currentSession[existingIndex]
+                            currentSession[existingIndex] = existing.copy(
+                                quantity = existing.quantity + qty
+                            )
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        _scanSession.value = currentSession
+                        if (_uiState.value is LensUiState.Processing) {
+                            finishScan()
+                        }
+                    }
+                }.onFailure { e ->
+                    if (e is CancellationException || !isActive) return@launch
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = LensUiState.Error(e.message ?: "Video analysis failed.", LensUiState.RoomOverview(contextRoom))
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException || !isActive) return@launch
+                withContext(Dispatchers.Main) {
+                    _uiState.value = LensUiState.Error(e.message ?: "Could not process the selected video.", LensUiState.RoomOverview(contextRoom))
+                }
+            }
+        }
+    }
     
     fun processUrisAsync(context: android.content.Context, uris: List<android.net.Uri>, contextRoom: Room) {
+        val firstUri = uris.firstOrNull() ?: return
+        val type = context.contentResolver.getType(firstUri) ?: ""
+        val isVideo = type.startsWith("video/") || firstUri.toString().endsWith(".mp4", ignoreCase = true) || firstUri.toString().endsWith(".mov", ignoreCase = true)
+
+        if (isVideo) {
+            processVideoUploadAsync(context, firstUri, contextRoom)
+            return
+        }
+
         _uiState.value = LensUiState.Processing(contextRoom, "Preparing images...")
 
         activeAnalysisJob?.cancel()
@@ -577,7 +689,7 @@ class LensViewModel(
             if (byteArrayList.isNotEmpty()) {
                 withContext(Dispatchers.Main) {
                     if (isActive) {
-                        processImagesAsync(byteArrayList, "PHOTO", contextRoom)
+                        processImagesAsync(byteArrayList, "UPLOAD_IMAGE", contextRoom)
                     }
                 }
             } else {
@@ -588,22 +700,100 @@ class LensViewModel(
         }
     }
 
-    fun processVideoAsync(videoFile: java.io.File, contextRoom: Room) {
-        _uiState.value = LensUiState.Processing(contextRoom, "Extracting video frames...")
+    /**
+     * Dedicated Scan Flow handler for Instant Photo captures.
+     * Operates purely on-device via YOLO. Does NOT call Gemini.
+     */
+    fun processPhotoScan(
+        imageBytes: ByteArray,
+        scanDetector: com.example.feature.lens.detector.LensScanDetector,
+        contextRoom: Room
+    ) {
+        android.util.Log.i("LENS_SCAN", "[LENS_SCAN] provider=yolo mode=instant_photo size=${imageBytes.size}")
+        _uiState.value = LensUiState.Processing(contextRoom, "Processing photo scan with YOLO...")
 
         activeAnalysisJob?.cancel()
         activeAnalysisJob = viewModelScope.launch(Dispatchers.IO) {
-            val frames = com.example.feature.lens.utils.VideoFrameExtractor.extractFrames(videoFile, 3)
-            if (!isActive) return@launch
-            if (frames.isNotEmpty()) {
-                withContext(Dispatchers.Main) {
-                    if (isActive) {
-                        processImagesAsync(frames, "VIDEO", contextRoom)
+            val bitmap = android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            if (bitmap != null) {
+                scanDetector.processInstantPhoto(bitmap)
+                bitmap.recycle()
+            }
+            withContext(Dispatchers.Main) {
+                if (_uiState.value is LensUiState.Processing) {
+                    finishScan()
+                }
+            }
+        }
+    }
+
+    fun processVideoAsync(videoFile: java.io.File, contextRoom: Room) {
+        _uiState.value = LensUiState.Processing(contextRoom, "Analyzing video with Gemini 3.8 Flash...")
+
+        activeAnalysisJob?.cancel()
+        activeAnalysisJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val videoBytes = videoFile.readBytes()
+                val result = uploadAnalyzer.analyzeVideo(videoBytes, "video/mp4", "UPLOAD_VIDEO")
+                result.onSuccess { detectionResult ->
+                    val currentSession = mutableListOf<ScannedAppliance>()
+                    val currentTime = System.currentTimeMillis()
+                    for (det in detectionResult.detections) {
+                        val label = det.applianceType ?: det.label
+                        val defaults = ApplianceMaster.getDefaults(label)
+                        val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
+                        val powerEstimateStr = if (det.powerRatingWatts != null) {
+                            "${powerWatts.toInt()} W"
+                        } else {
+                            "Est. ~${powerWatts.toInt()} W"
+                        }
+
+                        val rectF = android.graphics.RectF(
+                            det.boundingBox.left,
+                            det.boundingBox.top,
+                            det.boundingBox.right,
+                            det.boundingBox.bottom
+                        )
+
+                        val qty = det.quantity ?: 1
+                        val existingIndex = currentSession.indexOfFirst { it.label.equals(label, ignoreCase = true) }
+                        if (existingIndex == -1) {
+                            currentSession.add(
+                                ScannedAppliance(
+                                    label = defaults?.name ?: label,
+                                    powerWatts = powerWatts,
+                                    powerEstimateStr = powerEstimateStr,
+                                    boundingBox = rectF,
+                                    lastTrackingId = null,
+                                    lastSeenTimestamp = currentTime,
+                                    quantity = qty,
+                                    evidence = det.evidence
+                                )
+                            )
+                        } else {
+                            val existing = currentSession[existingIndex]
+                            currentSession[existingIndex] = existing.copy(
+                                quantity = existing.quantity + qty
+                            )
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        _scanSession.value = currentSession
+                        if (_uiState.value is LensUiState.Processing) {
+                            finishScan()
+                        }
+                    }
+                }.onFailure { e ->
+                    if (e is CancellationException || !isActive) return@launch
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = LensUiState.Error(e.message ?: "Video analysis failed.", LensUiState.RoomOverview(contextRoom))
                     }
                 }
-            } else {
+            } catch (e: Exception) {
+                if (e is CancellationException || !isActive) return@launch
                 withContext(Dispatchers.Main) {
-                    _uiState.value = LensUiState.Error("Failed to extract frames from video", LensUiState.RoomOverview(contextRoom))
+                    _uiState.value = LensUiState.Error(e.message ?: "Could not process video.", LensUiState.RoomOverview(contextRoom))
                 }
             }
         }

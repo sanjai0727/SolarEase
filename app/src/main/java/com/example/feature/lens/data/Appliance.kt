@@ -43,10 +43,26 @@ data class Detection(
     val label: String,
     val confidence: Float,
     val source: String,
-    @Json(name = "bounding_box") val boundingBox: BoundingBox
+    @Json(name = "bounding_box") val boundingBox: BoundingBox,
+    @Json(name = "power_rating_watts") val powerRatingWatts: Float? = null,
+    @Json(name = "quantity") val quantity: Int? = 1,
+    @Json(name = "evidence") val evidence: String? = null,
+    @Json(name = "appliance_type") val applianceType: String? = null,
+    @Json(name = "appliance_name") val applianceName: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DetectedAppliancePayload(
+    @Json(name = "appliance_type") val applianceType: String,
+    @Json(name = "appliance_name") val applianceName: String,
+    @Json(name = "quantity") val quantity: Int = 1,
+    @Json(name = "power_rating_watts") val powerRatingWatts: Float? = null,
+    @Json(name = "confidence") val confidence: Float = 0.9f,
+    @Json(name = "evidence") val evidence: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DetectionResult(
-    val detections: List<Detection>
+    val detections: List<Detection> = emptyList(),
+    @Json(name = "detected_appliances") val detectedAppliances: List<DetectedAppliancePayload>? = null
 )
