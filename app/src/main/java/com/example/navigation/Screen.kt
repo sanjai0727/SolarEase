@@ -47,6 +47,9 @@ sealed class Screen {
     
     @Serializable
     data object TnebBillStatus : Screen()
+
+    @Serializable
+    data object BillHistory : Screen()
     
     @Serializable
     data object SolarPanel : Screen()

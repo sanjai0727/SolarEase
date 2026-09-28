@@ -70,6 +70,7 @@ fun HomeRoute(
     onNavigateToElectricityChatbot: () -> Unit,
     onNavigateToSolarEaseLens: () -> Unit,
     onNavigateToTnebBillStatus: () -> Unit,
+    onNavigateToBillHistory: () -> Unit = {},
     onNavigateToSolarPanel: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToActivity: () -> Unit = {},
@@ -195,7 +196,7 @@ fun HomeRoute(
                 PrimaryEnergyCard(
                     uiState = uiState,
                     onConnectBill = onNavigateToTnebBillStatus,
-                    onViewBillDetails = onNavigateToTnebBillStatus
+                    onViewBillHistory = onNavigateToBillHistory
                 )
 
                 // ── 4. REAP Energy Profile / Household Classification ───
@@ -478,7 +479,7 @@ private fun GreetingHeader(
 private fun PrimaryEnergyCard(
     uiState: HomeUiState,
     onConnectBill: () -> Unit,
-    onViewBillDetails: () -> Unit
+    onViewBillHistory: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -775,7 +776,7 @@ private fun PrimaryEnergyCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onViewBillDetails,
+                        onClick = onViewBillHistory,
                         modifier = Modifier
                             .weight(1f)
                             .height(38.dp),
@@ -783,7 +784,7 @@ private fun PrimaryEnergyCard(
                         border = BorderStroke(1.dp, StitchOutline)
                     ) {
                         Text(
-                            text = "View Bill Details",
+                            text = "View Bill History",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = StitchOnSurface

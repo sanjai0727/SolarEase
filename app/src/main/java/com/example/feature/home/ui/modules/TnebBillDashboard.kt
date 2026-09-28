@@ -518,7 +518,7 @@ private fun CurrentBillView(
 // ==============================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BillHistoryView(
+internal fun BillHistoryView(
     serviceNo: String,
     consumerData: TnebConsumerBillData,
     bills: List<TnebBillRecord>,
@@ -789,7 +789,7 @@ private fun BillHistoryView(
 // ==============================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BillDetailsView(
+internal fun BillDetailsView(
     serviceNo: String,
     consumerData: TnebConsumerBillData,
     bill: TnebBillRecord,
