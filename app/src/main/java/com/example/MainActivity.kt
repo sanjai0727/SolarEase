@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
     com.example.core.session.UserSession.init(this)
     com.example.feature.home.ui.modules.TnebBillCache.init(this)
     com.example.feature.home.ui.modules.BillCalculatorHistoryStorage.init(this)
+    com.example.feature.lens.data.LensRoomStorage.init(this)
     enableEdgeToEdge()
     setContent {
       SolarEaseTheme {

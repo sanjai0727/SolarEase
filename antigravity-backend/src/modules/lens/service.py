@@ -231,7 +231,7 @@ class ApplianceAnalysisService:
                 parsed_detections.append(
                     Detection(
                         id=f"det_{uuid.uuid4().hex[:8]}",
-                        label=app_type,
+                        label=app_name,
                         confidence=conf,
                         source=source,
                         bounding_box=BoundingBox(left=0.0, top=0.0, right=1.0, bottom=1.0),

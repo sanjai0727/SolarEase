@@ -47,7 +47,23 @@ fun LensLandingScreen(
     val uiState by viewModel.uiState.collectAsState()
     val rooms by viewModel.rooms.collectAsState()
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
+    var roomToRename by remember { mutableStateOf<Room?>(null) }
+    var showAddRoomDialog by remember { mutableStateOf(false) }
+    var currentCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    fun createCameraUri(ext: String): android.net.Uri {
+        val cameraDir = java.io.File(context.cacheDir, "camera").apply { mkdirs() }
+        val tempFile = java.io.File(cameraDir, "lens_upload_${System.currentTimeMillis()}.$ext")
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            tempFile
+        )
+        currentCameraUri = uri
+        return uri
+    }
+
+    val galleryPhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
             if (uris.isNotEmpty() && uiState is LensUiState.RoomOverview) {
@@ -55,6 +71,62 @@ fun LensLandingScreen(
             }
         }
     )
+
+    val galleryVideoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null && uiState is LensUiState.RoomOverview) {
+                viewModel.processUrisAsync(context, listOf(uri), (uiState as LensUiState.RoomOverview).room)
+            }
+        }
+    )
+
+    val cameraPhotoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            val capturedUri = currentCameraUri
+            if (success && capturedUri != null && uiState is LensUiState.RoomOverview) {
+                viewModel.processUrisAsync(context, listOf(capturedUri), (uiState as LensUiState.RoomOverview).room)
+            }
+        }
+    )
+
+    val cameraVideoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CaptureVideo(),
+        onResult = { success ->
+            val capturedUri = currentCameraUri
+            if (success && capturedUri != null && uiState is LensUiState.RoomOverview) {
+                viewModel.processUrisAsync(context, listOf(capturedUri), (uiState as LensUiState.RoomOverview).room)
+            }
+        }
+    )
+
+    if (roomToRename != null) {
+        val target = roomToRename!!
+        RenameRoomDialog(
+            currentName = target.name,
+            title = "Rename Room",
+            confirmButtonText = "Save",
+            onDismiss = { roomToRename = null },
+            onConfirm = { newName ->
+                viewModel.renameRoom(target.id, newName)
+                roomToRename = null
+            }
+        )
+    }
+
+    if (showAddRoomDialog) {
+        RenameRoomDialog(
+            currentName = "",
+            title = "Add Room",
+            confirmButtonText = "Add Room",
+            onDismiss = { showAddRoomDialog = false },
+            onConfirm = { newName ->
+                viewModel.addRoom(newName)
+                showAddRoomDialog = false
+            }
+        )
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is LensUiState.CameraActive) {
@@ -155,7 +227,8 @@ fun LensLandingScreen(
                 is LensUiState.RoomSetup -> {
                     RoomSetupContent(
                         rooms = rooms,
-                        onAddRoom = { viewModel.addRoom("Custom Room") },
+                        onAddRoom = { showAddRoomDialog = true },
+                        onRenameRoom = { room -> roomToRename = room },
                         onRemoveRoom = { viewModel.removeRoom(it) },
                         onMoveRoomUp = { index -> viewModel.reorderRooms(index, index - 1) },
                         onMoveRoomDown = { index -> viewModel.reorderRooms(index, index + 1) },
@@ -172,15 +245,31 @@ fun LensLandingScreen(
                         room = room,
                         activeIdx = if (activeIdx > 0) activeIdx else 1,
                         total = total,
-                        onUploadClicked = {
-                            photoPickerLauncher.launch(
+                        onRenameRoom = { roomToRename = room },
+                        onLiveScanClicked = {
+                            viewModel.startCamera(CameraMode.LIVE_SCAN)
+                        },
+                        onUploadPhotosClicked = {
+                            galleryPhotoPickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
                                 )
                             )
                         },
-                        onCameraClicked = {
-                            viewModel.startCamera(CameraMode.LIVE_SCAN)
+                        onUploadVideoClicked = {
+                            galleryVideoPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.VideoOnly
+                                )
+                            )
+                        },
+                        onCapturePhotoClicked = {
+                            val uri = createCameraUri("jpg")
+                            cameraPhotoLauncher.launch(uri)
+                        },
+                        onRecordVideoClicked = {
+                            val uri = createCameraUri("mp4")
+                            cameraVideoLauncher.launch(uri)
                         },
                         onSkipRoom = {
                             viewModel.skipCurrentRoom()
@@ -213,6 +302,67 @@ fun LensLandingScreen(
             }
         }
     }
+}
+
+@Composable
+fun RenameRoomDialog(
+    currentName: String,
+    title: String = "Rename Room",
+    confirmButtonText: String = "Save",
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf(currentName) }
+    val isValid = name.trim().isNotEmpty()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = LensTypography.headlineSm, color = LensColors.SlateText) },
+        text = {
+            Column {
+                Text(
+                    if (currentName.isEmpty()) "Enter the name for the new room:" else "Enter the new name for this room:",
+                    style = LensTypography.bodyMd,
+                    color = LensColors.SlateCaption
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text("Room Name") },
+                    placeholder = { Text("e.g. Master Bedroom, Living Room, Kitchen") },
+                    isError = !isValid && name.isNotEmpty(),
+                    supportingText = if (!isValid && name.isNotEmpty()) {
+                        { Text("Room name cannot be empty", color = LensColors.Error) }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (isValid) {
+                        onConfirm(name.trim())
+                    }
+                },
+                enabled = isValid,
+                colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(confirmButtonText, color = LensColors.OnPrimary)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = LensColors.SlateCaption)
+            }
+        },
+        containerColor = LensColors.SurfaceContainerLowest,
+        shape = RoundedCornerShape(12.dp)
+    )
 }
 
 // ─── Stitch Header Bar ───────────────────────────────────────────────────────────
@@ -673,6 +823,7 @@ private fun WorkflowStepItem(
 fun RoomSetupContent(
     rooms: List<Room>,
     onAddRoom: () -> Unit,
+    onRenameRoom: (Room) -> Unit,
     onRemoveRoom: (String) -> Unit,
     onMoveRoomUp: (Int) -> Unit,
     onMoveRoomDown: (Int) -> Unit,
@@ -887,6 +1038,32 @@ fun RoomSetupContent(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.Primary.copy(alpha = 0.1f),
+                                modifier = Modifier
+                                    .padding(end = 4.dp)
+                                    .clickable { onRenameRoom(room) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Edit",
+                                        tint = LensColors.Primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        "Edit",
+                                        style = LensTypography.labelCaps.copy(fontSize = 10.sp),
+                                        color = LensColors.Primary
+                                    )
+                                }
+                            }
+
                             IconButton(
                                 onClick = { onMoveRoomUp(index) },
                                 enabled = index > 0,
@@ -971,8 +1148,12 @@ fun RoomOverviewContent(
     room: Room,
     activeIdx: Int,
     total: Int,
-    onUploadClicked: () -> Unit,
-    onCameraClicked: () -> Unit,
+    onRenameRoom: (Room) -> Unit,
+    onLiveScanClicked: () -> Unit,
+    onUploadPhotosClicked: () -> Unit,
+    onUploadVideoClicked: () -> Unit,
+    onCapturePhotoClicked: () -> Unit,
+    onRecordVideoClicked: () -> Unit,
     onSkipRoom: () -> Unit
 ) {
     Column(
@@ -1015,6 +1196,21 @@ fun RoomOverviewContent(
                             style = LensTypography.headlineSm.copy(fontSize = 14.sp),
                             color = LensColors.SlateText
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = LensColors.Primary.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable { onRenameRoom(room) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = "Rename", tint = LensColors.Primary, modifier = Modifier.size(11.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("Rename", style = LensTypography.labelCaps.copy(fontSize = 10.sp), color = LensColors.Primary)
+                            }
+                        }
                     }
                     Surface(
                         shape = RoundedCornerShape(4.dp),
@@ -1063,13 +1259,13 @@ fun RoomOverviewContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Scan or Capture ${room.name}",
+                            "Audit Zone: ${room.name}",
                             style = LensTypography.headlineMd,
                             color = LensColors.SlateText
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Ensure good ambient lighting. Stand near the doorway or center of the room to capture ceiling fixtures, wall units, and floor load appliances in single sweeps.",
+                            "Choose an audit workflow: upload media for Gemini 3.8 Flash analysis, or scan the room in real time using on-device YOLO.",
                             style = LensTypography.bodyMd,
                             color = LensColors.SlateCaption,
                             lineHeight = 18.sp
@@ -1092,7 +1288,7 @@ fun RoomOverviewContent(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    "SUPPORTED ROOM APPLIANCES TARGET",
+                    "TARGET APPLIANCES IN THIS ROOM",
                     style = LensTypography.labelCaps,
                     color = LensColors.SlateCaption
                 )
@@ -1109,8 +1305,158 @@ fun RoomOverviewContent(
             }
         }
 
-        // Dual Primary Technical Action Cards
-        // Action Card 1: Camera Reticle Scanner
+        // ══════════════════════════════════════════════════════════════════
+        // WORKFLOW 1: UPLOAD (Backend Gemini 3.8 Flash)
+        // ══════════════════════════════════════════════════════════════════
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            color = LensColors.SurfaceContainerLowest,
+            border = BorderStroke(1.dp, LensColors.Outline)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = LensColors.SurfaceContainerLow,
+                        modifier = Modifier.size(46.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.CloudUpload,
+                                contentDescription = null,
+                                tint = LensColors.Primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Upload Media",
+                                style = LensTypography.headlineSm,
+                                color = LensColors.SlateText
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.PrimaryFixed.copy(alpha = 0.3f)
+                            ) {
+                                Text(
+                                    "GEMINI 3.8 FLASH",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.Primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "Multi-modal AI detection with Gemini 3.8 Flash. Select from gallery or capture with camera for upload.",
+                            style = LensTypography.bodyMd,
+                            color = LensColors.SlateCaption,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Input Path Section 1: Gallery
+                Text(
+                    "PATH 1 & 2: SELECT FROM GALLERY",
+                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                    color = LensColors.SlateCaption
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onUploadPhotosClicked,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Photos", style = LensTypography.labelSm, color = LensColors.SlateText)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onUploadVideoClicked,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Video", style = LensTypography.labelSm, color = LensColors.SlateText)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Input Path Section 2: Camera Capture for Upload
+                Text(
+                    "PATH 3: CAPTURE MEDIA FOR UPLOAD",
+                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                    color = LensColors.SlateCaption
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onCapturePhotoClicked,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Take Photo", style = LensTypography.labelSm, color = LensColors.SlateText)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onRecordVideoClicked,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Videocam, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Record Video", style = LensTypography.labelSm, color = LensColors.SlateText)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // WORKFLOW 2: LIVE SCAN (On-Device Local YOLO)
+        // ══════════════════════════════════════════════════════════════════
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
@@ -1141,27 +1487,34 @@ fun RoomOverviewContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "Open Camera",
+                                "Live Scan",
                                 style = LensTypography.headlineSm,
                                 color = LensColors.SlateText
                             )
-                            Text(
-                                "REAL-TIME",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.Primary
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.SurfaceContainerHighest
+                            ) {
+                                Text(
+                                    "OFFLINE YOLO",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.SlateText,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            "Live reticle scan, burst snapshot mode, or a guided 10-second rotational video sweep.",
+                            "Real-time camera scanning with on-device detector and live bounding boxes. Zero network requests.",
                             style = LensTypography.bodyMd,
                             color = LensColors.SlateCaption,
-                            maxLines = 2
+                            fontSize = 12.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Button(
-                    onClick = onCameraClicked,
+                    onClick = onLiveScanClicked,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
@@ -1169,76 +1522,9 @@ fun RoomOverviewContent(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.DocumentScanner, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Launch Camera", style = LensTypography.labelSm, color = LensColors.OnPrimary)
-                    }
-                }
-            }
-        }
-
-        // Action Card 2: Batch Media Upload
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLowest,
-            border = BorderStroke(1.dp, LensColors.Outline)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = LensColors.SurfaceContainerLow,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.DriveFolderUpload,
-                                contentDescription = null,
-                                tint = LensColors.Tertiary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Upload Media",
-                                style = LensTypography.headlineSm,
-                                color = LensColors.SlateText
-                            )
-                            Text(
-                                "BATCH",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.SlateCaption
-                            )
-                        }
-                        Text(
-                            "Select high-res photos or recorded pan clips directly from your device file storage.",
-                            style = LensTypography.bodyMd,
-                            color = LensColors.SlateCaption,
-                            maxLines = 2
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = onUploadClicked,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LensColors.OutlineVariant)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Select from Device", style = LensTypography.labelSm, color = LensColors.SlateText)
+                        Text("Start Live Scan (Local YOLO)", style = LensTypography.labelSm, color = LensColors.OnPrimary)
                     }
                 }
             }

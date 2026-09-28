@@ -200,7 +200,6 @@ private fun LensCameraContent(
             }
         },
         bottomBar = {
-            // Segmented Instrument Mode Selector
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = LensColors.InverseSurface,
@@ -209,29 +208,20 @@ private fun LensCameraContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CameraModeTab(
-                        label = "Photo",
-                        icon = Icons.Default.PhotoCamera,
-                        isSelected = uiState.mode == CameraMode.PHOTO,
-                        modifier = Modifier.weight(1f),
-                        onClick = { viewModel.startCamera(CameraMode.PHOTO) }
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(LensColors.PrimaryLive, CircleShape)
                     )
-                    CameraModeTab(
-                        label = "Video (10s)",
-                        icon = Icons.Default.Videocam,
-                        isSelected = uiState.mode == CameraMode.VIDEO,
-                        modifier = Modifier.weight(1f),
-                        onClick = { viewModel.startCamera(CameraMode.VIDEO) }
-                    )
-                    CameraModeTab(
-                        label = "Live Scan",
-                        icon = Icons.Default.DocumentScanner,
-                        isSelected = uiState.mode == CameraMode.LIVE_SCAN,
-                        modifier = Modifier.weight(1f),
-                        onClick = { viewModel.startCamera(CameraMode.LIVE_SCAN) }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "LIVE SCAN ACTIVE • ZERO NETWORK REQUESTS (OFFLINE YOLO)",
+                        style = LensTypography.labelCaps.copy(fontSize = 11.sp),
+                        color = LensColors.InverseOnSurface
                     )
                 }
             }
@@ -264,34 +254,23 @@ private fun LensCameraContent(
                         cameraProvider.unbindAll()
 
                         try {
-                            when (uiState.mode) {
-                                CameraMode.PHOTO -> {
-                                    imageCapture = ImageCapture.Builder().build()
-                                    cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture)
-                                }
-                                CameraMode.VIDEO -> {
-                                    cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
-                                }
-                                CameraMode.LIVE_SCAN -> {
-                                    val imageAnalysis = ImageAnalysis.Builder()
-                                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                        .build()
+                            val imageAnalysis = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
 
-                                    imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
-                                        analysisScope.launch {
-                                            try {
-                                                val candidates = scanDetector.processFrame(imageProxy)
-                                                viewModel.onLocalCandidatesDetected(candidates)
-                                            } catch (e: Exception) {
-                                                Log.e("LensScreen", "Frame analysis failed", e)
-                                            } finally {
-                                                imageProxy.close()
-                                            }
-                                        }
+                            imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
+                                analysisScope.launch {
+                                    try {
+                                        val candidates = scanDetector.processFrame(imageProxy)
+                                        viewModel.onLocalCandidatesDetected(candidates)
+                                    } catch (e: Exception) {
+                                        Log.e("LensScreen", "Frame analysis failed", e)
+                                    } finally {
+                                        imageProxy.close()
                                     }
-                                    cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalysis)
                                 }
                             }
+                            cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalysis)
                         } catch (exc: Exception) {
                             Log.e("LensScreen", "Camera binding failed", exc)
                         }
@@ -474,128 +453,34 @@ private fun LensCameraContent(
                 }
             }
 
-            // Bottom Shutter / Action Controls Layer
+            // Bottom Action Controls Layer
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 24.dp)
             ) {
-                when (uiState.mode) {
-                    CameraMode.PHOTO -> {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(Color.Transparent, CircleShape)
-                                .clickable {
-                                    val file = File(context.cacheDir, "temp_photo.jpg")
-                                    val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
-                                    imageCapture?.takePicture(
-                                        outputOptions,
-                                        ContextCompat.getMainExecutor(context),
-                                        object : ImageCapture.OnImageSavedCallback {
-                                            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                                val bytes = file.readBytes()
-                                                viewModel.processPhotoScan(bytes, scanDetector, uiState.room)
-                                            }
-                                            override fun onError(exception: ImageCaptureException) {
-                                                Log.e("LensScreen", "Photo capture failed", exception)
-                                            }
-                                        }
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = LensColors.InverseOnSurface,
-                                modifier = Modifier.size(68.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(54.dp)
-                                            .background(LensColors.Primary, CircleShape)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    CameraMode.VIDEO -> {
-                        Button(
-                            onClick = { viewModel.finishScan() },
-                            modifier = Modifier
-                                .size(70.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
-                        ) {
-                            Icon(Icons.Default.Videocam, contentDescription = "Record", tint = Color.White)
-                        }
-                    }
-                    CameraMode.LIVE_SCAN -> {
-                        Button(
-                            onClick = { viewModel.finishScan() },
-                            colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth(0.85f)
-                                .height(48.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    "Finish Scan (${scanSession.size} detected)",
-                                    style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                                    color = LensColors.OnPrimary
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
-                            }
-                        }
+                Button(
+                    onClick = { viewModel.finishScan() },
+                    colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(48.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            "Finish Live Scan (${scanSession.size} detected)",
+                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                            color = LensColors.OnPrimary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun CameraModeTab(
-    label: String,
-    icon: ImageVector,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .height(38.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(6.dp),
-        color = if (isSelected) LensColors.SurfaceContainerLowest else Color.Transparent,
-        border = if (isSelected) BorderStroke(1.dp, LensColors.Outline) else null
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (isSelected) LensColors.Primary else LensColors.InverseOnSurface.copy(alpha = 0.7f),
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                label,
-                style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal),
-                color = if (isSelected) LensColors.SlateText else LensColors.InverseOnSurface.copy(alpha = 0.8f)
-            )
         }
     }
 }

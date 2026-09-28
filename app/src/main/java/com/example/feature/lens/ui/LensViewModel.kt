@@ -26,6 +26,7 @@ enum class SaveStatus {
     FAILED
 }
 
+@kotlinx.serialization.Serializable
 enum class RoomStatus {
     PENDING,
     IN_PROGRESS,
@@ -33,6 +34,7 @@ enum class RoomStatus {
     SKIPPED
 }
 
+@kotlinx.serialization.Serializable
 data class Room(
     val id: String = java.util.UUID.randomUUID().toString(),
     val name: String,
@@ -81,6 +83,7 @@ sealed class LensUiState {
     ) : LensUiState()
 }
 
+@kotlinx.serialization.Serializable
 data class EditableAppliance(
     val id: String = java.util.UUID.randomUUID().toString(),
     val label: String,
@@ -133,24 +136,40 @@ class LensViewModel(
     private var overlayTtlJob: Job? = null
 
     init {
-        // Initialize with default rooms
-        _rooms.value = listOf(
-            Room(name = "Bedroom", order = 0),
-            Room(name = "Hall", order = 1),
-            Room(name = "Bathroom", order = 2),
-            Room(name = "Kitchen", order = 3)
-        )
+        // Load persistently saved rooms or default household rooms
+        val savedRooms = com.example.feature.lens.data.LensRoomStorage.loadRooms()
+        _rooms.value = if (savedRooms.isNotEmpty()) savedRooms else com.example.feature.lens.data.LensRoomStorage.defaultRooms()
     }
 
     fun addRoom(name: String) {
+        val trimmed = name.trim().ifEmpty { "Custom Room" }
         val newOrder = _rooms.value.size
-        val newRoom = Room(name = name, order = newOrder)
+        val newRoom = Room(name = trimmed, order = newOrder)
         _rooms.value = _rooms.value + newRoom
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(_rooms.value)
+    }
+
+    fun renameRoom(roomId: String, newName: String): Boolean {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return false
+        _rooms.value = _rooms.value.map { room ->
+            if (room.id == roomId) room.copy(name = trimmed) else room
+        }
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(_rooms.value)
+        val currentState = _uiState.value
+        if (currentState is LensUiState.RoomOverview && currentState.room.id == roomId) {
+            val updated = _rooms.value.find { it.id == roomId }
+            if (updated != null) {
+                _uiState.value = LensUiState.RoomOverview(updated)
+            }
+        }
+        return true
     }
 
     fun removeRoom(roomId: String) {
         val updated = _rooms.value.filter { it.id != roomId }.sortedBy { it.order }
         _rooms.value = updated.mapIndexed { index, room -> room.copy(order = index) }
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(_rooms.value)
     }
 
     fun reorderRooms(fromIndex: Int, toIndex: Int) {
@@ -159,6 +178,7 @@ class LensViewModel(
             val item = current.removeAt(fromIndex)
             current.add(toIndex, item)
             _rooms.value = current.mapIndexed { index, room -> room.copy(order = index) }
+            com.example.feature.lens.data.LensRoomStorage.saveRooms(_rooms.value)
         }
     }
 
@@ -185,6 +205,7 @@ class LensViewModel(
         _rooms.value = _rooms.value.map {
             if (it.id == roomId) it.copy(status = status) else it
         }
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(_rooms.value)
     }
 
     fun skipCurrentRoom() {
@@ -395,6 +416,7 @@ class LensViewModel(
             _rooms.value = _rooms.value.map { r ->
                 if (r.id == room.id) updatedRoom else r
             }
+            com.example.feature.lens.data.LensRoomStorage.saveRooms(_rooms.value)
 
             val sortedRooms = _rooms.value.sortedBy { it.order }
             val currentIndex = sortedRooms.indexOfFirst { it.id == room.id }

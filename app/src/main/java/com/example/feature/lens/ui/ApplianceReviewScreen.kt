@@ -357,8 +357,37 @@ private fun ApplianceCardStitch(
     onUpdate: (String, String, Float, Float, Int, Int) -> Unit,
     onRemove: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = ApplianceMaster.appliances.map { it.name }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var showWattageDialog by remember { mutableStateOf(false) }
+
+    val standardOptions = remember {
+        ApplianceMaster.appliances
+            .map { it.name }
+            .filter { !it.contains("Other", ignoreCase = true) }
+    }
+    val allDropdownOptions = remember {
+        standardOptions + "Other / Custom"
+    }
+
+    // Determine if current appliance label matches a standard appliance
+    val matchedStandard = remember(appliance.label) {
+        ApplianceMaster.appliances.find {
+            !it.name.contains("Other", ignoreCase = true) &&
+            it.name.equals(appliance.label, ignoreCase = true)
+        } ?: ApplianceMaster.getDefaults(appliance.label)?.takeIf { !it.name.contains("Other", ignoreCase = true) }
+    }
+
+    val isCurrentStandard = matchedStandard != null && standardOptions.contains(matchedStandard.name)
+    var selectedDropdownItem by remember(appliance.label) {
+        mutableStateOf(if (isCurrentStandard) matchedStandard!!.name else "Other / Custom")
+    }
+
+    val isCustomMode = selectedDropdownItem == "Other / Custom"
+    var customNameText by remember(appliance.label, isCustomMode) {
+        mutableStateOf(if (isCustomMode) {
+            if (appliance.label.equals("Other / Custom Appliance", ignoreCase = true)) "" else appliance.label
+        } else "")
+    }
 
     val applianceIcon = when {
         appliance.label.lowercase().contains("ac") || appliance.label.lowercase().contains("air conditioner") -> Icons.Default.AcUnit
@@ -370,6 +399,47 @@ private fun ApplianceCardStitch(
         else -> Icons.Default.Power
     }
 
+    if (showWattageDialog) {
+        var wattageInput by remember { mutableStateOf(appliance.powerWatts.toInt().toString()) }
+        AlertDialog(
+            onDismissRequest = { showWattageDialog = false },
+            title = { Text("Adjust Rated Load", style = LensTypography.headlineSm, color = LensColors.SlateText) },
+            text = {
+                Column {
+                    Text("Enter rated power in Watts for ${appliance.label}:", style = LensTypography.bodyMd, color = LensColors.SlateCaption)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = wattageInput,
+                        onValueChange = { wattageInput = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Power Rating (Watts)") },
+                        suffix = { Text("W") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val w = wattageInput.toFloatOrNull() ?: appliance.powerWatts
+                        onUpdate(appliance.id, appliance.label, w.coerceAtLeast(1f), appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
+                        showWattageDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary)
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWattageDialog = false }) {
+                    Text("Cancel", color = LensColors.SlateCaption)
+                }
+            },
+            containerColor = LensColors.SurfaceContainerLowest
+        )
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -377,7 +447,7 @@ private fun ApplianceCardStitch(
         border = BorderStroke(1.dp, LensColors.Outline)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Header Row: Identification & Remove
+            // Header Row: Icon, Detection Tag, and Remove
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -395,22 +465,26 @@ private fun ApplianceCardStitch(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text(appliance.label, style = LensTypography.headlineSm.copy(fontSize = 15.sp), color = LensColors.SlateText)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 shape = RoundedCornerShape(3.dp),
                                 color = LensColors.PrimaryFixed
                             ) {
                                 Text(
-                                    "AI Detected (96%)",
+                                    "AI Suggested",
                                     style = LensTypography.labelCaps.copy(fontSize = 9.sp),
                                     color = LensColors.Primary,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text("• ${(appliance.monthlyKwh).toInt()} kWh/mo", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateCaption)
                         }
+                        Text(
+                            "₹${appliance.monthlyCost.toInt()} / mo estimated",
+                            style = LensTypography.labelSm.copy(fontSize = 10.sp),
+                            color = LensColors.SlateCaption
+                        )
                     }
                 }
                 IconButton(onClick = { onRemove(appliance.id) }, modifier = Modifier.size(28.dp)) {
@@ -418,7 +492,90 @@ private fun ApplianceCardStitch(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Standard Appliance Name Dropdown
+            Text(
+                "APPLIANCE NAME",
+                style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                color = LensColors.SlateCaption
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = dropdownExpanded,
+                onExpandedChange = { dropdownExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedDropdownItem,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    textStyle = LensTypography.headlineSm.copy(fontSize = 14.sp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = dropdownExpanded,
+                    onDismissRequest = { dropdownExpanded = false }
+                ) {
+                    allDropdownOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    option,
+                                    fontWeight = if (option == selectedDropdownItem) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (option == "Other / Custom") LensColors.Primary else LensColors.SlateText
+                                )
+                            },
+                            onClick = {
+                                selectedDropdownItem = option
+                                dropdownExpanded = false
+                                if (option != "Other / Custom") {
+                                    val def = ApplianceMaster.getDefaults(option)
+                                    val newWattage = def?.defaultWattage ?: ApplianceMaster.getDefaultWattage(option)
+                                    val newHours = def?.typicalUsageHoursPerDay ?: appliance.usageHoursPerDay
+                                    val newDays = def?.monthlyUsageDays ?: appliance.monthlyUsageDays
+                                    onUpdate(appliance.id, option, newWattage, newHours, newDays, appliance.quantity)
+                                } else {
+                                    val currentLabel = if (appliance.label == "Other / Custom Appliance" || standardOptions.contains(appliance.label)) "" else appliance.label
+                                    customNameText = currentLabel
+                                    if (currentLabel.isNotBlank()) {
+                                        onUpdate(appliance.id, currentLabel, appliance.powerWatts, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Custom Appliance Name Input Field (Shown when Other / Custom is selected)
+            if (isCustomMode) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = customNameText,
+                    onValueChange = { newName ->
+                        customNameText = newName
+                        val finalLabel = newName.ifBlank { "Other / Custom Appliance" }
+                        onUpdate(
+                            appliance.id, finalLabel, appliance.powerWatts,
+                            appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity
+                        )
+                    },
+                    label = { Text("Custom Appliance Name") },
+                    placeholder = { Text("e.g. Aquarium Filter, Water Purifier, Server Rack") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Quantitative Specs Controls (2-Column Grid)
             Row(
@@ -476,14 +633,23 @@ private fun ApplianceCardStitch(
                     }
                 }
 
-                // Rated Load Pill
+                // Rated Load Pill (Clickable to adjust wattage)
                 Surface(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showWattageDialog = true },
                     shape = RoundedCornerShape(6.dp),
                     color = LensColors.SurfaceContainerLow
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
-                        Text("RATED LOAD", style = LensTypography.labelCaps.copy(fontSize = 9.sp), color = LensColors.SlateCaption)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("RATED LOAD", style = LensTypography.labelCaps.copy(fontSize = 9.sp), color = LensColors.SlateCaption)
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Wattage", tint = LensColors.Primary, modifier = Modifier.size(12.dp))
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -496,7 +662,7 @@ private fun ApplianceCardStitch(
                                 color = LensColors.PrimaryContainer
                             ) {
                                 Text(
-                                    "SPEC",
+                                    if (isCustomMode) "CUSTOM" else "SPEC",
                                     style = LensTypography.labelCaps.copy(fontSize = 9.sp),
                                     color = LensColors.OnPrimary,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)

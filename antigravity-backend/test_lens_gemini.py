@@ -72,7 +72,7 @@ class GeminiLensUploadUnitTests(unittest.TestCase):
 
         # Check detections list compatibility
         det_ref = result.detections[0]
-        self.assertEqual(det_ref.label, "refrigerator")
+        self.assertEqual(det_ref.label, "Double Door Refrigerator")
         self.assertIsNone(det_ref.power_rating_watts)
         self.assertEqual(det_ref.quantity, 1)
 
@@ -110,7 +110,7 @@ class GeminiLensUploadUnitTests(unittest.TestCase):
         self.assertEqual(len(contents), 2)  # Part and LENS_UPLOAD_PROMPT
 
         self.assertEqual(len(result.detections), 1)
-        self.assertEqual(result.detections[0].label, "washing machine")
+        self.assertEqual(result.detections[0].label, "Front Load Washing Machine")
 
     def test_no_openrouter_or_nvidia_reference(self):
         """Strictly verify service does NOT reference OpenRouter or NVIDIA models."""
