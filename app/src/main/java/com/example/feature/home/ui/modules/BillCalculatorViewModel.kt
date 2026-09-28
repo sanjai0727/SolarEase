@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import java.util.UUID
 
 enum class CalculatorScreenState {
@@ -17,11 +18,13 @@ enum class CalculatorScreenState {
     HISTORY
 }
 
+@Serializable
 enum class BillingCycle(val displayName: String, val days: Int) {
     MONTHLY("Monthly", 30),
     BIMONTHLY("Bi-monthly", 60)
 }
 
+@Serializable
 data class SavedCalculation(
     val id: String = UUID.randomUUID().toString(),
     val timestamp: Long = System.currentTimeMillis(),
@@ -30,7 +33,9 @@ data class SavedCalculation(
     val cycle: BillingCycle
 )
 
-class BillCalculatorViewModel : ViewModel() {
+class BillCalculatorViewModel(
+    private val storage: BillCalculatorHistoryStorage = BillCalculatorHistoryStorage
+) : ViewModel() {
 
     private val _screenState = MutableStateFlow(CalculatorScreenState.ENTRY)
     val screenState: StateFlow<CalculatorScreenState> = _screenState.asStateFlow()
@@ -54,6 +59,15 @@ class BillCalculatorViewModel : ViewModel() {
     val savedCalculations: StateFlow<List<SavedCalculation>> = _savedCalculations.asStateFlow()
 
     private var calculationJob: Job? = null
+
+    init {
+        _savedCalculations.value = storage.getAll()
+        viewModelScope.launch {
+            storage.historyFlow.collect { list ->
+                _savedCalculations.value = list
+            }
+        }
+    }
 
     fun onInputChanged(text: String) {
         val sanitized = text.filter { it.isDigit() || it == '.' }
@@ -136,7 +150,8 @@ class BillCalculatorViewModel : ViewModel() {
                 billResult = result,
                 cycle = _billingCycle.value
             )
-            _savedCalculations.value = listOf(newRecord) + _savedCalculations.value
+            storage.saveCalculation(newRecord)
+            _savedCalculations.value = storage.getAll()
 
             _screenState.value = CalculatorScreenState.RESULT
         }
@@ -167,10 +182,12 @@ class BillCalculatorViewModel : ViewModel() {
     }
 
     fun deleteHistoryItem(id: String) {
-        _savedCalculations.value = _savedCalculations.value.filter { it.id != id }
+        storage.deleteCalculation(id)
+        _savedCalculations.value = storage.getAll()
     }
 
     fun clearHistory() {
+        storage.clearHistory()
         _savedCalculations.value = emptyList()
     }
 

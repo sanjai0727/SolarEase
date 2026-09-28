@@ -1,5 +1,8 @@
 package com.example.feature.home.ui.modules
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class SlabBreakdown(
     val fromUnit: Double,
     val toUnit: Double,
@@ -8,6 +11,7 @@ data class SlabBreakdown(
     val amount: Double
 )
 
+@Serializable
 data class BillResult(
     val totalUnits: Double,
     val freeUnits: Double,

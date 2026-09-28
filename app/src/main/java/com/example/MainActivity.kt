@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     com.example.core.session.UserSession.init(this)
     com.example.feature.home.ui.modules.TnebBillCache.init(this)
+    com.example.feature.home.ui.modules.BillCalculatorHistoryStorage.init(this)
     enableEdgeToEdge()
     setContent {
       SolarEaseTheme {

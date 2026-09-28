@@ -17,11 +17,13 @@ class BillCalculatorViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        BillCalculatorHistoryStorage.resetForTesting()
         viewModel = BillCalculatorViewModel()
     }
 
     @After
     fun tearDown() {
+        BillCalculatorHistoryStorage.resetForTesting()
         Dispatchers.resetMain()
     }
 
@@ -113,5 +115,58 @@ class BillCalculatorViewModelTest {
 
         viewModel.navigateToEntry()
         assertEquals(CalculatorScreenState.ENTRY, viewModel.screenState.value)
+    }
+
+    @Test
+    fun testMultipleCalculationsNewestFirstOrdering() = runTest(testDispatcher) {
+        // First calculation: 250 units
+        viewModel.onInputChanged("250")
+        viewModel.calculate()
+        advanceUntilIdle()
+
+        // Second calculation: 500 units
+        viewModel.onInputChanged("500")
+        viewModel.calculate()
+        advanceUntilIdle()
+
+        val history = viewModel.savedCalculations.value
+        assertEquals(2, history.size)
+        // Newest calculation should appear first
+        assertEquals(500.0, history[0].units, 0.001)
+        assertEquals(250.0, history[1].units, 0.001)
+        assertTrue(history[0].timestamp >= history[1].timestamp)
+    }
+
+    @Test
+    fun testClearHistory() = runTest(testDispatcher) {
+        viewModel.onInputChanged("200")
+        viewModel.calculate()
+        advanceUntilIdle()
+
+        viewModel.onInputChanged("400")
+        viewModel.calculate()
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.savedCalculations.value.size)
+        viewModel.clearHistory()
+        assertTrue(viewModel.savedCalculations.value.isEmpty())
+    }
+
+    @Test
+    fun testOpenSavedResultFromHistory() = runTest(testDispatcher) {
+        viewModel.onInputChanged("350")
+        viewModel.setBillingCycle(BillingCycle.MONTHLY)
+        viewModel.calculate()
+        advanceUntilIdle()
+
+        val saved = viewModel.savedCalculations.value.first()
+        viewModel.navigateToEntry()
+        assertEquals(CalculatorScreenState.ENTRY, viewModel.screenState.value)
+
+        viewModel.openSavedResult(saved)
+        assertEquals(CalculatorScreenState.RESULT, viewModel.screenState.value)
+        assertEquals("350", viewModel.inputText.value)
+        assertEquals(BillingCycle.MONTHLY, viewModel.billingCycle.value)
+        assertEquals(350.0, viewModel.billResult.value?.totalUnits ?: 0.0, 0.001)
     }
 }

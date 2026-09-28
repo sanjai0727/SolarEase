@@ -1,5 +1,6 @@
 package com.example.feature.home.ui.modules
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -35,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +81,61 @@ fun BillCalculatorRoute(
     val billResult by viewModel.billResult.collectAsState()
     val calculationStep by viewModel.calculationStep.collectAsState()
     val savedCalculations by viewModel.savedCalculations.collectAsState()
+
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        BillCalculatorHistoryStorage.init(context)
+    }
+
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = screenState != CalculatorScreenState.ENTRY) {
+        when (screenState) {
+            CalculatorScreenState.CALCULATING -> viewModel.cancelCalculation()
+            CalculatorScreenState.RESULT -> viewModel.navigateToEntry()
+            CalculatorScreenState.HISTORY -> viewModel.navigateToEntry()
+            CalculatorScreenState.ENTRY -> onNavigateBack()
+        }
+    }
+
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Clear Calculation History?",
+                    fontWeight = FontWeight.Bold,
+                    color = StitchOnSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete all saved calculations? This action cannot be undone.",
+                    color = StitchOnSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearHistory()
+                        showClearConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = StitchError,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Clear All", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("Cancel", color = StitchOnSurfaceVariant)
+                }
+            }
+        )
+    }
 
     val topBarTitle = when (screenState) {
         CalculatorScreenState.ENTRY -> "Bill Calculator"
@@ -130,6 +187,16 @@ fun BillCalculatorRoute(
                         }
                         CalculatorScreenState.RESULT -> {
                             IconButton(
+                                onClick = { viewModel.navigateToHistory() },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = "Calculation History",
+                                    tint = StitchOnSurface
+                                )
+                            }
+                            IconButton(
                                 onClick = { viewModel.recalculate() },
                                 modifier = Modifier.size(40.dp)
                             ) {
@@ -142,7 +209,7 @@ fun BillCalculatorRoute(
                         }
                         CalculatorScreenState.HISTORY -> {
                             if (savedCalculations.isNotEmpty()) {
-                                TextButton(onClick = { viewModel.clearHistory() }) {
+                                TextButton(onClick = { showClearConfirmDialog = true }) {
                                     Text(
                                         text = "Clear All",
                                         color = StitchError,
@@ -184,7 +251,8 @@ fun BillCalculatorRoute(
                         onClearInput = { viewModel.clearInput() },
                         onSelectPreset = { viewModel.selectPreset(it) },
                         onSelectCycle = { viewModel.setBillingCycle(it) },
-                        onCalculate = { viewModel.calculate() }
+                        onCalculate = { viewModel.calculate() },
+                        onNavigateToHistory = { viewModel.navigateToHistory() }
                     )
                 }
                 CalculatorScreenState.CALCULATING -> {
@@ -200,7 +268,8 @@ fun BillCalculatorRoute(
                             result = result,
                             billingCycle = billingCycle,
                             onRecalculate = { viewModel.recalculate() },
-                            onNavigateToSolarLens = onNavigateToSolarLens
+                            onNavigateToSolarLens = onNavigateToSolarLens,
+                            onNavigateToHistory = { viewModel.navigateToHistory() }
                         )
                     } ?: run {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -233,7 +302,8 @@ private fun BillCalculatorEntryView(
     onClearInput: () -> Unit,
     onSelectPreset: (Double) -> Unit,
     onSelectCycle: (BillingCycle) -> Unit,
-    onCalculate: () -> Unit
+    onCalculate: () -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
     val presets = listOf(150.0, 300.0, 500.0, 650.0, 800.0)
@@ -623,6 +693,64 @@ private fun BillCalculatorEntryView(
             }
         }
 
+        // 5. Calculation History Card Entry Point
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { onNavigateToHistory() },
+            shape = RoundedCornerShape(12.dp),
+            color = StitchSurfaceLowest,
+            border = BorderStroke(1.dp, StitchOutline)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(StitchSurfaceContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = StitchPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Calculation History",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = StitchOnSurface
+                        )
+                        Text(
+                            text = "View and compare past bill estimates",
+                            fontSize = 12.sp,
+                            color = StitchOnSurfaceVariant
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "View History",
+                    tint = StitchOnSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -908,7 +1036,8 @@ private fun BillCalculatorResultView(
     result: BillResult,
     billingCycle: BillingCycle,
     onRecalculate: () -> Unit,
-    onNavigateToSolarLens: () -> Unit
+    onNavigateToSolarLens: () -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
     var subsidyExpanded by remember { mutableStateOf(false) }
@@ -1587,6 +1716,25 @@ private fun BillCalculatorResultView(
             Text("Calculate Another Bill", fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
 
+        // View History button
+        OutlinedButton(
+            onClick = onNavigateToHistory,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, StitchOutline),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = StitchOnSurface)
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("View Calculation History", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -1757,7 +1905,7 @@ private fun BillCalculatorHistoryView(
                                     color = StitchSurfaceLow
                                 ) {
                                     Text(
-                                        text = "${item.cycle.displayName} • Tamil Nadu",
+                                        text = "${item.cycle.displayName} • Tamil Nadu (LT-1A)",
                                         fontSize = 11.sp,
                                         color = StitchOnSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1765,13 +1913,13 @@ private fun BillCalculatorHistoryView(
                                 }
                                 IconButton(
                                     onClick = { onDeleteItem(item.id) },
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete entry",
-                                        tint = StitchOnSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
+                                        imageVector = Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete calculation",
+                                        tint = StitchError.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -1803,7 +1951,27 @@ private fun BillCalculatorHistoryView(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Free Allowance: ${item.billResult.freeUnits.toInt()} kWh",
+                                    fontSize = 11.sp,
+                                    color = StitchPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Chargeable: ${item.billResult.chargeableUnits.toInt()} kWh",
+                                    fontSize = 11.sp,
+                                    color = StitchOnSurfaceVariant
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
 
                             Text(
                                 text = dateFormat.format(Date(item.timestamp)),
@@ -1849,7 +2017,7 @@ private fun BillCalculatorHistoryView(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "No Saved Calculations",
+                        text = "No calculations yet",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = StitchOnSurface
@@ -1858,7 +2026,7 @@ private fun BillCalculatorHistoryView(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Compute an estimated bill to begin tracking your usage trendlines locally.",
+                        text = "Your previous bill calculations will appear here.",
                         fontSize = 13.sp,
                         color = StitchOnSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -1884,7 +2052,7 @@ private fun BillCalculatorHistoryView(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Calculations are saved locally in this session for quick comparison.",
+                text = "Calculations are saved locally on your device for quick comparison.",
                 fontSize = 11.sp,
                 color = StitchOnSurfaceVariant
             )
