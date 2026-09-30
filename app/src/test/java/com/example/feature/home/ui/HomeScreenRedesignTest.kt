@@ -205,4 +205,184 @@ class HomeScreenRedesignTest {
         assertEquals(2, state2.dailyConsumptionPoints.size)
         assertEquals(10.0, state2.dailyConsumptionPoints.last().dailyKwh, 0.001)
     }
+
+    /**
+     * Requirement 21 Exact Scenario:
+     * Last paid bill: Date: 24 Aug, Meter reading: 42,000 kWh
+     * Current reading: 30 Sep, Meter reading: 42,440 kWh
+     *
+     * Expected:
+     * CURRENT graph starts at: 24 Aug / 42,000 kWh and ends at: 30 Sep / 42,440 kWh
+     * Current consumption: 440 kWh
+     * Know Your Consumption card: "Find where your 440 kWh is going"
+     *
+     * Then update current reading: 42,460 kWh
+     * Expected:
+     * Graph final point: 42,460 kWh
+     * Current consumption: 460 kWh
+     * Know Your Consumption card: "Find where your 460 kWh is going"
+     */
+    @Test
+    fun test5_exactScenario_meterReadingProgressionAndDynamicCardUpdate() {
+        val testUser = User(id = "USR-201", name = "Sanjai", username = "sanjai", mobileNumber = "9876543210")
+        UserSession.saveUser(context, testUser)
+
+        // 1. Last paid bill: Date: 24 Aug, Meter reading: 42,000 kWh
+        val billData = TnebConsumerBillData(
+            consumerNumber = "09234567891",
+            consumerName = "Sanjai",
+            bills = listOf(
+                TnebBillRecord(
+                    id = "REC-AUG",
+                    assessmentDate = "24 Aug 2026",
+                    kwh = "42000",
+                    units = "400",
+                    isPaid = true
+                )
+            )
+        )
+        TnebBillCache.save(context, billData)
+        MeterReadingCache.syncBaselineFromTnebBill(billData)
+
+        // 2. Current reading: 30 Sep, Meter reading: 42,440 kWh
+        val saveResult = MeterReadingCache.saveReading(42440.0, "2026-09-30")
+        assertTrue(saveResult is MeterValidationResult.Success)
+
+        // Verify single source of truth metrics
+        val metrics1 = MeterReadingCache.metrics.value
+        assertNotNull(metrics1)
+        assertEquals(440.0, metrics1!!.unitsConsumed, 0.001)
+        assertEquals(42440.0, metrics1.currentReading, 0.001)
+        assertEquals(42000.0, metrics1.baselineReading, 0.001)
+
+        // Verify CURRENT progression window
+        val currentWindow1 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.CURRENT)
+        assertEquals(2, currentWindow1.points.size)
+
+        // Starting point: 24 Aug / 42,000 kWh
+        val startPt1 = currentWindow1.points.first()
+        assertEquals("24 Aug", startPt1.dateLabel)
+        assertEquals(42000.0, startPt1.readingValue, 0.001)
+        assertEquals("Last Bill", startPt1.subLabel)
+        assertTrue(startPt1.isBaseline)
+
+        // Ending point: 30 Sep / 42,440 kWh
+        val endPt1 = currentWindow1.points.last()
+        assertEquals("30 Sep", endPt1.dateLabel)
+        assertEquals(42440.0, endPt1.readingValue, 0.001)
+        assertEquals("Today", endPt1.subLabel)
+        assertEquals(42440.0, currentWindow1.latestReading, 0.001)
+
+        // Verify Know Your Consumption card dynamic heading
+        val kwhText1 = if (metrics1.unitsConsumed % 1.0 == 0.0) "${metrics1.unitsConsumed.toInt()}" else String.format(Locale.getDefault(), "%.1f", metrics1.unitsConsumed)
+        val cardHeading1 = "Find where your $kwhText1 kWh is going"
+        assertEquals("Find where your 440 kWh is going", cardHeading1)
+
+        // 3. User updates current reading: 42,460 kWh
+        val updateResult = MeterReadingCache.updateTodayReading(42460.0)
+        assertTrue(updateResult is MeterValidationResult.Success)
+
+        // Verify immediate update of single source of truth
+        val metrics2 = MeterReadingCache.metrics.value
+        assertNotNull(metrics2)
+        assertEquals(460.0, metrics2!!.unitsConsumed, 0.001)
+        assertEquals(42460.0, metrics2.currentReading, 0.001)
+
+        // Verify updated CURRENT progression window
+        val currentWindow2 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.CURRENT)
+        assertEquals(2, currentWindow2.points.size)
+        val endPt2 = currentWindow2.points.last()
+        assertEquals(42460.0, endPt2.readingValue, 0.001)
+        assertEquals(42460.0, currentWindow2.latestReading, 0.001)
+
+        // Verify Know Your Consumption card immediately updates to 460 kWh
+        val kwhText2 = if (metrics2.unitsConsumed % 1.0 == 0.0) "${metrics2.unitsConsumed.toInt()}" else String.format(Locale.getDefault(), "%.1f", metrics2.unitsConsumed)
+        val cardHeading2 = "Find where your $kwhText2 kWh is going"
+        assertEquals("Find where your 460 kWh is going", cardHeading2)
+    }
+
+    /**
+     * Requirement 6, 7, 8, 9 & 18:
+     * 2M, 4M, 6M selectors & Left/Right historical window navigation.
+     * Rules:
+     * - Disable LEFT when no older data.
+     * - Disable RIGHT when no newer data.
+     * - Insufficient data: clean state without fabricating data.
+     */
+    @Test
+    fun test6_historicalRangesAndNavigation() {
+        val testUser = User(id = "USR-202", name = "Sanjai", username = "sanjai", mobileNumber = "9876543210")
+        UserSession.saveUser(context, testUser)
+
+        val historicalBills = listOf(
+            TnebBillRecord(id = "B0", assessmentDate = "24 Aug 2026", kwh = "42000", units = "800", isPaid = true),
+            TnebBillRecord(id = "B1", assessmentDate = "24 Jun 2026", kwh = "41200", units = "800", isPaid = true),
+            TnebBillRecord(id = "B2", assessmentDate = "24 Apr 2026", kwh = "40400", units = "800", isPaid = true),
+            TnebBillRecord(id = "B3", assessmentDate = "24 Feb 2026", kwh = "39600", units = "800", isPaid = true)
+        )
+
+        val billData = TnebConsumerBillData(
+            consumerNumber = "09234567892",
+            bills = historicalBills
+        )
+        TnebBillCache.save(context, billData)
+        MeterReadingCache.syncBaselineFromTnebBill(billData)
+
+        // ── Test 2M Window 0: Jun 2026 – Aug 2026 ──
+        val m2Window0 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 0, providedBillData = billData)
+        assertEquals(2, m2Window0.points.size)
+        assertEquals(41200.0, m2Window0.points.first().readingValue, 0.001)
+        assertEquals(42000.0, m2Window0.points.last().readingValue, 0.001)
+        assertEquals(42000.0, m2Window0.latestReading, 0.001)
+        assertTrue(m2Window0.hasOlder) // Can go older (Apr - Jun)
+        org.junit.Assert.assertFalse(m2Window0.hasNewer) // Newer is disabled
+
+        // ── Test 2M Window 1 (Tap LEFT): Apr 2026 – Jun 2026 ──
+        val m2Window1 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 1, providedBillData = billData)
+        assertEquals(2, m2Window1.points.size)
+        assertEquals(40400.0, m2Window1.points.first().readingValue, 0.001)
+        assertEquals(41200.0, m2Window1.points.last().readingValue, 0.001)
+        assertTrue(m2Window1.hasOlder) // Can go older (Feb - Apr)
+        assertTrue(m2Window1.hasNewer) // Can go newer (Jun - Aug)
+
+        // ── Test 2M Window 2 (Tap LEFT again): Feb 2026 – Apr 2026 ──
+        val m2Window2 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 2, providedBillData = billData)
+        assertEquals(2, m2Window2.points.size)
+        assertEquals(39600.0, m2Window2.points.first().readingValue, 0.001)
+        assertEquals(40400.0, m2Window2.points.last().readingValue, 0.001)
+        org.junit.Assert.assertFalse(m2Window2.hasOlder) // Reached oldest available -> Left disabled
+        assertTrue(m2Window2.hasNewer) // Can go newer
+
+        // ── Test 4M Window 0: Apr 2026 – Aug 2026 ──
+        val m4Window0 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M4, windowOffset = 0, providedBillData = billData)
+        assertEquals(3, m4Window0.points.size)
+        assertEquals(40400.0, m4Window0.points[0].readingValue, 0.001) // Apr
+        assertEquals(41200.0, m4Window0.points[1].readingValue, 0.001) // Jun
+        assertEquals(42000.0, m4Window0.points[2].readingValue, 0.001) // Aug
+        assertEquals(42000.0, m4Window0.latestReading, 0.001)
+
+        // ── Test 6M Window 0: Feb 2026 – Aug 2026 ──
+        val m6Window0 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M6, windowOffset = 0, providedBillData = billData)
+        assertEquals(4, m6Window0.points.size)
+        assertEquals(39600.0, m6Window0.points[0].readingValue, 0.001) // Feb
+        assertEquals(40400.0, m6Window0.points[1].readingValue, 0.001) // Apr
+        assertEquals(41200.0, m6Window0.points[2].readingValue, 0.001) // Jun
+        assertEquals(42000.0, m6Window0.points[3].readingValue, 0.001) // Aug
+        assertEquals(42000.0, m6Window0.latestReading, 0.001)
+
+        // ── Test Insufficient Data: When user has only 1 bill ──
+        val singleBillData = TnebConsumerBillData(
+            consumerNumber = "09234567893",
+            bills = listOf(historicalBills[0]) // Only Aug bill
+        )
+        val m2Empty = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 0, providedBillData = singleBillData)
+        assertTrue(m2Empty.isInsufficientData)
+        assertTrue(m2Empty.points.isEmpty())
+
+        val m4Empty = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M4, windowOffset = 0, providedBillData = singleBillData)
+        assertTrue(m4Empty.isInsufficientData)
+
+        val m6Empty = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M6, windowOffset = 0, providedBillData = singleBillData)
+        assertTrue(m6Empty.isInsufficientData)
+    }
 }

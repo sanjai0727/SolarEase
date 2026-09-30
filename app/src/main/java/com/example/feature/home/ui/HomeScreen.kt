@@ -64,6 +64,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.core.session.UserSession
 import com.example.feature.home.ui.modules.DailyConsumptionGraph
 import com.example.feature.home.ui.modules.MeterReadingGraph
+import com.example.feature.home.ui.modules.MeterReadingProgressionGraph
 import androidx.compose.material.icons.filled.History
 import com.example.ui.theme.*
 import java.util.Locale
@@ -210,9 +211,10 @@ fun HomeRoute(
                     onCancelEditingReading = { viewModel.cancelEditingReading() }
                 )
 
-                // ── 3. Current Consumption / Small Graph ────────────────
-                DailyConsumptionGraph(
-                    points = uiState.dailyConsumptionPoints
+                // ── 3. Meter Reading Progression Graph ────────────────
+                MeterReadingProgressionGraph(
+                    points = uiState.meterGraphPoints,
+                    billData = uiState.billData
                 )
 
                 // ── 4. REAP Energy Profile / Household Classification ───
@@ -233,12 +235,12 @@ fun HomeRoute(
                     onCheckDues = onNavigateToTnebBillStatus
                 )
 
-                // ── 7. Explore Tools (Only tools not in bottom navigation)
+                // ── 7. Explore Tools (Bill Status, Chatbot, Solar Lens, Calculator)
                 QuickToolsSection(
                     onBillStatus = onNavigateToTnebBillStatus,
-                    onBillHistory = onNavigateToBillHistory,
-                    onSolarPanel = onNavigateToSolarPanel,
                     onChatbot = onNavigateToElectricityChatbot,
+                    onSolarLens = onNavigateToSolarEaseLens,
+                    onCalculator = onNavigateToBillCalculator,
                     hasConnectedBill = uiState.hasConnectedBill
                 )
 
@@ -1467,14 +1469,9 @@ private fun KnowYourConsumptionCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Start Appliance Audit with Solar Lens",
+                        text = "Start Appliance Audit with Solar Lens →",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -1883,9 +1880,9 @@ private fun FeatureBullet(
 @Composable
 private fun QuickToolsSection(
     onBillStatus: () -> Unit,
-    onBillHistory: () -> Unit,
-    onSolarPanel: () -> Unit,
     onChatbot: () -> Unit,
+    onSolarLens: () -> Unit,
+    onCalculator: () -> Unit,
     hasConnectedBill: Boolean
 ) {
     Column(
@@ -1921,7 +1918,7 @@ private fun QuickToolsSection(
                 title = "Bill Status",
                 subtitle = if (hasConnectedBill) "TNEB LT-1A" else "Check dues & units",
                 icon = Icons.Default.ReceiptLong,
-                iconTint = Color(0xFF0284C7), // Light blue
+                iconTint = Color(0xFF0284C7), // Light blue accent
                 onClick = onBillStatus
             )
             QuickToolCard(
@@ -1929,7 +1926,7 @@ private fun QuickToolsSection(
                 title = "Chatbot",
                 subtitle = "Ask Energy AI",
                 icon = Icons.Default.SmartToy,
-                iconTint = Color(0xFF4F46E5), // Indigo
+                iconTint = Color(0xFF4F46E5), // Indigo/purple accent
                 onClick = onChatbot
             )
         }
@@ -1940,19 +1937,19 @@ private fun QuickToolsSection(
         ) {
             QuickToolCard(
                 modifier = Modifier.weight(1f),
-                title = "Rooftop Solar",
-                subtitle = "Sizing & generation",
-                icon = Icons.Default.SolarPower,
-                iconTint = Color(0xFFD97706), // Amber
-                onClick = onSolarPanel
+                title = "Solar Lens",
+                subtitle = "AI load & appliance audit",
+                icon = Icons.Default.CameraOutdoor,
+                iconTint = Color(0xFF2563EB), // Blue/indigo accent
+                onClick = onSolarLens
             )
             QuickToolCard(
                 modifier = Modifier.weight(1f),
-                title = "Bill History",
-                subtitle = "Past cycles & tariff",
-                icon = Icons.Default.History,
-                iconTint = Color(0xFF0D9488), // Teal
-                onClick = onBillHistory
+                title = "Calculator",
+                subtitle = "Solar sizing & savings",
+                icon = Icons.Default.Calculate,
+                iconTint = Color(0xFFEA580C), // Amber/orange accent
+                onClick = onCalculator
             )
         }
     }

@@ -43,14 +43,33 @@ data class CurrentCycleEnergyMetrics(
     val billingPeriodDisplay: String = ""
 )
 
+enum class MeterGraphRange(val label: String) {
+    CURRENT("CURRENT"),
+    M2("2M"),
+    M4("4M"),
+    M6("6M")
+}
+
 @Serializable
 data class MeterGraphPoint(
-    val dateLabel: String, // e.g. "Sep 1", "Sep 10", "Today"
-    val readingValue: Double, // Y-axis: meter reading e.g. 12450, 12582
-    val unitsConsumed: Double, // kWh consumed since baseline
+    val dateLabel: String, // e.g. "24 Aug", "30 Sep", "Today"
+    val readingValue: Double, // Y-axis: meter reading e.g. 42000, 42440
+    val unitsConsumed: Double = 0.0, // kWh consumed since baseline
     val dailyUnits: Double? = null,
     val isBaseline: Boolean = false,
-    val fullDate: String = ""
+    val fullDate: String = "",
+    val subLabel: String = "" // e.g. "Last Bill", "Today"
+)
+
+data class MeterProgressionWindow(
+    val range: MeterGraphRange,
+    val windowOffset: Int = 0,
+    val periodTitle: String,
+    val points: List<MeterGraphPoint>,
+    val latestReading: Double,
+    val hasOlder: Boolean,
+    val hasNewer: Boolean,
+    val isInsufficientData: Boolean = false
 )
 
 @Serializable

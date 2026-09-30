@@ -228,17 +228,25 @@ object MeterReadingCache {
     /**
      * Safely updates today's existing meter reading.
      */
-    fun updateTodayReading(readingValue: Double): MeterValidationResult {
+    fun updateTodayReading(
+        readingValue: Double,
+        readingDateIso: String? = null
+    ): MeterValidationResult {
         val base = _baseline.value
             ?: return MeterValidationResult.Error("No active billing cycle found.")
 
-        val todayKey = getTodayIsoDate()
         val currentList = _readings.value
-        val existingIndex = currentList.indexOfFirst { it.readingDate == todayKey }
+        val todayKey = readingDateIso ?: getTodayIsoDate()
+        var existingIndex = currentList.indexOfFirst { it.readingDate == todayKey }
+        if (existingIndex == -1 && readingDateIso == null && currentList.isNotEmpty()) {
+            existingIndex = currentList.lastIndex
+        }
 
         if (existingIndex == -1) {
             return MeterValidationResult.Error("No reading found for today to edit.")
         }
+
+        val targetKey = currentList[existingIndex].readingDate
 
         if (readingValue < 0.0) {
             return MeterValidationResult.Error("Meter reading cannot be negative.")
@@ -249,8 +257,8 @@ object MeterReadingCache {
             return MeterValidationResult.Error("Updated reading cannot be lower than your last bill reading ($baseFormatted kWh).")
         }
 
-        // Preceding reading (before today)
-        val priorReadings = currentList.filter { it.readingDate < todayKey }
+        // Preceding reading (before target date)
+        val priorReadings = currentList.filter { it.readingDate < targetKey }
         val prevVal = priorReadings.maxByOrNull { it.readingDate }?.readingValue ?: base.baselineReading
 
         if (readingValue < prevVal) {
@@ -359,13 +367,17 @@ object MeterReadingCache {
                 unitsConsumed = 0.0,
                 dailyUnits = 0.0,
                 isBaseline = true,
-                fullDate = base.baselineDate
+                fullDate = base.baselineDate,
+                subLabel = "Last Bill"
             )
         )
 
         // 2. User's recorded daily meter readings
-        for (record in _readings.value) {
+        val currentReadings = _readings.value
+        for (i in currentReadings.indices) {
+            val record = currentReadings[i]
             val consumed = max(0.0, record.readingValue - base.baselineReading)
+            val isLast = (i == currentReadings.lastIndex)
             points.add(
                 MeterGraphPoint(
                     dateLabel = formatToShortDate(record.displayDate.ifBlank { record.readingDate }),
@@ -373,12 +385,203 @@ object MeterReadingCache {
                     unitsConsumed = consumed,
                     dailyUnits = record.dailyConsumption,
                     isBaseline = false,
-                    fullDate = record.displayDate.ifBlank { record.readingDate }
+                    fullDate = record.displayDate.ifBlank { record.readingDate },
+                    subLabel = if (isLast) "Today" else ""
                 )
             )
         }
 
         return points
+    }
+
+    /**
+     * Resolves the requested meter reading progression window for CURRENT, 2M, 4M, and 6M views.
+     * - CURRENT: Anchored to latest paid bill -> current meter reading.
+     * - 2M / 4M / 6M: Uses actual historical bill and meter readings, support window shifting.
+     * - Disables navigation arrows appropriately when older or newer data does not exist.
+     * - Returns isInsufficientData = true when not enough data exists (zero fabricated data).
+     */
+    fun getProgressionWindow(
+        range: MeterGraphRange,
+        windowOffset: Int = 0,
+        providedBillData: TnebConsumerBillData? = null
+    ): MeterProgressionWindow {
+        if (range == MeterGraphRange.CURRENT) {
+            val base = _baseline.value
+            val currentPoints = getGraphPoints()
+            if (base == null || base.baselineReading <= 0.0) {
+                return MeterProgressionWindow(
+                    range = MeterGraphRange.CURRENT,
+                    windowOffset = 0,
+                    periodTitle = "Current Cycle",
+                    points = emptyList(),
+                    latestReading = 0.0,
+                    hasOlder = false,
+                    hasNewer = false,
+                    isInsufficientData = true
+                )
+            }
+
+            val latestVal = currentPoints.lastOrNull()?.readingValue ?: base.baselineReading
+            val startLabel = formatToShortDate(base.baselineDate)
+            val endLabel = currentPoints.lastOrNull()?.dateLabel ?: startLabel
+            val title = if (startLabel.equals(endLabel, ignoreCase = true)) startLabel else "$startLabel – $endLabel"
+
+            return MeterProgressionWindow(
+                range = MeterGraphRange.CURRENT,
+                windowOffset = 0,
+                periodTitle = title,
+                points = currentPoints,
+                latestReading = latestVal,
+                hasOlder = false,
+                hasNewer = false,
+                isInsufficientData = currentPoints.isEmpty()
+            )
+        }
+
+        // For historical ranges: 2M, 4M, 6M
+        val billData = providedBillData ?: TnebBillCache.billData.value
+        val rawBills = billData?.bills ?: emptyList()
+
+        data class HistoricalBillItem(
+            val date: Date,
+            val readingValue: Double,
+            val displayDate: String,
+            val fullDate: String,
+            val isBaseline: Boolean
+        )
+
+        val billItems = mutableListOf<HistoricalBillItem>()
+
+        for (bill in rawBills) {
+            val kwhVal = bill.kwh.filter { it.isDigit() || it == '.' }.toDoubleOrNull()
+            if (kwhVal != null && kwhVal > 0.0) {
+                val dateRaw = bill.assessmentDate.ifBlank { bill.entryDate.ifBlank { bill.dueDate } }
+                val parsedD = parseAnyDate(dateRaw)
+                if (parsedD != null) {
+                    billItems.add(
+                        HistoricalBillItem(
+                            date = parsedD,
+                            readingValue = kwhVal,
+                            displayDate = formatToShortDate(dateRaw),
+                            fullDate = normalizeDateString(dateRaw),
+                            isBaseline = false
+                        )
+                    )
+                }
+            }
+        }
+
+        // Include active baseline if valid
+        val base = _baseline.value
+        if (base != null && base.baselineReading > 0.0) {
+            val baseDate = parseAnyDate(base.baselineDate)
+            if (baseDate != null && billItems.none { it.readingValue == base.baselineReading && kotlin.math.abs(it.date.time - baseDate.time) < 86400000L * 3 }) {
+                billItems.add(
+                    HistoricalBillItem(
+                        date = baseDate,
+                        readingValue = base.baselineReading,
+                        displayDate = formatToShortDate(base.baselineDate),
+                        fullDate = base.baselineDate,
+                        isBaseline = true
+                    )
+                )
+            }
+        }
+
+        // Deduplicate and sort chronologically (earliest to latest)
+        val sortedBills = billItems.distinctBy { it.date.time / 86400000L }
+            .sortedBy { it.date.time }
+
+        val cyclesRequired = when (range) {
+            MeterGraphRange.M2 -> 1
+            MeterGraphRange.M4 -> 2
+            MeterGraphRange.M6 -> 3
+            MeterGraphRange.CURRENT -> 0
+        }
+
+        val minBillsNeeded = cyclesRequired + 1
+        if (sortedBills.size < minBillsNeeded) {
+            return MeterProgressionWindow(
+                range = range,
+                windowOffset = 0,
+                periodTitle = range.label,
+                points = emptyList(),
+                latestReading = 0.0,
+                hasOlder = false,
+                hasNewer = false,
+                isInsufficientData = true
+            )
+        }
+
+        val totalPossibleWindows = sortedBills.size - cyclesRequired
+        val safeOffset = windowOffset.coerceIn(0, totalPossibleWindows - 1)
+
+        val endingBillIndex = sortedBills.lastIndex - safeOffset
+        val startingBillIndex = endingBillIndex - cyclesRequired
+
+        val startBill = sortedBills[startingBillIndex]
+        val endBill = sortedBills[endingBillIndex]
+
+        val hasOlder = startingBillIndex > 0
+        val hasNewer = safeOffset > 0
+
+        // Extract all bill points in this window
+        val windowBills = sortedBills.subList(startingBillIndex, endingBillIndex + 1)
+
+        // Include any archived readings or current readings between startBill and endBill
+        val archived = (getArchivedReadings() + _readings.value).filter { rec ->
+            val d = parseAnyDate(rec.readingDate)
+            d != null && d.time >= startBill.date.time && d.time <= endBill.date.time
+        }
+
+        val allWindowPoints = mutableListOf<MeterGraphPoint>()
+        for (b in windowBills) {
+            allWindowPoints.add(
+                MeterGraphPoint(
+                    dateLabel = b.displayDate,
+                    readingValue = b.readingValue,
+                    unitsConsumed = max(0.0, b.readingValue - startBill.readingValue),
+                    dailyUnits = null,
+                    isBaseline = (b == startBill),
+                    fullDate = b.fullDate,
+                    subLabel = if (b == startBill) "Start" else if (b == endBill) "End" else ""
+                )
+            )
+        }
+
+        for (rec in archived) {
+            if (allWindowPoints.none { it.readingValue == rec.readingValue }) {
+                allWindowPoints.add(
+                    MeterGraphPoint(
+                        dateLabel = formatToShortDate(rec.displayDate.ifBlank { rec.readingDate }),
+                        readingValue = rec.readingValue,
+                        unitsConsumed = max(0.0, rec.readingValue - startBill.readingValue),
+                        dailyUnits = rec.dailyConsumption,
+                        isBaseline = false,
+                        fullDate = rec.displayDate.ifBlank { rec.readingDate }
+                    )
+                )
+            }
+        }
+
+        val sortedPoints = allWindowPoints.sortedBy { it.readingValue }
+        val periodTitle = "${formatToMonthYear(startBill.date)} – ${formatToMonthYear(endBill.date)}"
+
+        return MeterProgressionWindow(
+            range = range,
+            windowOffset = safeOffset,
+            periodTitle = periodTitle,
+            points = sortedPoints,
+            latestReading = endBill.readingValue,
+            hasOlder = hasOlder,
+            hasNewer = hasNewer,
+            isInsufficientData = sortedPoints.size < 2
+        )
+    }
+
+    private fun formatToMonthYear(d: Date): String {
+        return SimpleDateFormat("MMM yyyy", Locale.US).format(d)
     }
 
     /**

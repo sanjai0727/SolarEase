@@ -19,12 +19,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -532,23 +535,45 @@ private fun parseIsoDate(iso: String): Date? {
 }
 
 /**
- * Cumulative progression graph retained for backwards compatibility or detailed meter views.
+ * METER READING PROGRESSION Graph
+ * - Represents actual meter reading progression on Y-axis (e.g. 42,000 kWh -> 42,440 kWh).
+ * - NOT a "consumption from zero" graph.
+ * - Authoritative starting point for CURRENT: Last paid bill date + last paid bill meter reading.
+ * - Ending point: Latest available current meter reading.
+ * - Range selectors: CURRENT, 2M, 4M, 6M (default CURRENT).
+ * - Left/Right navigation arrows for 2M, 4M, 6M historical windows.
+ * - Prominently displays current meter reading.
+ * - Interactive tap tooltip for Date and Meter Reading.
+ * - Clean empty state when insufficient data exists without fabricating data.
  */
 @Composable
-fun MeterReadingGraph(
+fun MeterReadingProgressionGraph(
     points: List<MeterGraphPoint>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    billData: TnebConsumerBillData? = null
 ) {
+    var selectedRange by remember { mutableStateOf(MeterGraphRange.CURRENT) }
+    var windowOffset by remember(selectedRange) { mutableStateOf(0) }
+
+    val windowData = remember(selectedRange, windowOffset, points, billData) {
+        MeterReadingCache.getProgressionWindow(selectedRange, windowOffset, billData)
+    }
+
+    val activePoints = windowData.points
+    var selectedPointIndex by remember(activePoints) { mutableStateOf<Int?>(null) }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF7FBF8)
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFF7FBF8),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
+            // ── 1. Top Header: Title and Prominently Displayed Latest Reading ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -558,26 +583,33 @@ fun MeterReadingGraph(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ShowChart,
-                        contentDescription = null,
-                        tint = Color(0xFF1E7038),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ShowChart,
+                            contentDescription = null,
+                            tint = Color(0xFF1E7038),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                     Text(
                         text = "METER READING PROGRESSION",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextMuted,
-                        letterSpacing = 0.5.sp
+                        color = Color(0xFF1E7038),
+                        letterSpacing = 0.6.sp
                     )
                 }
 
-                if (points.isNotEmpty()) {
-                    val latest = points.last()
+                if (windowData.latestReading > 0.0) {
                     Text(
-                        text = "${String.format(Locale.getDefault(), "%,.0f", latest.readingValue)} kWh",
-                        fontSize = 11.sp,
+                        text = "${String.format(Locale.getDefault(), "%,.0f", windowData.latestReading)} kWh",
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1E7038)
                     )
@@ -586,29 +618,150 @@ fun MeterReadingGraph(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (points.size < 2) {
+            // ── 2. Range Category Selectors & Left/Right Navigation ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Range Category Selectors: CURRENT | 2M | 4M | 6M
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE2E8F0).copy(alpha = 0.6f))
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    MeterGraphRange.values().forEach { range ->
+                        val isSelected = range == selectedRange
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) Color(0xFF1E7038) else Color.Transparent)
+                                .clickable {
+                                    selectedRange = range
+                                    windowOffset = 0
+                                    selectedPointIndex = null
+                                }
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = range.label,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) Color.White else TextMuted
+                            )
+                        }
+                    }
+                }
+
+                // Left and Right Navigation Controls: [ ← ]  periodTitle  [ → ]
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (windowData.hasOlder) {
+                                windowOffset += 1
+                                selectedPointIndex = null
+                            }
+                        },
+                        enabled = windowData.hasOlder,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Older Period",
+                            tint = if (windowData.hasOlder) Color(0xFF1E7038) else TextMuted.copy(alpha = 0.3f),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+
+                    Text(
+                        text = windowData.periodTitle,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextDark
+                    )
+
+                    IconButton(
+                        onClick = {
+                            if (windowData.hasNewer) {
+                                windowOffset = max(0, windowOffset - 1)
+                                selectedPointIndex = null
+                            }
+                        },
+                        enabled = windowData.hasNewer,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Newer Period",
+                            tint = if (windowData.hasNewer) Color(0xFF1E7038) else TextMuted.copy(alpha = 0.3f),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // ── 3. Graph Curve / Points / Empty State ──
+            if (windowData.isInsufficientData || activePoints.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(90.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFEFF6F0)),
+                        .height(110.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFEFF6F0).copy(alpha = 0.7f))
+                        .padding(14.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFF1E7038).copy(alpha = 0.7f),
+                            modifier = Modifier.size(22.dp)
+                        )
                         Text(
-                            text = if (points.isEmpty()) "Connect bill to begin tracking" else "Baseline logged (${String.format(Locale.getDefault(), "%,.0f", points.first().readingValue)} kWh)",
+                            text = "More meter or bill history is needed to show this period.",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextDark,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(3.dp))
+                    }
+                }
+            } else if (activePoints.size < 2) {
+                // Baseline only logged, waiting for first current reading
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFEFF6F0).copy(alpha = 0.7f))
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
-                            text = "Record daily meter readings to visualize your cycle consumption curve.",
+                            text = "Baseline logged (${String.format(Locale.getDefault(), "%,.0f", activePoints.first().readingValue)} kWh)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextDark,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Record today's meter reading to visualize your cycle progression.",
                             fontSize = 11.sp,
                             color = TextMuted,
                             textAlign = TextAlign.Center
@@ -616,81 +769,133 @@ fun MeterReadingGraph(
                     }
                 }
             } else {
-                val minVal = remember(points) { points.minOf { it.readingValue } }
-                val maxVal = remember(points) { points.maxOf { it.readingValue } }
-                val valueRange = remember(minVal, maxVal) {
-                    val diff = maxVal - minVal
-                    if (diff <= 0.0) 10.0 else diff
+                // Interactive Status / Tooltip Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (selectedPointIndex != null && selectedPointIndex!! in activePoints.indices) {
+                        val pt = activePoints[selectedPointIndex!!]
+                        val subText = if (pt.subLabel.isNotEmpty()) " (${pt.subLabel})" else ""
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFE8F5E9))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "${pt.dateLabel}$subText · ${String.format(Locale.getDefault(), "%,.0f", pt.readingValue)} kWh",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1E7038)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Tap point for details",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Canvas Graph
+                val minVal = activePoints.minOf { it.readingValue }
+                val maxVal = activePoints.maxOf { it.readingValue }
+                val valueRange = if (maxVal - minVal <= 0.0) 10.0 else maxVal - minVal
+
+                var pointCoordinates by remember { mutableStateOf<List<Offset>>(emptyList()) }
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp)
+                        .height(130.dp)
                 ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(activePoints) {
+                                detectTapGestures { tapOffset ->
+                                    if (pointCoordinates.isNotEmpty()) {
+                                        val closest = pointCoordinates.indices.minByOrNull { i ->
+                                            kotlin.math.abs(pointCoordinates[i].x - tapOffset.x)
+                                        }
+                                        selectedPointIndex = if (selectedPointIndex == closest) null else closest
+                                    }
+                                }
+                            }
+                    ) {
                         val canvasWidth = size.width
                         val canvasHeight = size.height
+                        val leftPadding = 52.dp.toPx() // Room for readable meter values
+                        val rightPadding = 16.dp.toPx()
                         val topPadding = 12.dp.toPx()
-                        val bottomPadding = 22.dp.toPx()
-                        val chartHeight = canvasHeight - topPadding - bottomPadding
-                        val leftPadding = 12.dp.toPx()
-                        val rightPadding = 12.dp.toPx()
-                        val chartWidth = canvasWidth - leftPadding - rightPadding
+                        val bottomPadding = 26.dp.toPx() // Room for date & subLabel
 
-                        val gridSteps = 3
+                        val chartWidth = canvasWidth - leftPadding - rightPadding
+                        val chartHeight = canvasHeight - topPadding - bottomPadding
+
+                        // 1. Subtle horizontal grid lines (0%, 50%, 100%)
+                        val gridSteps = 2
                         for (i in 0..gridSteps) {
                             val y = topPadding + (chartHeight / gridSteps) * i
                             drawLine(
-                                color = GridLineColor.copy(alpha = 0.6f),
+                                color = GridLineColor.copy(alpha = 0.7f),
                                 start = Offset(leftPadding, y),
                                 end = Offset(canvasWidth - rightPadding, y),
                                 strokeWidth = 1.dp.toPx()
                             )
                         }
 
-                        val n = points.size
+                        val n = activePoints.size
                         val stepX = if (n > 1) chartWidth / (n - 1) else chartWidth
 
+                        val coords = mutableListOf<Offset>()
                         val path = Path()
                         val fillPath = Path()
-                        val pointCoordinates = mutableListOf<Offset>()
 
                         for (i in 0 until n) {
-                            val pt = points[i]
+                            val pt = activePoints[i]
                             val x = leftPadding + (i * stepX)
-                            val normalizedY = ((pt.readingValue - minVal) / valueRange).toFloat()
+                            val normalizedY = ((pt.readingValue - minVal) / valueRange).toFloat().coerceIn(0f, 1f)
                             val y = topPadding + chartHeight - (normalizedY * chartHeight)
-                            pointCoordinates.add(Offset(x, y))
+                            coords.add(Offset(x, y))
 
                             if (i == 0) {
                                 path.moveTo(x, y)
                                 fillPath.moveTo(x, topPadding + chartHeight)
                                 fillPath.lineTo(x, y)
                             } else {
-                                val prev = pointCoordinates[i - 1]
+                                val prev = coords[i - 1]
                                 val cx = (prev.x + x) / 2f
                                 path.cubicTo(cx, prev.y, cx, y, x, y)
                                 fillPath.cubicTo(cx, prev.y, cx, y, x, y)
                             }
                         }
 
-                        val lastCoord = pointCoordinates.last()
+                        val lastCoord = coords.last()
                         fillPath.lineTo(lastCoord.x, topPadding + chartHeight)
                         fillPath.close()
 
+                        pointCoordinates = coords
+
+                        // 2. Draw subtle filled area under line
                         drawPath(
                             path = fillPath,
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0xFF4CAF50).copy(alpha = 0.28f),
-                                    Color(0xFF4CAF50).copy(alpha = 0.02f)
+                                    Color(0xFF4CAF50).copy(alpha = 0.25f),
+                                    Color(0xFF4CAF50).copy(alpha = 0.01f)
                                 ),
                                 startY = topPadding,
                                 endY = topPadding + chartHeight
                             )
                         )
 
+                        // 3. Draw smooth curve
                         drawPath(
                             path = path,
                             color = Color(0xFF1E7038),
@@ -700,22 +905,131 @@ fun MeterReadingGraph(
                             )
                         )
 
+                        // 4. Draw data points
                         for (i in 0 until n) {
-                            val coord = pointCoordinates[i]
+                            val c = coords[i]
+                            val isSelected = (selectedPointIndex == i)
+
+                            if (isSelected) {
+                                // Vertical guideline
+                                drawLine(
+                                    color = Color(0xFF1E7038).copy(alpha = 0.5f),
+                                    start = Offset(c.x, topPadding),
+                                    end = Offset(c.x, topPadding + chartHeight),
+                                    strokeWidth = 1.5.dp.toPx(),
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
+                                )
+                                // Halo circle
+                                drawCircle(
+                                    color = Color(0xFF1E7038).copy(alpha = 0.2f),
+                                    radius = 8.dp.toPx(),
+                                    center = c
+                                )
+                            }
+
+                            // Outer point border
                             drawCircle(
                                 color = Color(0xFF1E7038),
-                                radius = 4.dp.toPx(),
-                                center = coord
+                                radius = if (isSelected) 5.dp.toPx() else 4.dp.toPx(),
+                                center = c
                             )
+                            // Inner white core
                             drawCircle(
                                 color = Color.White,
                                 radius = 2.dp.toPx(),
-                                center = coord
+                                center = c
                             )
+                        }
+                    }
+
+                    // Y-Axis labels (readable meter values along the left)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 2.dp, bottom = 24.dp, start = 2.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = String.format(Locale.getDefault(), "%,.0f", maxVal),
+                            fontSize = 9.sp,
+                            color = TextMuted,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = String.format(Locale.getDefault(), "%,.0f", (minVal + maxVal) / 2),
+                            fontSize = 9.sp,
+                            color = TextMuted,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = String.format(Locale.getDefault(), "%,.0f", minVal),
+                            fontSize = 9.sp,
+                            color = TextMuted,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // X-Axis starting and ending labels along bottom
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 50.dp, end = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        val firstPt = activePoints.first()
+                        val lastPt = activePoints.last()
+
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text(
+                                text = firstPt.dateLabel,
+                                fontSize = 9.sp,
+                                color = TextDark,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (firstPt.subLabel.isNotEmpty()) {
+                                Text(
+                                    text = firstPt.subLabel,
+                                    fontSize = 8.sp,
+                                    color = TextMuted
+                                )
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = lastPt.dateLabel,
+                                fontSize = 9.sp,
+                                color = TextDark,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (lastPt.subLabel.isNotEmpty()) {
+                                Text(
+                                    text = lastPt.subLabel,
+                                    fontSize = 8.sp,
+                                    color = TextMuted
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Delegator for backwards-compatibility with existing code.
+ */
+@Composable
+fun MeterReadingGraph(
+    points: List<MeterGraphPoint>,
+    modifier: Modifier = Modifier,
+    billData: TnebConsumerBillData? = null
+) {
+    MeterReadingProgressionGraph(
+        points = points,
+        modifier = modifier,
+        billData = billData
+    )
 }
