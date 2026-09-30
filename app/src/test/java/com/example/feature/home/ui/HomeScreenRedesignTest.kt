@@ -328,46 +328,65 @@ class HomeScreenRedesignTest {
         TnebBillCache.save(context, billData)
         MeterReadingCache.syncBaselineFromTnebBill(billData)
 
-        // ── Test 2M Window 0: Jun 2026 – Aug 2026 ──
+        // ── Test 2M Window 0: Jun 2026 – Aug 2026 (Jun, Jul, Aug) ──
         val m2Window0 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 0, providedBillData = billData)
-        assertEquals(2, m2Window0.points.size)
+        assertEquals(3, m2Window0.points.size) // Jun, Jul, Aug
         assertEquals(41200.0, m2Window0.points.first().readingValue, 0.001)
+        assertTrue(m2Window0.points.first().hasReading)
+        org.junit.Assert.assertFalse(m2Window0.points[1].hasReading) // Jul has no bill, position preserved
         assertEquals(42000.0, m2Window0.points.last().readingValue, 0.001)
+        assertTrue(m2Window0.points.last().hasReading)
         assertEquals(42000.0, m2Window0.latestReading, 0.001)
         assertTrue(m2Window0.hasOlder) // Can go older (Apr - Jun)
         org.junit.Assert.assertFalse(m2Window0.hasNewer) // Newer is disabled
 
-        // ── Test 2M Window 1 (Tap LEFT): Apr 2026 – Jun 2026 ──
+        // ── Test 2M Window 1 (Tap LEFT): Apr 2026 – Jun 2026 (Apr, May, Jun) ──
         val m2Window1 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 1, providedBillData = billData)
-        assertEquals(2, m2Window1.points.size)
+        assertEquals(3, m2Window1.points.size)
         assertEquals(40400.0, m2Window1.points.first().readingValue, 0.001)
         assertEquals(41200.0, m2Window1.points.last().readingValue, 0.001)
         assertTrue(m2Window1.hasOlder) // Can go older (Feb - Apr)
         assertTrue(m2Window1.hasNewer) // Can go newer (Jun - Aug)
 
-        // ── Test 2M Window 2 (Tap LEFT again): Feb 2026 – Apr 2026 ──
+        // ── Test 2M Window 2 (Tap LEFT again): Feb 2026 – Apr 2026 (Feb, Mar, Apr) ──
         val m2Window2 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M2, windowOffset = 2, providedBillData = billData)
-        assertEquals(2, m2Window2.points.size)
+        assertEquals(3, m2Window2.points.size)
         assertEquals(39600.0, m2Window2.points.first().readingValue, 0.001)
         assertEquals(40400.0, m2Window2.points.last().readingValue, 0.001)
         org.junit.Assert.assertFalse(m2Window2.hasOlder) // Reached oldest available -> Left disabled
         assertTrue(m2Window2.hasNewer) // Can go newer
 
-        // ── Test 4M Window 0: Apr 2026 – Aug 2026 ──
+        // ── Test 4M Window 0: Apr 2026 – Aug 2026 (Apr, May, Jun, Jul, Aug) ──
         val m4Window0 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M4, windowOffset = 0, providedBillData = billData)
-        assertEquals(3, m4Window0.points.size)
-        assertEquals(40400.0, m4Window0.points[0].readingValue, 0.001) // Apr
-        assertEquals(41200.0, m4Window0.points[1].readingValue, 0.001) // Jun
-        assertEquals(42000.0, m4Window0.points[2].readingValue, 0.001) // Aug
+        assertEquals(5, m4Window0.points.size)
+        assertEquals("Apr", m4Window0.points[0].dateLabel)
+        assertEquals(40400.0, m4Window0.points[0].readingValue, 0.001)
+        assertTrue(m4Window0.points[0].hasReading)
+
+        assertEquals("May", m4Window0.points[1].dateLabel)
+        org.junit.Assert.assertFalse(m4Window0.points[1].hasReading)
+
+        assertEquals("Jun", m4Window0.points[2].dateLabel)
+        assertEquals(41200.0, m4Window0.points[2].readingValue, 0.001)
+        assertTrue(m4Window0.points[2].hasReading)
+
+        assertEquals("Jul", m4Window0.points[3].dateLabel)
+        org.junit.Assert.assertFalse(m4Window0.points[3].hasReading)
+
+        assertEquals("Aug", m4Window0.points[4].dateLabel)
+        assertEquals(42000.0, m4Window0.points[4].readingValue, 0.001)
+        assertTrue(m4Window0.points[4].hasReading)
         assertEquals(42000.0, m4Window0.latestReading, 0.001)
 
-        // ── Test 6M Window 0: Feb 2026 – Aug 2026 ──
+        // ── Test 6M Window 0: Feb 2026 – Aug 2026 (Feb, Mar, Apr, May, Jun, Jul, Aug) ──
         val m6Window0 = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M6, windowOffset = 0, providedBillData = billData)
-        assertEquals(4, m6Window0.points.size)
-        assertEquals(39600.0, m6Window0.points[0].readingValue, 0.001) // Feb
-        assertEquals(40400.0, m6Window0.points[1].readingValue, 0.001) // Apr
-        assertEquals(41200.0, m6Window0.points[2].readingValue, 0.001) // Jun
-        assertEquals(42000.0, m6Window0.points[3].readingValue, 0.001) // Aug
+        assertEquals(7, m6Window0.points.size)
+        assertEquals("Feb", m6Window0.points[0].dateLabel)
+        assertEquals(39600.0, m6Window0.points[0].readingValue, 0.001)
+        assertTrue(m6Window0.points[0].hasReading)
+        assertEquals("Aug", m6Window0.points[6].dateLabel)
+        assertEquals(42000.0, m6Window0.points[6].readingValue, 0.001)
+        assertTrue(m6Window0.points[6].hasReading)
         assertEquals(42000.0, m6Window0.latestReading, 0.001)
 
         // ── Test Insufficient Data: When user has only 1 bill ──
@@ -384,5 +403,69 @@ class HomeScreenRedesignTest {
 
         val m6Empty = MeterReadingCache.getProgressionWindow(com.example.feature.home.ui.modules.MeterGraphRange.M6, windowOffset = 0, providedBillData = singleBillData)
         assertTrue(m6Empty.isInsufficientData)
+    }
+
+    /**
+     * Requirement: Every month inside historical range must be represented.
+     * Example: 4M Window December 2025 -> April 2026.
+     * All 5 months (Dec, Jan, Feb, Mar, Apr) must be represented on the graph.
+     * Actual data for months with readings (e.g. Feb 26 -> 41,361 kWh).
+     * No fabricated values for months without readings.
+     */
+    @Test
+    fun test7_exactUserScenario_4M_DecToApr_EveryMonthRepresented() {
+        val testUser = User(id = "USR-203", name = "Sanjai", username = "sanjai", mobileNumber = "9876543210")
+        UserSession.saveUser(context, testUser)
+
+        val bills = listOf(
+            TnebBillRecord(id = "B_APR", assessmentDate = "26 Apr 2026", kwh = "42000", units = "639", isPaid = true),
+            TnebBillRecord(id = "B_FEB", assessmentDate = "26 Feb 2026", kwh = "41361", units = "700", isPaid = true),
+            TnebBillRecord(id = "B_DEC", assessmentDate = "26 Dec 2025", kwh = "40661", units = "600", isPaid = true)
+        )
+
+        val billData = TnebConsumerBillData(
+            consumerNumber = "09234567894",
+            bills = bills
+        )
+        TnebBillCache.save(context, billData)
+
+        val m4 = MeterReadingCache.getProgressionWindow(
+            com.example.feature.home.ui.modules.MeterGraphRange.M4,
+            windowOffset = 0,
+            providedBillData = billData
+        )
+
+        // 5 months: Dec, Jan, Feb, Mar, Apr
+        assertEquals(5, m4.points.size)
+        assertEquals(listOf("Dec", "Jan", "Feb", "Mar", "Apr"), m4.points.map { it.dateLabel })
+
+        // Dec
+        val decPoint = m4.points[0]
+        assertEquals("Dec", decPoint.dateLabel)
+        assertTrue(decPoint.hasReading)
+        assertEquals(40661.0, decPoint.readingValue, 0.001)
+
+        // Jan (no bill -> position preserved, hasReading = false)
+        val janPoint = m4.points[1]
+        assertEquals("Jan", janPoint.dateLabel)
+        org.junit.Assert.assertFalse(janPoint.hasReading)
+
+        // Feb (actual reading 41,361 kWh)
+        val febPoint = m4.points[2]
+        assertEquals("Feb", febPoint.dateLabel)
+        assertTrue(febPoint.hasReading)
+        assertEquals(41361.0, febPoint.readingValue, 0.001)
+        assertEquals("26 Feb 2026", febPoint.fullDate)
+
+        // Mar (no bill -> position preserved, hasReading = false)
+        val marPoint = m4.points[3]
+        assertEquals("Mar", marPoint.dateLabel)
+        org.junit.Assert.assertFalse(marPoint.hasReading)
+
+        // Apr
+        val aprPoint = m4.points[4]
+        assertEquals("Apr", aprPoint.dateLabel)
+        assertTrue(aprPoint.hasReading)
+        assertEquals(42000.0, aprPoint.readingValue, 0.001)
     }
 }

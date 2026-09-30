@@ -535,49 +535,110 @@ object MeterReadingCache {
             d != null && d.time >= startBill.date.time && d.time <= endBill.date.time
         }
 
-        val allWindowPoints = mutableListOf<MeterGraphPoint>()
-        for (b in windowBills) {
-            allWindowPoints.add(
-                MeterGraphPoint(
-                    dateLabel = b.displayDate,
-                    readingValue = b.readingValue,
-                    unitsConsumed = max(0.0, b.readingValue - startBill.readingValue),
-                    dailyUnits = null,
-                    isBaseline = (b == startBill),
-                    fullDate = b.fullDate,
-                    subLabel = if (b == startBill) "Start" else if (b == endBill) "End" else ""
-                )
-            )
+        // Build complete monthly timeline from startBill's month to endBill's month
+        val startCal = Calendar.getInstance().apply {
+            time = startBill.date
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
 
-        for (rec in archived) {
-            if (allWindowPoints.none { it.readingValue == rec.readingValue }) {
+        val endCal = Calendar.getInstance().apply {
+            time = endBill.date
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val monthsInWindow = mutableListOf<Calendar>()
+        val tempCal = startCal.clone() as Calendar
+        while (!tempCal.after(endCal)) {
+            monthsInWindow.add(tempCal.clone() as Calendar)
+            tempCal.add(Calendar.MONTH, 1)
+        }
+
+        val allWindowPoints = mutableListOf<MeterGraphPoint>()
+        for (calItem in monthsInWindow) {
+            val matchingBill = windowBills.firstOrNull { isSameMonth(it.date, calItem) }
+            val matchingReading = archived.firstOrNull { rec ->
+                val d = parseAnyDate(rec.readingDate)
+                d != null && isSameMonth(d, calItem)
+            }
+
+            val shortMonth = SimpleDateFormat("MMM", Locale.US).format(calItem.time)
+            val fullMonth = SimpleDateFormat("MMMM yyyy", Locale.US).format(calItem.time)
+
+            if (matchingBill != null) {
                 allWindowPoints.add(
                     MeterGraphPoint(
-                        dateLabel = formatToShortDate(rec.displayDate.ifBlank { rec.readingDate }),
-                        readingValue = rec.readingValue,
-                        unitsConsumed = max(0.0, rec.readingValue - startBill.readingValue),
-                        dailyUnits = rec.dailyConsumption,
+                        dateLabel = shortMonth,
+                        readingValue = matchingBill.readingValue,
+                        unitsConsumed = max(0.0, matchingBill.readingValue - startBill.readingValue),
+                        dailyUnits = null,
+                        isBaseline = (matchingBill == startBill),
+                        fullDate = matchingBill.fullDate.ifBlank { formatToMonthDayYear(matchingBill.date) },
+                        subLabel = if (calItem == monthsInWindow.first()) "Start" else if (calItem == monthsInWindow.last()) "End" else "",
+                        hasReading = true
+                    )
+                )
+            } else if (matchingReading != null) {
+                val recDate = parseAnyDate(matchingReading.readingDate) ?: calItem.time
+                allWindowPoints.add(
+                    MeterGraphPoint(
+                        dateLabel = shortMonth,
+                        readingValue = matchingReading.readingValue,
+                        unitsConsumed = max(0.0, matchingReading.readingValue - startBill.readingValue),
+                        dailyUnits = matchingReading.dailyConsumption,
                         isBaseline = false,
-                        fullDate = rec.displayDate.ifBlank { rec.readingDate }
+                        fullDate = matchingReading.displayDate.ifBlank { formatToMonthDayYear(recDate) },
+                        subLabel = "",
+                        hasReading = true
+                    )
+                )
+            } else {
+                // Month within historical window has no recorded reading: preserve position on timeline without fake reading
+                allWindowPoints.add(
+                    MeterGraphPoint(
+                        dateLabel = shortMonth,
+                        readingValue = 0.0,
+                        unitsConsumed = 0.0,
+                        dailyUnits = null,
+                        isBaseline = false,
+                        fullDate = fullMonth,
+                        subLabel = "",
+                        hasReading = false
                     )
                 )
             }
         }
 
-        val sortedPoints = allWindowPoints.sortedBy { it.readingValue }
+        val validReadingsCount = allWindowPoints.count { it.hasReading }
         val periodTitle = "${formatToMonthYear(startBill.date)} – ${formatToMonthYear(endBill.date)}"
 
         return MeterProgressionWindow(
             range = range,
             windowOffset = safeOffset,
             periodTitle = periodTitle,
-            points = sortedPoints,
+            points = allWindowPoints,
             latestReading = endBill.readingValue,
             hasOlder = hasOlder,
             hasNewer = hasNewer,
-            isInsufficientData = sortedPoints.size < 2
+            isInsufficientData = validReadingsCount < 2
         )
+    }
+
+    private fun isSameMonth(d: Date, c: Calendar): Boolean {
+        val cal = Calendar.getInstance().apply { time = d }
+        return cal.get(Calendar.YEAR) == c.get(Calendar.YEAR) &&
+               cal.get(Calendar.MONTH) == c.get(Calendar.MONTH)
+    }
+
+    private fun formatToMonthDayYear(d: Date): String {
+        return SimpleDateFormat("MMMM d", Locale.US).format(d)
     }
 
     private fun formatToMonthYear(d: Date): String {

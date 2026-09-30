@@ -52,13 +52,14 @@ enum class MeterGraphRange(val label: String) {
 
 @Serializable
 data class MeterGraphPoint(
-    val dateLabel: String, // e.g. "24 Aug", "30 Sep", "Today"
+    val dateLabel: String, // e.g. "24 Aug", "30 Sep", "Dec", "Jan"
     val readingValue: Double, // Y-axis: meter reading e.g. 42000, 42440
     val unitsConsumed: Double = 0.0, // kWh consumed since baseline
     val dailyUnits: Double? = null,
     val isBaseline: Boolean = false,
     val fullDate: String = "",
-    val subLabel: String = "" // e.g. "Last Bill", "Today"
+    val subLabel: String = "", // e.g. "Last Bill", "Today", "Start", "End"
+    val hasReading: Boolean = true // false if monthly timeline guide without recorded reading
 )
 
 data class MeterProgressionWindow(
