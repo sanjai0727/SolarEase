@@ -20,6 +20,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
+import com.example.core.network.MeterApi
+import com.example.core.network.dto.MeterReadingCreateDto
+import com.example.core.network.dto.MeterReadingUpdateDto
+import com.example.feature.home.ui.modules.CurrentCycleEnergyMetrics
+import com.example.feature.home.ui.modules.DailyConsumptionPoint
+import com.example.feature.home.ui.modules.MeterCycleBaseline
+import com.example.feature.home.ui.modules.MeterGraphPoint
+import com.example.feature.home.ui.modules.MeterReadingCache
+import com.example.feature.home.ui.modules.MeterReadingRecord
+import com.example.feature.home.ui.modules.MeterValidationResult
+import kotlinx.coroutines.flow.combine
+import java.util.Locale
+
 /**
  * REAP 4-tier benchmark classification based on bi-monthly electricity consumption.
  */
@@ -102,7 +115,20 @@ data class HomeUiState(
     val isLensLoading: Boolean = false,
     val recommendedSolarCapacityKw: Double? = null,
     val estimatedSolarSavingsPerCycle: Double? = null,
-    val recentActivities: List<HomeActivityEvent> = emptyList()
+    val recentActivities: List<HomeActivityEvent> = emptyList(),
+
+    // --- NEW HOME ENERGY / CURRENT CYCLE TRACKING FIELDS ---
+    val meterBaseline: MeterCycleBaseline? = null,
+    val currentEnergyMetrics: CurrentCycleEnergyMetrics? = null,
+    val meterGraphPoints: List<MeterGraphPoint> = emptyList(),
+    val dailyConsumptionPoints: List<DailyConsumptionPoint> = emptyList(),
+    val hasCurrentReading: Boolean = false,
+    val isTodayReadingEntered: Boolean = false,
+    val todayEnteredReading: Double? = null,
+    val meterInputText: String = "",
+    val meterValidationError: String? = null,
+    val isSavingReading: Boolean = false,
+    val isEditingReading: Boolean = false
 ) {
     val totalConnectedLoadWatts: Float
         get() = appliances.sumOf { (it.powerRatingWatts * it.quantity).toDouble() }.toFloat()
@@ -112,20 +138,129 @@ data class HomeUiState(
 
     val hasCompletedAudit: Boolean
         get() = appliances.isNotEmpty()
+
+    val currentBillingCycleKwh: Double
+        get() = if (hasCurrentReading && currentEnergyMetrics != null) {
+            currentEnergyMetrics.unitsConsumed
+        } else {
+            unitsConsumed ?: 0.0
+        }
 }
 
 class HomeViewModel(
     private val lensRepository: LensRepository = LensRepository(RetrofitClient.lensApi),
+    private val meterApi: MeterApi = RetrofitClient.meterApi,
     private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(buildInitialUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        // Synchronize baseline immediately if bill data is already restored
+        TnebBillCache.billData.value?.let { bill ->
+            MeterReadingCache.syncBaselineFromTnebBill(bill)
+        }
         loadUserProfile()
         observeBillData()
+        observeMeterData()
         loadAppliances()
+    }
+
+    private fun buildInitialUiState(): HomeUiState {
+        val currentUser = UserSession.currentUser
+        val displayName = currentUser?.name ?: currentUser?.username
+        val firstName = displayName?.trim()?.split(" ")?.firstOrNull()?.takeIf { it.isNotBlank() }
+        val initial = firstName?.firstOrNull()?.uppercaseChar() ?: 'S'
+
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val greetingText = when {
+            hour < 12 -> "Good morning"
+            hour < 17 -> "Good afternoon"
+            else -> "Good evening"
+        }
+
+        val address = currentUser?.houseAddress?.takeIf { it.isNotBlank() }
+        val billData = TnebBillCache.billData.value
+        val baseline = MeterReadingCache.baseline.value
+        val metrics = MeterReadingCache.metrics.value
+        val readings = MeterReadingCache.readings.value
+        val graphPts = MeterReadingCache.getGraphPoints()
+        val hasReading = readings.isNotEmpty()
+
+        val hasBill = (billData != null && (billData.bills.isNotEmpty() || billData.consumerNumber.isNotBlank()))
+                || (baseline != null && baseline.serviceConnectionNumber?.isNotBlank() == true)
+                || (!currentUser?.ebServiceNumber.isNullOrBlank())
+
+        val latest = billData?.latestBill
+        val parsedUnits = latest?.units?.toDoubleOrNull()
+            ?: latest?.kwh?.toDoubleOrNull()
+            ?: baseline?.previousBilledUnits
+
+        val amount = when {
+            billData?.isDuesNil == true -> "₹0.00"
+            latest != null && latest.isPaid -> "₹0.00"
+            latest != null && latest.amountDue.isNotBlank() -> {
+                val raw = latest.amountDue.trim()
+                if (raw.startsWith("₹")) raw else "₹$raw"
+            }
+            else -> "₹0.00"
+        }
+
+        val isPaid = billData?.isDuesNil == true || (latest?.isPaid == true)
+        val period = latest?.period?.takeIf { it.isNotBlank() }
+            ?: latest?.assessmentDate?.takeIf { it.isNotBlank() }
+            ?: baseline?.baselineDate
+
+        val tariff = billData?.tariffCode?.takeIf { it.isNotBlank() }
+            ?: billData?.serviceCategory?.takeIf { it.isNotBlank() }
+            ?: baseline?.tariffCode
+            ?: "TANGEDCO LT-1A · DOMESTIC"
+
+        val dailyPts = MeterReadingCache.getDailyConsumptionPoints()
+        val activeUnits = if (hasReading && metrics != null) metrics.unitsConsumed else parsedUnits
+
+        val tier = when {
+            activeUnits == null -> ReapTier.PENDING
+            activeUnits <= 500.0 -> ReapTier.ECH
+            activeUnits <= 800.0 -> ReapTier.EEH
+            activeUnits <= 1000.0 -> ReapTier.EOH
+            else -> ReapTier.ETH
+        }
+
+        val recommendedSolarKw = if (activeUnits != null && activeUnits > 0) {
+            EstimateCalculator.calculateRecommendedSystemSize(activeUnits / 2.0)
+        } else null
+
+        val estimatedCycleSavings = if (activeUnits != null && activeUnits > 0) {
+            (activeUnits * 0.8 * 4.5).coerceAtLeast(0.0)
+        } else null
+
+        return HomeUiState(
+            userName = firstName,
+            userInitial = initial,
+            userAddress = address,
+            greeting = greetingText,
+            hasConnectedBill = hasBill,
+            billData = billData,
+            unitsConsumed = activeUnits,
+            amountDue = amount,
+            dueDate = latest?.dueDate?.takeIf { it.isNotBlank() },
+            isPaid = isPaid,
+            billingPeriod = period,
+            tariffCategory = tariff,
+            reapTier = tier,
+            activeJourneyStage = if (hasBill) 2 else 1,
+            recommendedSolarCapacityKw = recommendedSolarKw,
+            estimatedSolarSavingsPerCycle = estimatedCycleSavings,
+            meterBaseline = baseline,
+            currentEnergyMetrics = metrics,
+            meterGraphPoints = graphPts,
+            dailyConsumptionPoints = dailyPts,
+            hasCurrentReading = hasReading,
+            isTodayReadingEntered = metrics?.isTodayLogged ?: false,
+            todayEnteredReading = metrics?.todayReading
+        )
     }
 
     fun refresh() {
@@ -170,8 +305,66 @@ class HomeViewModel(
         }
     }
 
+    private fun observeMeterData() {
+        viewModelScope.launch {
+            combine(
+                MeterReadingCache.baseline,
+                MeterReadingCache.metrics,
+                MeterReadingCache.readings
+            ) { baseline, metrics, readings ->
+                Triple(baseline, metrics, readings)
+            }.collect { (baseline, metrics, readings) ->
+                val hasReading = readings.isNotEmpty()
+                val graphPts = MeterReadingCache.getGraphPoints()
+                val dailyPts = MeterReadingCache.getDailyConsumptionPoints()
+                _uiState.update { current ->
+                    val activeUnits = if (hasReading && metrics != null) metrics.unitsConsumed else current.unitsConsumed
+                    val tier = when {
+                        activeUnits == null -> ReapTier.PENDING
+                        activeUnits <= 500.0 -> ReapTier.ECH
+                        activeUnits <= 800.0 -> ReapTier.EEH
+                        activeUnits <= 1000.0 -> ReapTier.EOH
+                        else -> ReapTier.ETH
+                    }
+                    val recKw = if (activeUnits != null && activeUnits > 0) {
+                        EstimateCalculator.calculateRecommendedSystemSize(activeUnits / 2.0)
+                    } else null
+                    val estSavings = if (activeUnits != null && activeUnits > 0) {
+                        (activeUnits * 0.8 * 4.5).coerceAtLeast(0.0)
+                    } else null
+
+                    current.copy(
+                        meterBaseline = baseline,
+                        currentEnergyMetrics = metrics,
+                        meterGraphPoints = graphPts,
+                        dailyConsumptionPoints = dailyPts,
+                        hasCurrentReading = hasReading,
+                        isTodayReadingEntered = metrics?.isTodayLogged ?: false,
+                        todayEnteredReading = metrics?.todayReading,
+                        unitsConsumed = activeUnits,
+                        reapTier = tier,
+                        recommendedSolarCapacityKw = recKw,
+                        estimatedSolarSavingsPerCycle = estSavings
+                    )
+                }
+            }
+        }
+    }
+
     private fun processBillData(billData: TnebConsumerBillData?) {
         if (billData == null || (billData.bills.isEmpty() && billData.consumerNumber.isBlank())) {
+            val baseline = MeterReadingCache.baseline.value
+            val user = UserSession.currentUser
+            if ((baseline != null && baseline.serviceConnectionNumber?.isNotBlank() == true) || !user?.ebServiceNumber.isNullOrBlank()) {
+                _uiState.update { current ->
+                    current.copy(
+                        hasConnectedBill = true,
+                        meterBaseline = baseline
+                    )
+                }
+                return
+            }
+
             _uiState.update { current ->
                 current.copy(
                     hasConnectedBill = false,
@@ -190,6 +383,9 @@ class HomeViewModel(
             }
             return
         }
+
+        // Establish the baseline starting point for the current billing cycle
+        MeterReadingCache.syncBaselineFromTnebBill(billData)
 
         val latest = billData.latestBill
         val parsedUnits = latest?.units?.toDoubleOrNull()
@@ -339,5 +535,130 @@ class HomeViewModel(
         }
 
         return list
+    }
+
+    fun onMeterInputChanged(text: String) {
+        val sanitized = text.filter { it.isDigit() || it == '.' }
+        if (sanitized.count { it == '.' } <= 1) {
+            _uiState.update { it.copy(meterInputText = sanitized, meterValidationError = null) }
+        }
+    }
+
+    fun saveCurrentMeterReading() {
+        val inputText = _uiState.value.meterInputText.trim()
+        val readingVal = inputText.toDoubleOrNull()
+        if (readingVal == null) {
+            _uiState.update { it.copy(meterValidationError = "Please enter a valid numeric reading.") }
+            return
+        }
+
+        val result = MeterReadingCache.saveReading(readingVal)
+        when (result) {
+            is MeterValidationResult.Success -> {
+                _uiState.update { current ->
+                    current.copy(
+                        meterInputText = "",
+                        meterValidationError = null,
+                        isSavingReading = false,
+                        isEditingReading = false
+                    )
+                }
+
+                // Asynchronously sync to backend if user is authenticated
+                viewModelScope.launch(ioDispatcher) {
+                    try {
+                        val token = UserSession.accessToken
+                        if (!token.isNullOrBlank()) {
+                            meterApi.submitReading(
+                                MeterReadingCreateDto(
+                                    readingValue = readingVal,
+                                    readingDate = result.reading.readingDate
+                                )
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.w("HomeViewModel", "Could not sync meter reading to backend (offline mode)", e)
+                    }
+                }
+            }
+            is MeterValidationResult.DuplicateToday -> {
+                _uiState.update {
+                    it.copy(
+                        meterValidationError = "Today's reading (${String.format(Locale.getDefault(), "%,.0f", result.existingReading.readingValue)} kWh) has already been saved.",
+                        isSavingReading = false
+                    )
+                }
+            }
+            is MeterValidationResult.Error -> {
+                _uiState.update {
+                    it.copy(
+                        meterValidationError = result.message,
+                        isSavingReading = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateTodayMeterReading() {
+        val inputText = _uiState.value.meterInputText.trim()
+        val readingVal = inputText.toDoubleOrNull()
+        if (readingVal == null) {
+            _uiState.update { it.copy(meterValidationError = "Please enter a valid numeric reading.") }
+            return
+        }
+
+        val result = MeterReadingCache.updateTodayReading(readingVal)
+        when (result) {
+            is MeterValidationResult.Success -> {
+                _uiState.update {
+                    it.copy(
+                        meterInputText = "",
+                        meterValidationError = null,
+                        isEditingReading = false
+                    )
+                }
+
+                viewModelScope.launch(ioDispatcher) {
+                    try {
+                        val token = UserSession.accessToken
+                        if (!token.isNullOrBlank()) {
+                            meterApi.updateTodayReading(
+                                MeterReadingUpdateDto(readingValue = readingVal)
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.w("HomeViewModel", "Could not sync updated reading to backend", e)
+                    }
+                }
+            }
+            is MeterValidationResult.Error -> {
+                _uiState.update { it.copy(meterValidationError = result.message) }
+            }
+            is MeterValidationResult.DuplicateToday -> {}
+        }
+    }
+
+    fun startEditingReading() {
+        val currentToday = _uiState.value.todayEnteredReading
+        _uiState.update {
+            it.copy(
+                isEditingReading = true,
+                meterInputText = if (currentToday != null) {
+                    if (currentToday % 1.0 == 0.0) currentToday.toInt().toString() else currentToday.toString()
+                } else "",
+                meterValidationError = null
+            )
+        }
+    }
+
+    fun cancelEditingReading() {
+        _uiState.update {
+            it.copy(
+                isEditingReading = false,
+                meterInputText = "",
+                meterValidationError = null
+            )
+        }
     }
 }

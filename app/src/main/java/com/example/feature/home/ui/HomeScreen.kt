@@ -57,8 +57,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.core.session.UserSession
+import com.example.feature.home.ui.modules.DailyConsumptionGraph
+import com.example.feature.home.ui.modules.MeterReadingGraph
+import androidx.compose.material.icons.filled.History
 import com.example.ui.theme.*
 import java.util.Locale
 
@@ -192,11 +198,21 @@ fun HomeRoute(
                     hasConnectedBill = uiState.hasConnectedBill
                 )
 
-                // ── 3. Primary Energy Status Card (Connected vs Zero-State) ─
+                // ── 2. Primary Energy Status Card (Home Energy) ─────────
                 PrimaryEnergyCard(
                     uiState = uiState,
                     onConnectBill = onNavigateToTnebBillStatus,
-                    onViewBillHistory = onNavigateToBillHistory
+                    onViewBillHistory = onNavigateToBillHistory,
+                    onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
+                    onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
+                    onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
+                    onStartEditingReading = { viewModel.startEditingReading() },
+                    onCancelEditingReading = { viewModel.cancelEditingReading() }
+                )
+
+                // ── 3. Current Consumption / Small Graph ────────────────
+                DailyConsumptionGraph(
+                    points = uiState.dailyConsumptionPoints
                 )
 
                 // ── 4. REAP Energy Profile / Household Classification ───
@@ -205,36 +221,28 @@ fun HomeRoute(
                     onLearnMore = onNavigateToTnebBillStatus
                 )
 
-                // ── 5. Recommended Next Step Action Hero ────────────────
-                RecommendedActionCard(
+                // ── 5. KNOW YOUR CONSUMPTION (Solar Lens Promotion) ─────
+                KnowYourConsumptionCard(
                     uiState = uiState,
-                    onConnectBill = onNavigateToTnebBillStatus,
-                    onOpenCalculator = onNavigateToBillCalculator,
-                    onOpenSolarLens = onNavigateToSolarEaseLens,
-                    onExploreSolar = onNavigateToSolarPanel
+                    onOpenSolarLens = onNavigateToSolarEaseLens
                 )
 
-                // ── 6. "Your Energy Journey" (6-Stage REAP Stepper) ─────
-                ReapJourneyStepper(
-                    activeStage = uiState.activeJourneyStage
+                // ── 6. Bill History / Check Dues ────────────────────────
+                BillActionsSection(
+                    onViewBillHistory = onNavigateToBillHistory,
+                    onCheckDues = onNavigateToTnebBillStatus
                 )
 
-                // ── 7. Solar Lens AI Load Audit Discovery Card ──────────
-                SolarLensHeroCard(
-                    uiState = uiState,
-                    onLaunchLens = onNavigateToSolarEaseLens
-                )
-
-                // ── 8. Quick Access Tools (2x2 Grid) ────────────────────
+                // ── 7. Explore Tools (Only tools not in bottom navigation)
                 QuickToolsSection(
                     onBillStatus = onNavigateToTnebBillStatus,
-                    onCalculator = onNavigateToBillCalculator,
-                    onSolarLens = onNavigateToSolarEaseLens,
+                    onBillHistory = onNavigateToBillHistory,
+                    onSolarPanel = onNavigateToSolarPanel,
                     onChatbot = onNavigateToElectricityChatbot,
                     hasConnectedBill = uiState.hasConnectedBill
                 )
 
-                // ── 9. Recent Household Activity / Event Log ────────────
+                // ── 8. Recent Household Activity / Event Log ────────────
                 RecentActivitySection(
                     activities = uiState.recentActivities
                 )
@@ -479,7 +487,12 @@ private fun GreetingHeader(
 private fun PrimaryEnergyCard(
     uiState: HomeUiState,
     onConnectBill: () -> Unit,
-    onViewBillHistory: () -> Unit
+    onViewBillHistory: () -> Unit,
+    onMeterInputChanged: (String) -> Unit,
+    onSaveMeterReading: () -> Unit,
+    onUpdateTodayReading: () -> Unit,
+    onStartEditingReading: () -> Unit,
+    onCancelEditingReading: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -488,8 +501,10 @@ private fun PrimaryEnergyCard(
         border = BorderStroke(1.dp, StitchOutline),
         shadowElevation = 0.dp
     ) {
-        if (!uiState.hasConnectedBill || uiState.unitsConsumed == null) {
-            // Stitch New User Standby Zero-State
+        if (!uiState.hasConnectedBill) {
+            // ==================================================================
+            // STATE A: NEW USER / BILL NOT CONNECTED
+            // ==================================================================
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -616,10 +631,14 @@ private fun PrimaryEnergyCard(
                     }
                 }
             }
-        } else {
-            // Real TNEB Synced State
-            val units = uiState.unitsConsumed
-            val dailyAvg = String.format(Locale.getDefault(), "%.1f", units / 60.0)
+        } else if (!uiState.hasCurrentReading) {
+            // ==================================================================
+            // STATE B: BILL CONNECTED, FIRST CURRENT READING NOT ENTERED
+            // ==================================================================
+            val baseline = uiState.meterBaseline
+            val baselineKwh = baseline?.baselineReading ?: 0.0
+            val baselineDate = baseline?.baselineDate?.ifBlank { "01 Sep 2026" } ?: "01 Sep 2026"
+            val prevBilledUnits = baseline?.previousBilledUnits ?: uiState.unitsConsumed
 
             Column(
                 modifier = Modifier
@@ -627,6 +646,7 @@ private fun PrimaryEnergyCard(
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // Header with Bill Connected Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -643,134 +663,158 @@ private fun PrimaryEnergyCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(StitchPrimaryFixed)
+                            .background(Color(0xFFE8F5E9))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(StitchPrimary)
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color(0xFF1E7038),
+                                modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "TNEB SYNCED",
+                                text = "Bill Connected ✓",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchOnPrimaryFixedVariant,
+                                color = Color(0xFF1E7038),
                                 letterSpacing = 0.5.sp
                             )
                         }
                     }
                 }
 
-                // Numbers Display
-                Row(
+                // Baseline Starting Point Info
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                    shape = RoundedCornerShape(12.dp),
+                    color = StitchSurfaceContainerLow,
+                    border = BorderStroke(1.dp, StitchOutline)
                 ) {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = if (units % 1.0 == 0.0) units.toInt().toString() else String.format(Locale.getDefault(), "%.1f", units),
-                            fontSize = 36.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StitchOnSurface,
-                            letterSpacing = (-1).sp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "kWh",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = StitchOnSurfaceVariant
-                        )
-                    }
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "LAST BILL READING",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StitchOnSurfaceVariant,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (baselineKwh > 0.0) "${String.format(Locale.getDefault(), "%,.0f", baselineKwh)} kWh" else "Baseline Pending",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StitchOnSurface
+                                )
+                            }
 
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = uiState.amountDue ?: "₹0.00",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (uiState.isPaid) StitchPrimaryContainer else StitchError
-                        )
-                        Text(
-                            text = if (uiState.isPaid) "Paid • Nil Dues" else (uiState.dueDate?.let { "Due $it" } ?: "Current Bill"),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (uiState.isPaid) StitchPrimaryContainer else StitchError
-                        )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "LAST BILL DATE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StitchOnSurfaceVariant,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = baselineDate,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = StitchOnSurface
+                                )
+                            }
+                        }
+
+                        if (prevBilledUnits != null && prevBilledUnits > 0.0) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = StitchOutline.copy(alpha = 0.5f))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Previous billed units: ${String.format(Locale.getDefault(), "%,.0f", prevBilledUnits)} kWh (Historical baseline)",
+                                fontSize = 11.sp,
+                                color = StitchOnSurfaceVariant
+                            )
+                        }
                     }
                 }
 
-                // Progress Track
-                val progressFraction = (units / 1200.0).toFloat().coerceIn(0.1f, 1f)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(StitchSurfaceContainerHigh)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progressFraction)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(StitchPrimaryContainer)
-                    )
-                }
-
-                // Cycle and daily rate
-                Row(
+                // Prompt to enter today's meter reading
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = uiState.billingPeriod?.let { "Cycle: $it" } ?: "Bi-monthly billing cycle",
-                        fontSize = 12.sp,
-                        color = StitchOnSurfaceVariant
-                    )
-                    Text(
-                        text = "$dailyAvg kWh/day",
-                        fontSize = 12.sp,
+                        text = "Enter today's meter reading",
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = StitchOnSurface
                     )
-                }
 
-                // Tariff Slab Slot
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(StitchSurfaceContainerLow)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Row(
+                    OutlinedTextField(
+                        value = uiState.meterInputText,
+                        onValueChange = onMeterInputChanged,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        placeholder = {
+                            Text(
+                                text = if (baselineKwh > 0.0) "e.g. ${String.format(Locale.getDefault(), "%.0f", baselineKwh + 132)}" else "e.g. 12582",
+                                color = StitchOnSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        },
+                        trailingIcon = {
+                            Text(
+                                text = "kWh",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = StitchOnSurfaceVariant,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        isError = uiState.meterValidationError != null,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StitchPrimaryContainer,
+                            unfocusedBorderColor = StitchOutline
+                        )
+                    )
+
+                    if (uiState.meterValidationError != null) {
+                        Text(
+                            text = uiState.meterValidationError,
+                            fontSize = 12.sp,
+                            color = StitchError,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = onSaveMeterReading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StitchPrimaryContainer,
+                            contentColor = StitchOnPrimary
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = "TARIFF SLAB",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StitchOnSurfaceVariant,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = uiState.tariffCategory,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = StitchOnSurface
+                            text = "Save Today's Reading",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
 
-                // Action to view details
+                // Two Separate Actions: View Bill History & Check Dues
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -810,6 +854,325 @@ private fun PrimaryEnergyCard(
                     }
                 }
             }
+        } else {
+            // ==================================================================
+            // STATE C & D: CURRENT CYCLE LIVE DASHBOARD / TODAY'S READING SAVED
+            // ==================================================================
+            val metrics = uiState.currentEnergyMetrics
+            val units = metrics?.unitsConsumed ?: 0.0
+            val currentReadingVal = metrics?.currentReading ?: 0.0
+            val avgDaily = metrics?.avgUnitsPerDay ?: 0.0
+            val estBill = metrics?.estimatedBill ?: 0.0
+            val periodDisplay = metrics?.billingPeriodDisplay ?: "Current billing cycle"
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header with Live Tracking Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "YOUR CURRENT ENERGY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchOnSurfaceVariant,
+                        letterSpacing = 0.8.sp
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFE8F5E9))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF1E7038))
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (uiState.isTodayReadingEntered) "TODAY SAVED ✓" else "LIVE TRACKING",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1E7038),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                }
+
+                // Primary Numbers Display (Current-Cycle Consumption & Estimated Bill)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = if (units % 1.0 == 0.0) units.toInt().toString() else String.format(Locale.getDefault(), "%.1f", units),
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchOnSurface,
+                                letterSpacing = (-1).sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "kWh",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = StitchOnSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = "Consumed since last bill",
+                            fontSize = 11.sp,
+                            color = StitchOnSurfaceVariant
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = if (estBill > 0.0) "₹${String.format(Locale.getDefault(), "%,.0f", estBill)}" else "₹0.00",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFD97706) // Amber / orange accent for Estimated Cost
+                        )
+                        Text(
+                            text = "Estimated Bill",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFB45309)
+                        )
+                    }
+                }
+
+                // Cycle Details Metric Cards (Current Reading, Average, Days Elapsed)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = StitchSurfaceContainerLow,
+                        border = BorderStroke(1.dp, StitchOutline)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text("CURRENT READING", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StitchOnSurfaceVariant)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${String.format(Locale.getDefault(), "%,.0f", currentReadingVal)} kWh",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchOnSurface
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF0FDF4),
+                        border = BorderStroke(1.dp, Color(0xFFBBF7D0))
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text("AVERAGE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${String.format(Locale.getDefault(), "%.1f", avgDaily)} kWh/d",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchOnSurface
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF0F9FF),
+                        border = BorderStroke(1.dp, Color(0xFFBAE6FD))
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text("ELAPSED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0369A1))
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${metrics?.daysElapsed ?: 1} Days",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchOnSurface
+                            )
+                        }
+                    }
+                }
+
+                // Progress Track & Billing cycle dates
+                val progressFraction = (units / 1000.0).toFloat().coerceIn(0.05f, 1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(StitchSurfaceContainerHigh)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progressFraction)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(StitchPrimaryContainer)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Cycle: $periodDisplay",
+                        fontSize = 12.sp,
+                        color = StitchOnSurfaceVariant
+                    )
+                    Text(
+                        text = uiState.tariffCategory,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = StitchOnSurface
+                    )
+                }
+
+                // Today's Reading Status & Edit Action
+                if (uiState.isTodayReadingEntered) {
+                    if (uiState.isEditingReading) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            color = StitchSurfaceContainerLow,
+                            border = BorderStroke(1.dp, StitchOutline)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Edit Today's Reading", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = uiState.meterInputText,
+                                        onValueChange = onMeterInputChanged,
+                                        modifier = Modifier.weight(1f),
+                                        trailingIcon = { Text("kWh", fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    Button(
+                                        onClick = onUpdateTodayReading,
+                                        shape = RoundedCornerShape(6.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer)
+                                    ) {
+                                        Text("Update", fontSize = 12.sp)
+                                    }
+                                    TextButton(onClick = onCancelEditingReading) {
+                                        Text("Cancel", fontSize = 12.sp, color = StitchOnSurfaceVariant)
+                                    }
+                                }
+                                if (uiState.meterValidationError != null) {
+                                    Text(uiState.meterValidationError, fontSize = 11.sp, color = StitchError)
+                                }
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFF1F8F3))
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1E7038),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Today's reading (${String.format(Locale.getDefault(), "%,.0f", uiState.todayEnteredReading ?: currentReadingVal)} kWh) logged",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF1E7038),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            TextButton(
+                                onClick = onStartEditingReading,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(12.dp), tint = StitchPrimaryContainer)
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("Edit", fontSize = 11.sp, color = StitchPrimaryContainer, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    // Next day arrived: prompt for new reading
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFF9E6),
+                        border = BorderStroke(1.dp, Color(0xFFFFE082))
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Enter today's meter reading",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF795548)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = uiState.meterInputText,
+                                    onValueChange = onMeterInputChanged,
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = { Text("e.g. ${String.format(Locale.getDefault(), "%.0f", currentReadingVal + 5)}", fontSize = 12.sp) },
+                                    trailingIcon = { Text("kWh", fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                Button(
+                                    onClick = onSaveMeterReading,
+                                    shape = RoundedCornerShape(6.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer)
+                                ) {
+                                    Text("Save", fontSize = 12.sp)
+                                }
+                            }
+                            if (uiState.meterValidationError != null) {
+                                Text(uiState.meterValidationError, fontSize = 11.sp, color = StitchError)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -824,8 +1187,8 @@ private fun ReapClassificationCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = StitchSurfaceContainerLowest,
-        border = BorderStroke(1.dp, StitchOutline),
+        color = Color(0xFFFAF5FF), // Subtle purple tint for Energy Profile
+        border = BorderStroke(1.dp, Color(0xFFE9D5FF)),
         shadowElevation = 0.dp
     ) {
         Column(
@@ -846,7 +1209,7 @@ private fun ReapClassificationCard(
                     Icon(
                         imageVector = Icons.Default.Verified,
                         contentDescription = null,
-                        tint = StitchPrimaryContainer,
+                        tint = Color(0xFF7C3AED), // Purple accent
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
@@ -860,14 +1223,14 @@ private fun ReapClassificationCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (uiState.reapTier == ReapTier.PENDING) StitchSecondaryContainer else StitchPrimaryFixed)
+                        .background(if (uiState.reapTier == ReapTier.PENDING) Color(0xFFF3E8FF) else Color(0xFFEDE9FE))
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = if (uiState.reapTier == ReapTier.PENDING) "Classification Pending" else uiState.reapTier.code,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (uiState.reapTier == ReapTier.PENDING) StitchSecondary else StitchOnPrimaryFixedVariant
+                        color = Color(0xFF6D28D9)
                     )
                 }
             }
@@ -1033,264 +1396,182 @@ private fun ReapTierChip(
     }
 }
 
-// ─── 5. Recommended Action Hero Card ──────────────────────────────────────────
+// ─── 5. KNOW YOUR CONSUMPTION (Solar Lens Promotion Card) ──────────────────────
 
 @Composable
-private fun RecommendedActionCard(
+private fun KnowYourConsumptionCard(
     uiState: HomeUiState,
-    onConnectBill: () -> Unit,
-    onOpenCalculator: () -> Unit,
     onOpenSolarLens: () -> Unit,
-    onExploreSolar: () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    when {
-        // Step 1: Measure Baseline (New User)
-        !uiState.hasConnectedBill -> {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = StitchSurfaceContainerLow,
-                border = BorderStroke(1.dp, StitchOutline)
+    // Current billing-cycle consumption from single source of truth (current meter reading - previous bill reading)
+    val currentKwh = uiState.currentBillingCycleKwh
+    val kwhText = if (currentKwh > 0.0) {
+        if (currentKwh % 1.0 == 0.0) "${currentKwh.toInt()}" else String.format(Locale.getDefault(), "%.1f", currentKwh)
+    } else null
+
+    val headingText = if (kwhText != null) {
+        "Find where your $kwhText kWh is going"
+    } else {
+        "Find where your electricity is going"
+    }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFEEF2FF), // Indigo / light blue subtle accent
+        border = BorderStroke(1.dp, Color(0xFFC7D2FE))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Section label (02 Reduce badge completely removed per requirement)
+            Text(
+                text = "KNOW YOUR CONSUMPTION",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4F46E5), // Indigo accent
+                letterSpacing = 0.8.sp
+            )
+
+            Text(
+                text = headingText,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = StitchOnSurface
+            )
+
+            Text(
+                text = "Run an appliance audit to discover which heavy loads (AC, water heater, pump) can be optimized to lower your bill into the next lower tariff slab.",
+                fontSize = 12.sp,
+                color = StitchOnSurfaceVariant,
+                lineHeight = 17.sp
+            )
+
+            Button(
+                onClick = onOpenSolarLens,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4338CA), // Deep Indigo
+                    contentColor = Color.White
+                )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "RECOMMENDED ACTION",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StitchPrimaryContainer,
-                            letterSpacing = 0.8.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(StitchPrimaryFixed)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Step 01",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StitchOnPrimaryFixedVariant
-                            )
-                        }
-                    }
-
                     Text(
-                        text = "Measure Your Baseline",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StitchOnSurface
-                    )
-                    Text(
-                        text = "Retrieve your latest consumer receipt or calculate your estimated monthly units to establish your home's initial energy baseline.",
+                        text = "Start Appliance Audit with Solar Lens",
                         fontSize = 12.sp,
-                        color = StitchOnSurfaceVariant,
-                        lineHeight = 17.sp
+                        fontWeight = FontWeight.SemiBold
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = onConnectBill,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = StitchPrimaryContainer,
-                                contentColor = StitchOnPrimary
-                            )
-                        ) {
-                            Text("Connect Bill", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        }
-
-                        OutlinedButton(
-                            onClick = onOpenCalculator,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, StitchOutline)
-                        ) {
-                            Text("Use Calculator", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = StitchOnSurface)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Step 2: Reduce Loads (Bill Connected, Audit Pending)
-        !uiState.hasCompletedAudit -> {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = StitchSurfaceContainerHigh,
-                border = BorderStroke(1.dp, StitchOutline)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "RECOMMENDED NEXT STEP",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StitchPrimaryContainer,
-                            letterSpacing = 0.8.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(StitchPrimaryFixed)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "02 Reduce",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StitchOnPrimaryFixedVariant
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Find where your ${uiState.unitsConsumed?.toInt() ?: ""} kWh is going",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StitchOnSurface
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
                     )
-                    Text(
-                        text = "Run an appliance audit to discover which heavy loads (AC, water heater, pump) can be optimized to lower your bill into the next lower tariff slab.",
-                        fontSize = 12.sp,
-                        color = StitchOnSurfaceVariant,
-                        lineHeight = 17.sp
-                    )
-
-                    Button(
-                        onClick = onOpenSolarLens,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchPrimaryContainer,
-                            contentColor = StitchOnPrimary
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("Start Appliance Audit with Solar Lens", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        // Step 3 & 4: Optimise & Generate (Audit Completed)
-        else -> {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = StitchPrimary,
-                shadowElevation = 0.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "03 OPTIMISE & 04 GENERATE",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StitchPrimaryFixed,
-                            letterSpacing = 0.8.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color.White.copy(alpha = 0.2f))
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "HIGHEST ROI",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Size Solar for your optimized baseline",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-
-                    val capacityStr = uiState.recommendedSolarCapacityKw?.let { String.format(Locale.getDefault(), "%.1f kW", it) } ?: "Rooftop"
-                    Text(
-                        text = "Sizing solar after appliance profiling recommends a $capacityStr array, maximizing generation self-consumption and reducing payback period.",
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        lineHeight = 17.sp
-                    )
-
-                    Button(
-                        onClick = onExploreSolar,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchSurfaceContainerLowest,
-                            contentColor = StitchPrimary
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("Explore Custom Solar System", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
-                    }
                 }
             }
         }
     }
 }
 
-// ─── 6. REAP Energy Journey Stepper ───────────────────────────────────────────
+// ─── 6. Bill History / Check Dues Section ─────────────────────────────────────
 
+@Composable
+private fun BillActionsSection(
+    onViewBillHistory: () -> Unit,
+    onCheckDues: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFFFFBEB), // Amber / warm tint for Bill / Cost
+        border = BorderStroke(1.dp, Color(0xFFFDE68A))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = null,
+                        tint = Color(0xFFD97706),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "BILL & PAYMENT ACTIONS",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB45309),
+                        letterSpacing = 0.6.sp
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onViewBillHistory,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = "View Bill History",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF92400E)
+                    )
+                }
+
+                Button(
+                    onClick = onCheckDues,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD97706),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "Check Dues",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── 6. REAP Energy Journey Stepper (Preserved for Profile screen relocation) ───
+
+@Suppress("unused")
 @Composable
 private fun ReapJourneyStepper(activeStage: Int) {
     Surface(
@@ -1408,6 +1689,7 @@ private fun ReapJourneyStepper(activeStage: Int) {
 
 // ─── 7. Solar Lens Hero Card ──────────────────────────────────────────────────
 
+@Suppress("unused")
 @Composable
 private fun SolarLensHeroCard(
     uiState: HomeUiState,
@@ -1596,13 +1878,13 @@ private fun FeatureBullet(
     }
 }
 
-// ─── 8. Quick Tools Section (2x2 Grid) ─────────────────────────────────────────
+// ─── 7. Quick Tools Section (2x2 Grid) ─────────────────────────────────────────
 
 @Composable
 private fun QuickToolsSection(
     onBillStatus: () -> Unit,
-    onCalculator: () -> Unit,
-    onSolarLens: () -> Unit,
+    onBillHistory: () -> Unit,
+    onSolarPanel: () -> Unit,
     onChatbot: () -> Unit,
     hasConnectedBill: Boolean
 ) {
@@ -1639,16 +1921,16 @@ private fun QuickToolsSection(
                 title = "Bill Status",
                 subtitle = if (hasConnectedBill) "TNEB LT-1A" else "Check dues & units",
                 icon = Icons.Default.ReceiptLong,
-                iconTint = StitchPrimaryContainer,
+                iconTint = Color(0xFF0284C7), // Light blue
                 onClick = onBillStatus
             )
             QuickToolCard(
                 modifier = Modifier.weight(1f),
-                title = "Calculator",
-                subtitle = "Estimate monthly cost",
-                icon = Icons.Default.Calculate,
-                iconTint = StitchTertiary,
-                onClick = onCalculator
+                title = "Chatbot",
+                subtitle = "Ask Energy AI",
+                icon = Icons.Default.SmartToy,
+                iconTint = Color(0xFF4F46E5), // Indigo
+                onClick = onChatbot
             )
         }
 
@@ -1658,19 +1940,19 @@ private fun QuickToolsSection(
         ) {
             QuickToolCard(
                 modifier = Modifier.weight(1f),
-                title = "Energy Audit",
-                subtitle = "Scan appliance loads",
-                icon = Icons.Default.CameraOutdoor,
-                iconTint = StitchPrimaryContainer,
-                onClick = onSolarLens
+                title = "Rooftop Solar",
+                subtitle = "Sizing & generation",
+                icon = Icons.Default.SolarPower,
+                iconTint = Color(0xFFD97706), // Amber
+                onClick = onSolarPanel
             )
             QuickToolCard(
                 modifier = Modifier.weight(1f),
-                title = "Chatbot",
-                subtitle = "Ask Energy AI",
-                icon = Icons.Default.SmartToy,
-                iconTint = StitchSecondary,
-                onClick = onChatbot
+                title = "Bill History",
+                subtitle = "Past cycles & tariff",
+                icon = Icons.Default.History,
+                iconTint = Color(0xFF0D9488), // Teal
+                onClick = onBillHistory
             )
         }
     }
@@ -1711,7 +1993,7 @@ private fun QuickToolCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(StitchSurfaceContainerLow),
+                    .background(iconTint.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
