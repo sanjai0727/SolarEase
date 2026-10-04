@@ -48,6 +48,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private val ChatbotBlue = Color(0xFF2563EB)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ElectricityChatbotRoute(
@@ -171,9 +173,6 @@ fun ElectricityChatbotRoute(
                             viewModel.sendMessage(textToSend)
                             inputText = ""
                         }
-                    },
-                    onSuggestionClicked = { suggestion ->
-                        viewModel.sendMessage(suggestion)
                     },
                     isTyping = uiState.isTyping,
                     currentLanguage = uiState.currentLanguage
@@ -548,25 +547,21 @@ private fun EmptyWelcomeStateStitch(
 ) {
     val isTamil = currentLanguage == "ta"
 
-    val welcomeTitle = if (isTamil) "SolarEase AI உதவியாளர்" else "SolarEase AI"
+    val welcomeTitle = if (isTamil) "இன்று உங்கள் மனதில் என்ன உள்ளது?" else "What's on your mind today?"
     val welcomeDesc = if (isTamil)
-        "மின்சாரம், சோலார் பேனல்கள், மாதாந்திர மின்கட்டணம் மற்றும் PM சூர்யா கர் மானியம் பற்றிய உங்களின் கேள்விகளுக்கு துல்லியமான வழிகாட்டி."
+        "சூரிய சக்தி, மின்சாரம், கட்டணங்கள் அல்லது ஆற்றல் சேமிப்பு பற்றி என்னிடம் எதையும் கேளுங்கள்."
     else
-        "Your on-demand solar & energy advisory engine. Ask anything regarding solar sizing, electricity tariffs, government subsidies, and home energy."
+        "Ask me anything about solar, electricity, bills, or energy savings."
 
     val suggestions = if (isTamil) {
         listOf(
-            "சூரிய ஆற்றல் என்றால் என்ன?" to "சூரிய ஒளியிலிருந்து சுத்தமான மின்சாரம் உற்பத்தி செய்யும் முறை.",
             "வீட்டிற்கு எத்தனை கிலோவாட் சோலார் தேவை?" to "மின் நுகர்வுக்கு ஏற்ப தேவையான சோலார் திறன் கணக்கீடு.",
-            "PM சூர்யா கர் திட்டத்தின் கீழ் மானியம் பெறுவது எப்படி?" to "மத்திய அரசின் ₹78,000 வரையிலான மானிய உதவி விபரங்கள்.",
-            "மின்சார கட்டணத்தை எவ்வாறு குறைப்பது?" to "மாதாந்திர மின்கட்டணத்தை 80% வரை குறைக்கும் வழிகள்."
+            "PM சூர்யா கர் திட்டத்தின் கீழ் மானியம் பெறுவது எப்படி?" to "மத்திய அரசின் ₹78,000 வரையிலான மானிய உதவி விபரங்கள்."
         )
     } else {
         listOf(
             "How much solar capacity do I need?" to "Calculates optimal PV output based on household load.",
-            "What government subsidy can I get under PM Surya Ghar?" to "Central financial assistance up to ₹78,000 for residential systems.",
-            "Explain my electricity bill & tariff slabs" to "Audits slab crossings, fixed charges, and fuel adjustment surcharges.",
-            "On-grid vs Hybrid: Which fits my home best?" to "Compares grid-tied economics vs battery backup resilience."
+            "What government subsidy can I get under PM Surya Ghar?" to "Central financial assistance up to ₹78,000 for residential systems."
         )
     }
 
@@ -577,7 +572,7 @@ private fun EmptyWelcomeStateStitch(
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Welcome Card
+        // Welcome Card (Centered inside existing chatbot layout)
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -586,70 +581,41 @@ private fun EmptyWelcomeStateStitch(
                 shadowElevation = 1.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(LensColors.SurfaceContainer),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(LensColors.SurfaceContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SolarPower,
-                                    contentDescription = null,
-                                    tint = LensColors.PrimaryContainer,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = welcomeTitle,
-                                    fontFamily = HankenGroteskFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 16.sp,
-                                    color = LensColors.OnSurface
-                                )
-                                Text(
-                                    text = "Residential & Commercial Advisory",
-                                    fontFamily = GeistFontFamily,
-                                    fontSize = 11.sp,
-                                    color = LensColors.OnSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = LensColors.PrimaryFixed.copy(alpha = 0.25f)
-                        ) {
-                            Text(
-                                text = "READY",
-                                fontFamily = GeistFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
-                                color = LensColors.Primary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.SolarPower,
+                            contentDescription = null,
+                            tint = LensColors.PrimaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
+
+                    Text(
+                        text = welcomeTitle,
+                        fontFamily = HankenGroteskFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 17.sp,
+                        color = LensColors.OnSurface,
+                        textAlign = TextAlign.Center
+                    )
 
                     Text(
                         text = welcomeDesc,
                         fontFamily = GeistFontFamily,
                         fontSize = 13.sp,
                         color = LensColors.OnSurfaceVariant,
-                        lineHeight = 18.sp
+                        lineHeight = 18.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -1070,182 +1036,115 @@ private fun ErrorRetryCardStitch(
 }
 
 /**
- * Bottom Chat Input Bar with Quick Follow-up Chips matching Stitch
+ * Bottom Chat Input Bar with clean subtle blue accent outline
  */
 @Composable
 private fun ChatInputBarStitch(
     inputText: String,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
-    onSuggestionClicked: (String) -> Unit,
     isTyping: Boolean,
     currentLanguage: String
 ) {
     val isTamil = currentLanguage == "ta"
-    val followUps = if (isTamil) {
-        listOf(
-            "மின்சாரத்தை எவ்வாறு சேமிப்பது?",
-            "EV சார்ஜர் என்றால் என்ன?",
-            "மானியம் எவ்வளவு கிடைக்கும்?"
-        )
-    } else {
-        listOf(
-            "How can I save electricity?",
-            "What is an EV charger?",
-            "What subsidy can I get?"
-        )
-    }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding(),
         color = LensColors.SurfaceContainerLowest,
         shadowElevation = 6.dp
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Quick Suggestion Follow-Up Chips
-            Row(
+            // Outlined Input Container with subtle blue accent
+            Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .weight(1f)
+                    .height(46.dp)
+                    .border(1.5.dp, ChatbotBlue, RoundedCornerShape(23.dp)),
+                shape = RoundedCornerShape(23.dp),
+                color = LensColors.SurfaceContainerLow
             ) {
-                Text(
-                    text = "SUGGESTED:",
-                    style = LensTypography.labelCaps,
-                    color = LensColors.Secondary,
-                    modifier = Modifier.padding(end = 2.dp)
-                )
-                followUps.forEach { suggestion ->
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = LensColors.SurfaceContainerLow,
-                        modifier = Modifier.clickable(enabled = !isTyping) {
-                            onSuggestionClicked(suggestion)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (isTyping) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(ChatbotBlue)
+                            )
+                            Text(
+                                text = if (isTamil) "உதவியாளர் பதிலளிக்கிறது..." else "Assistant is responding...",
+                                fontFamily = GeistFontFamily,
+                                fontSize = 13.sp,
+                                color = LensColors.OnSurfaceVariant
+                            )
                         }
-                    ) {
-                        Text(
-                            text = suggestion,
-                            fontFamily = GeistFontFamily,
-                            fontSize = 11.sp,
-                            color = LensColors.OnSurface,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    } else {
+                        TextField(
+                            value = inputText,
+                            onValueChange = onInputChanged,
+                            placeholder = {
+                                Text(
+                                    text = if (isTamil) "உங்கள் கேள்வியை தட்டச்சு செய்யவும்..." else "Ask anything about your home or energy...",
+                                    fontFamily = GeistFontFamily,
+                                    fontSize = 13.sp,
+                                    color = LensColors.OutlineVariant
+                                )
+                            },
+                            maxLines = 2,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = { onSend() }),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontFamily = GeistFontFamily,
+                                fontSize = 13.sp,
+                                color = LensColors.OnSurface
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             }
 
-            // Input Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Send Button FAB with subtle blue accent
+            val canSend = inputText.isNotBlank() && !isTyping
+            IconButton(
+                onClick = onSend,
+                enabled = canSend,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(if (canSend) ChatbotBlue else LensColors.SurfaceContainerHigh)
             ) {
-                // Outlined Input Container
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp),
-                    shape = RoundedCornerShape(23.dp),
-                    color = LensColors.SurfaceContainerLow
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AttachFile,
-                            contentDescription = "Attach",
-                            tint = LensColors.OutlineVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-
-                        if (isTyping) {
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(LensColors.PrimaryContainer)
-                                )
-                                Text(
-                                    text = "Assistant is responding...",
-                                    fontFamily = GeistFontFamily,
-                                    fontSize = 13.sp,
-                                    color = LensColors.OnSurfaceVariant
-                                )
-                            }
-                        } else {
-                            TextField(
-                                value = inputText,
-                                onValueChange = onInputChanged,
-                                placeholder = {
-                                    Text(
-                                        text = if (isTamil) "உங்கள் கேள்வியை தட்டச்சு செய்யவும்..." else "Ask a question about your home solar...",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 13.sp,
-                                        color = LensColors.OutlineVariant
-                                    )
-                                },
-                                maxLines = 2,
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                                keyboardActions = KeyboardActions(onSend = { onSend() }),
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
-                                ),
-                                textStyle = androidx.compose.ui.text.TextStyle(
-                                    fontFamily = GeistFontFamily,
-                                    fontSize = 13.sp,
-                                    color = LensColors.OnSurface
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Mic",
-                            tint = LensColors.OutlineVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // Send Button FAB
-                val canSend = inputText.isNotBlank() && !isTyping
-                IconButton(
-                    onClick = onSend,
-                    enabled = canSend,
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(if (canSend) LensColors.PrimaryContainer else LensColors.SurfaceContainerHigh)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        tint = if (canSend) LensColors.OnPrimary else LensColors.Secondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = if (canSend) Color.White else LensColors.Secondary.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

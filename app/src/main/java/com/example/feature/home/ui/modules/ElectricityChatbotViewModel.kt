@@ -2,14 +2,17 @@ package com.example.feature.home.ui.modules
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.session.UserSession
 import com.example.feature.home.domain.ChatbotRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import java.util.UUID
 
+@Serializable
 data class ChatMessage(
     val isUser: Boolean,
     val text: String,
@@ -17,15 +20,17 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Serializable
 data class ChatSession(
     val id: String = UUID.randomUUID().toString(),
+    val userId: String = "",
     val title: String,
     val snippet: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val mode: String,
-    val language: String,
+    val mode: String = "citizen",
+    val language: String = "en",
     val category: String = "solar-sizing",
-    val messages: List<ChatMessage>
+    val messages: List<ChatMessage> = emptyList()
 )
 
 data class ChatbotUiState(
@@ -48,6 +53,53 @@ class ElectricityChatbotViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ChatbotUiState())
     val uiState: StateFlow<ChatbotUiState> = _uiState.asStateFlow()
 
+    init {
+        loadPersistedChat()
+    }
+
+    private fun getEffectiveUserId(): String {
+        val firebaseUid = try {
+            com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        } catch (_: Throwable) {
+            null
+        }
+        return firebaseUid?.takeIf { it.isNotBlank() }
+            ?: UserSession.currentUser?.id?.takeIf { it.isNotBlank() }
+            ?: "default_user"
+    }
+
+    fun loadPersistedChat() {
+        val userId = getEffectiveUserId()
+        val userSessions = ChatHistoryStorage.getSessionsForUser(userId)
+        val activeSessionId = ChatHistoryStorage.getActiveSessionId(userId)
+
+        val sessionToLoad: ChatSession? = when {
+            activeSessionId == "NEW_CHAT" -> null
+            !activeSessionId.isNullOrBlank() -> userSessions.firstOrNull { it.id == activeSessionId } ?: userSessions.firstOrNull()
+            else -> userSessions.firstOrNull()
+        }
+
+        if (sessionToLoad != null) {
+            _uiState.update { state ->
+                state.copy(
+                    messages = sessionToLoad.messages.filter { !it.isLoading },
+                    activeSessionId = sessionToLoad.id,
+                    currentMode = sessionToLoad.mode,
+                    currentLanguage = sessionToLoad.language,
+                    sessions = userSessions
+                )
+            }
+        } else {
+            _uiState.update { state ->
+                state.copy(
+                    messages = emptyList(),
+                    activeSessionId = null,
+                    sessions = userSessions
+                )
+            }
+        }
+    }
+
     fun setMode(mode: String) {
         _uiState.update { it.copy(currentMode = mode) }
     }
@@ -57,7 +109,13 @@ class ElectricityChatbotViewModel : ViewModel() {
     }
 
     fun toggleHistory(show: Boolean) {
-        _uiState.update { it.copy(showHistory = show) }
+        if (show) {
+            val userId = getEffectiveUserId()
+            val sessions = ChatHistoryStorage.getSessionsForUser(userId)
+            _uiState.update { it.copy(showHistory = true, sessions = sessions) }
+        } else {
+            _uiState.update { it.copy(showHistory = false) }
+        }
     }
 
     fun setHistorySearchQuery(query: String) {
@@ -72,6 +130,9 @@ class ElectricityChatbotViewModel : ViewModel() {
         val currentState = _uiState.value
         archiveCurrentSessionIfNeeded(currentState)
 
+        val userId = getEffectiveUserId()
+        ChatHistoryStorage.setActiveSessionId(userId, "NEW_CHAT")
+
         _uiState.update { state ->
             state.copy(
                 messages = emptyList(),
@@ -79,7 +140,8 @@ class ElectricityChatbotViewModel : ViewModel() {
                 errorMessage = null,
                 lastFailedQuery = null,
                 activeSessionId = null,
-                showHistory = false
+                showHistory = false,
+                sessions = ChatHistoryStorage.getSessionsForUser(userId)
             )
         }
     }
@@ -88,17 +150,43 @@ class ElectricityChatbotViewModel : ViewModel() {
         val currentState = _uiState.value
         archiveCurrentSessionIfNeeded(currentState)
 
+        val userId = getEffectiveUserId()
+        ChatHistoryStorage.setActiveSessionId(userId, session.id)
+
         _uiState.update { state ->
             state.copy(
-                messages = session.messages,
+                messages = session.messages.filter { !it.isLoading },
                 currentMode = session.mode,
                 currentLanguage = session.language,
                 activeSessionId = session.id,
                 isTyping = false,
                 errorMessage = null,
                 lastFailedQuery = null,
-                showHistory = false
+                showHistory = false,
+                sessions = ChatHistoryStorage.getSessionsForUser(userId)
             )
+        }
+    }
+
+    fun deleteSession(sessionId: String) {
+        ChatHistoryStorage.deleteSession(sessionId)
+        val userId = getEffectiveUserId()
+        val updated = ChatHistoryStorage.getSessionsForUser(userId)
+
+        if (_uiState.value.activeSessionId == sessionId) {
+            ChatHistoryStorage.setActiveSessionId(userId, "NEW_CHAT")
+            _uiState.update { state ->
+                state.copy(
+                    messages = emptyList(),
+                    isTyping = false,
+                    errorMessage = null,
+                    lastFailedQuery = null,
+                    activeSessionId = null,
+                    sessions = updated
+                )
+            }
+        } else {
+            _uiState.update { it.copy(sessions = updated) }
         }
     }
 
@@ -142,6 +230,8 @@ class ElectricityChatbotViewModel : ViewModel() {
                                 isUser = false,
                                 text = response.answer
                             )
+                        } else {
+                            updatedMessages.add(ChatMessage(isUser = false, text = response.answer))
                         }
 
                         val updatedState = state.copy(
@@ -159,11 +249,15 @@ class ElectricityChatbotViewModel : ViewModel() {
                         if (updatedMessages.isNotEmpty() && updatedMessages.last().isLoading) {
                             updatedMessages.removeLast() // Remove loading indicator on error
                         }
-                        state.copy(
+                        val finalState = state.copy(
                             messages = updatedMessages,
                             isTyping = false,
                             errorMessage = error.localizedMessage ?: "Network error. Please retry."
                         )
+                        if (updatedMessages.isNotEmpty()) {
+                            archiveCurrentSessionIfNeeded(finalState)
+                        }
+                        finalState
                     }
                 }
             )
@@ -171,58 +265,57 @@ class ElectricityChatbotViewModel : ViewModel() {
     }
 
     private fun archiveCurrentSessionIfNeeded(state: ChatbotUiState) {
-        val validUserMsg = state.messages.firstOrNull { it.isUser && it.text.isNotBlank() } ?: return
-        val lastBotMsg = state.messages.lastOrNull { !it.isUser && it.text.isNotBlank() }
+        val cleanMessages = state.messages.filter { !it.isLoading }
+        val validUserMsg = cleanMessages.firstOrNull { it.isUser && it.text.isNotBlank() } ?: return
+        val lastBotMsg = cleanMessages.lastOrNull { !it.isUser && it.text.isNotBlank() }
 
         val sessionId = state.activeSessionId ?: UUID.randomUUID().toString()
+        val userId = getEffectiveUserId()
         val category = determineCategory(validUserMsg.text)
 
         val newSession = ChatSession(
             id = sessionId,
+            userId = userId,
             title = validUserMsg.text.take(60),
             snippet = (lastBotMsg?.text ?: validUserMsg.text).take(90),
             timestamp = System.currentTimeMillis(),
             mode = state.currentMode,
             language = state.currentLanguage,
             category = category,
-            messages = state.messages
+            messages = cleanMessages
         )
 
-        val existingIdx = state.sessions.indexOfFirst { it.id == sessionId }
-        val updatedList = if (existingIdx >= 0) {
-            state.sessions.toMutableList().apply { set(existingIdx, newSession) }
-        } else {
-            listOf(newSession) + state.sessions
-        }
+        ChatHistoryStorage.saveSession(newSession)
 
+        val updatedList = ChatHistoryStorage.getSessionsForUser(userId)
         _uiState.update { it.copy(sessions = updatedList) }
     }
 
     private fun updateCurrentSessionInList(state: ChatbotUiState): ChatbotUiState {
-        val validUserMsg = state.messages.firstOrNull { it.isUser && it.text.isNotBlank() } ?: return state
-        val lastBotMsg = state.messages.lastOrNull { !it.isUser && it.text.isNotBlank() }
+        val cleanMessages = state.messages.filter { !it.isLoading }
+        val validUserMsg = cleanMessages.firstOrNull { it.isUser && it.text.isNotBlank() } ?: return state
+        val lastBotMsg = cleanMessages.lastOrNull { !it.isUser && it.text.isNotBlank() }
 
         val sessionId = state.activeSessionId ?: UUID.randomUUID().toString()
+        val userId = getEffectiveUserId()
         val category = determineCategory(validUserMsg.text)
 
         val newSession = ChatSession(
             id = sessionId,
+            userId = userId,
             title = validUserMsg.text.take(60),
             snippet = (lastBotMsg?.text ?: validUserMsg.text).take(90),
             timestamp = System.currentTimeMillis(),
             mode = state.currentMode,
             language = state.currentLanguage,
             category = category,
-            messages = state.messages
+            messages = cleanMessages
         )
 
-        val existingIdx = state.sessions.indexOfFirst { it.id == sessionId }
-        val updatedList = if (existingIdx >= 0) {
-            state.sessions.toMutableList().apply { set(existingIdx, newSession) }
-        } else {
-            listOf(newSession) + state.sessions
-        }
+        ChatHistoryStorage.saveSession(newSession)
+        ChatHistoryStorage.setActiveSessionId(userId, sessionId)
 
+        val updatedList = ChatHistoryStorage.getSessionsForUser(userId)
         return state.copy(sessions = updatedList, activeSessionId = sessionId)
     }
 
