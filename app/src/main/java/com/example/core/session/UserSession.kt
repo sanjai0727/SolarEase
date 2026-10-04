@@ -17,6 +17,7 @@ data class User(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val ebServiceNumber: String? = null,
+    val tnebRegisteredMobile: String? = null,
     val registrationCompleted: Boolean = false,
     val onboardingCompleted: Boolean = false,
     val installationCompleted: Boolean = false
@@ -31,18 +32,114 @@ object UserSession {
     private const val KEY_USER = "current_user"
     private const val KEY_ACCESS_TOKEN = "access_token"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
+    private const val KEY_EB_SERVICE_NUMBER = "eb_service_number"
+    private const val KEY_TNEB_REGISTERED_MOBILE = "tneb_registered_mobile"
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        encodeDefaults = true
+        coerceInputValues = true
+    }
+
+    private var appContext: Context? = null
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         accessToken = prefs.getString(KEY_ACCESS_TOKEN, null)
         refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null)
         val userJson = prefs.getString(KEY_USER, null)
         if (userJson != null) {
             try {
-                currentUser = Json.decodeFromString<User>(userJson)
+                currentUser = json.decodeFromString<User>(userJson)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        // If user session is null in local prefs, but Firebase session is still active and signed in,
+        // restore user session from the active Firebase session to prevent state loss on cold restart.
+        if (currentUser == null) {
+            try {
+                val fbUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (fbUser != null) {
+                    val restoredUser = User(
+                        id = fbUser.uid,
+                        name = fbUser.displayName,
+                        username = fbUser.displayName?.ifBlank { null } ?: fbUser.phoneNumber ?: "User",
+                        email = fbUser.email,
+                        mobileNumber = fbUser.phoneNumber
+                    )
+                    currentUser = restoredUser
+                    saveUser(context, restoredUser)
+                }
+            } catch (_: Throwable) {
+                // Ignore in testing environments where FirebaseAuth is not mocked/initialized
+            }
+        }
+
+        // Resilient recovery: ensure saved ebServiceNumber and tnebRegisteredMobile are never lost
+        val fallbackEb = prefs.getString(KEY_EB_SERVICE_NUMBER, null)?.ifBlank { null }
+        val fallbackTnebMobile = prefs.getString(KEY_TNEB_REGISTERED_MOBILE, null)?.ifBlank { null }
+
+        currentUser?.let { user ->
+            var updated = user
+            if (updated.ebServiceNumber.isNullOrBlank() && !fallbackEb.isNullOrBlank()) {
+                updated = updated.copy(ebServiceNumber = fallbackEb)
+            }
+            if (updated.tnebRegisteredMobile.isNullOrBlank() && !fallbackTnebMobile.isNullOrBlank()) {
+                updated = updated.copy(tnebRegisteredMobile = fallbackTnebMobile)
+            }
+            if (updated != user) {
+                currentUser = updated
+                val editor = prefs.edit()
+                editor.putString(KEY_USER, json.encodeToString(updated))
+                editor.apply()
+            }
+        }
+    }
+
+    fun getSavedEbServiceNumber(context: Context? = null): String? {
+        val ctx = context?.applicationContext ?: appContext
+        return currentUser?.ebServiceNumber?.ifBlank { null }
+            ?: ctx?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ?.getString(KEY_EB_SERVICE_NUMBER, null)?.ifBlank { null }
+    }
+
+    fun getSavedTnebMobile(context: Context? = null): String? {
+        val ctx = context?.applicationContext ?: appContext
+        return currentUser?.tnebRegisteredMobile?.ifBlank { null }
+            ?: ctx?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ?.getString(KEY_TNEB_REGISTERED_MOBILE, null)?.ifBlank { null }
+    }
+
+    fun saveExplicitElectricityDetails(context: Context? = null, consumerNumber: String?, tnebMobile: String?) {
+        val ctx = context?.applicationContext ?: appContext
+        if (ctx != null) {
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val editor = prefs.edit()
+            if (!consumerNumber.isNullOrBlank()) {
+                editor.putString(KEY_EB_SERVICE_NUMBER, consumerNumber)
+            } else if (consumerNumber != null) {
+                editor.remove(KEY_EB_SERVICE_NUMBER)
+            }
+            if (!tnebMobile.isNullOrBlank()) {
+                editor.putString(KEY_TNEB_REGISTERED_MOBILE, tnebMobile)
+            } else if (tnebMobile != null) {
+                editor.remove(KEY_TNEB_REGISTERED_MOBILE)
+            }
+            editor.apply()
+        }
+        currentUser?.let { user ->
+            var updated = user
+            if (consumerNumber != null) {
+                updated = updated.copy(ebServiceNumber = consumerNumber.ifBlank { null })
+            }
+            if (tnebMobile != null) {
+                updated = updated.copy(tnebRegisteredMobile = tnebMobile.ifBlank { null })
+            }
+            currentUser = updated
         }
     }
 
@@ -56,10 +153,38 @@ object UserSession {
             .apply()
     }
 
-    fun saveUser(context: Context, user: User) {
-        currentUser = user
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_USER, Json.encodeToString(user)).apply()
+    fun saveUser(context: Context? = null, user: User) {
+        val ctx = context?.applicationContext ?: appContext
+        if (ctx != null) {
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val existingEb = prefs.getString(KEY_EB_SERVICE_NUMBER, null)?.ifBlank { null }
+            val existingTnebMobile = prefs.getString(KEY_TNEB_REGISTERED_MOBILE, null)?.ifBlank { null }
+
+            val finalEb = user.ebServiceNumber?.ifBlank { null } ?: existingEb
+            val finalTnebMobile = user.tnebRegisteredMobile?.ifBlank { null } ?: existingTnebMobile
+
+            val finalUser = user.copy(
+                ebServiceNumber = finalEb,
+                tnebRegisteredMobile = finalTnebMobile
+            )
+            currentUser = finalUser
+
+            val editor = prefs.edit()
+            editor.putString(KEY_USER, json.encodeToString(finalUser))
+            if (!finalEb.isNullOrBlank()) {
+                editor.putString(KEY_EB_SERVICE_NUMBER, finalEb)
+            }
+            if (!finalTnebMobile.isNullOrBlank()) {
+                editor.putString(KEY_TNEB_REGISTERED_MOBILE, finalTnebMobile)
+            }
+            editor.apply()
+        } else {
+            currentUser = user
+        }
+    }
+
+    fun saveUser(user: User) {
+        saveUser(null, user)
     }
     
     fun clear(context: Context) {
@@ -67,7 +192,13 @@ object UserSession {
         accessToken = null
         refreshToken = null
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().remove(KEY_USER).remove(KEY_ACCESS_TOKEN).remove(KEY_REFRESH_TOKEN).apply()
+        prefs.edit()
+            .remove(KEY_USER)
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_EB_SERVICE_NUMBER)
+            .remove(KEY_TNEB_REGISTERED_MOBILE)
+            .apply()
     }
 
     fun setProfilePromptDismissed(context: Context, userId: String) {

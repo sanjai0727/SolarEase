@@ -61,21 +61,29 @@ class TnebBillStatusViewModel : ViewModel() {
     private var captchaRefreshJob: kotlinx.coroutines.Job? = null
 
     init {
+        // Pre-fill Service Number and actual TNEB Registered Mobile Number if securely stored
+        val user = com.example.core.session.UserSession.currentUser
         val cached = TnebBillCache.billData.value
-        if (cached != null) {
-            _billData.value = cached
-            if (cached.consumerNumber.isNotBlank()) {
-                _serviceConnectionNumber.value = cached.consumerNumber.filter { it.isDigit() }.take(11)
-            }
-        } else {
-            val user = com.example.core.session.UserSession.currentUser
-            if (!user?.ebServiceNumber.isNullOrBlank()) {
-                _serviceConnectionNumber.value = user.ebServiceNumber.filter { it.isDigit() }.take(11)
-            }
-            if (!user?.mobileNumber.isNullOrBlank()) {
-                _registeredMobileNumber.value = user.mobileNumber.filter { it.isDigit() }.take(10)
-            }
+
+        val serviceNo = user?.ebServiceNumber?.ifBlank { null }
+            ?: cached?.consumerNumber?.ifBlank { null }
+            ?: com.example.core.session.UserSession.getSavedEbServiceNumber()
+            ?: ""
+        val mobileNo = user?.tnebRegisteredMobile?.ifBlank { null }
+            ?: com.example.core.session.UserSession.getSavedTnebMobile()
+            ?: ""
+
+        if (serviceNo.isNotBlank()) {
+            _serviceConnectionNumber.value = serviceNo.filter { it.isDigit() }.take(11)
         }
+        if (mobileNo.isNotBlank()) {
+            _registeredMobileNumber.value = mobileNo.filter { it.isDigit() }.takeLast(10)
+        }
+
+        // Always begin in IDLE state so the user lands on the verification/input screen
+        _submitState.value = SubmitState.IDLE
+        _billData.value = null
+
         validate()
     }
 
@@ -83,12 +91,18 @@ class TnebBillStatusViewModel : ViewModel() {
         val filtered = number.filter { it.isDigit() }.take(11)
         _serviceConnectionNumber.value = filtered
         validate()
+        if (filtered.length == 11) {
+            persistElectricityDetailsIfValid()
+        }
     }
 
     fun updateRegisteredMobileNumber(number: String) {
         val filtered = number.filter { it.isDigit() }.take(10)
         _registeredMobileNumber.value = filtered
         validate()
+        if (filtered.length == 10) {
+            persistElectricityDetailsIfValid()
+        }
     }
 
     fun updateCaptchaInput(input: String) {
@@ -101,8 +115,27 @@ class TnebBillStatusViewModel : ViewModel() {
         _isValid.value = isValidScn && isValidRmn
     }
 
+    private fun persistElectricityDetailsIfValid() {
+        val scn = _serviceConnectionNumber.value.filter { it.isDigit() }.take(11)
+        val rmn = _registeredMobileNumber.value.filter { it.isDigit() }.takeLast(10)
+        val current = com.example.core.session.UserSession.currentUser
+        if (current != null) {
+            val updated = current.copy(
+                ebServiceNumber = if (scn.length == 11) scn else current.ebServiceNumber,
+                tnebRegisteredMobile = if (rmn.length == 10) rmn else current.tnebRegisteredMobile
+            )
+            com.example.core.session.UserSession.saveUser(updated)
+        } else {
+            com.example.core.session.UserSession.saveExplicitElectricityDetails(
+                consumerNumber = if (scn.length == 11) scn else null,
+                tnebMobile = if (rmn.length == 10) rmn else null
+            )
+        }
+    }
+
     fun checkBillStatus() {
         if (_isValid.value) {
+            persistElectricityDetailsIfValid()
             if (_captchaImageBase64.value == null) {
                 // Phase 2A: Load TNPDCL and get CAPTCHA
                 requestCaptchaRefresh()
@@ -186,8 +219,23 @@ class TnebBillStatusViewModel : ViewModel() {
         val parsedData = TnebBillStatusHtmlParser.parseJson(json)
         if (parsedData != null && (parsedData.bills.isNotEmpty() || parsedData.consumerName.isNotBlank() || parsedData.tariffCode.isNotBlank())) {
             Log.d("TNEB", "[TNEB] UI received real bill data")
-            _billData.value = parsedData
-            TnebBillCache.save(null, parsedData)
+            TnebBillCache.save(parsedData)
+            _billData.value = TnebBillCache.billData.value ?: parsedData
+            val current = com.example.core.session.UserSession.currentUser
+            val scn = parsedData.consumerNumber.ifBlank { _serviceConnectionNumber.value.filter { it.isDigit() }.take(11) }
+            val rmn = _registeredMobileNumber.value.filter { it.isDigit() }.takeLast(10)
+            if (current != null) {
+                val updated = current.copy(
+                    ebServiceNumber = scn.ifBlank { current.ebServiceNumber },
+                    tnebRegisteredMobile = if (rmn.length == 10) rmn else current.tnebRegisteredMobile
+                )
+                com.example.core.session.UserSession.saveUser(updated)
+            } else {
+                com.example.core.session.UserSession.saveExplicitElectricityDetails(
+                    consumerNumber = scn.ifBlank { null },
+                    tnebMobile = if (rmn.length == 10) rmn else null
+                )
+            }
             _errorMessage.value = null
             _submitState.value = SubmitState.SUCCESS
         } else {
@@ -249,8 +297,23 @@ class TnebBillStatusViewModel : ViewModel() {
             val parsedData = TnebBillStatusHtmlParser.parseHtml(html)
             if (parsedData != null && (parsedData.bills.isNotEmpty() || parsedData.consumerName.isNotBlank() || parsedData.tariffCode.isNotBlank())) {
                 Log.d("TNEB", "[TNEB] UI received real bill data")
-                _billData.value = parsedData
-                TnebBillCache.save(null, parsedData)
+                TnebBillCache.save(parsedData)
+                _billData.value = TnebBillCache.billData.value ?: parsedData
+                val current = com.example.core.session.UserSession.currentUser
+                val scn = parsedData.consumerNumber.ifBlank { _serviceConnectionNumber.value.filter { it.isDigit() }.take(11) }
+                val rmn = _registeredMobileNumber.value.filter { it.isDigit() }.takeLast(10)
+                if (current != null) {
+                    val updated = current.copy(
+                        ebServiceNumber = scn.ifBlank { current.ebServiceNumber },
+                        tnebRegisteredMobile = if (rmn.length == 10) rmn else current.tnebRegisteredMobile
+                    )
+                    com.example.core.session.UserSession.saveUser(updated)
+                } else {
+                    com.example.core.session.UserSession.saveExplicitElectricityDetails(
+                        consumerNumber = scn.ifBlank { null },
+                        tnebMobile = if (rmn.length == 10) rmn else null
+                    )
+                }
                 _errorMessage.value = null
                 _submitState.value = SubmitState.SUCCESS
             } else {
