@@ -515,60 +515,54 @@ fun IntroductionContent(
             }
         }
 
-        // Hero Card: CAD Visual Load Mapping
+        // Compact Feature Card: Target Ingestion & Optical Load Mapping
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
             color = LensColors.InverseSurface,
             border = BorderStroke(1.dp, LensColors.OutlineVariant)
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(14.dp),
-                contentAlignment = Alignment.BottomStart
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        "TARGET INGESTION",
+                        style = LensTypography.labelCaps,
+                        color = LensColors.PrimaryFixedDim
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "Multi-Zone Optical Load Mapping",
+                        style = LensTypography.headlineSm,
+                        color = LensColors.InverseOnSurface
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = LensColors.SurfaceContainerLowest.copy(alpha = 0.15f)
                 ) {
-                    Column {
-                        Text(
-                            "TARGET INGESTION",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.PrimaryFixedDim
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Sensors,
+                            contentDescription = null,
+                            tint = LensColors.PrimaryFixedDim,
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            "Multi-Zone Optical Load Mapping",
-                            style = LensTypography.headlineSm,
+                            "CV-CORE",
+                            style = LensTypography.labelCaps,
                             color = LensColors.InverseOnSurface
                         )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = LensColors.SurfaceContainerLowest.copy(alpha = 0.15f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Sensors,
-                                contentDescription = null,
-                                tint = LensColors.PrimaryFixedDim,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                "CV-CORE",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.InverseOnSurface
-                            )
-                        }
                     }
                 }
             }
@@ -645,85 +639,6 @@ fun IntroductionContent(
             }
         }
 
-        // Value Metric Highlights (2-Column Dense Grid)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Surface(
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp),
-                color = LensColors.SurfaceContainerLowest,
-                border = BorderStroke(1.dp, LensColors.Outline)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Verified,
-                            contentDescription = null,
-                            tint = LensColors.Primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "MODEL ACCURACY",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.Primary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        "94.8%",
-                        style = LensTypography.metricValLg,
-                        color = LensColors.SlateText
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        "High-confidence detection on common Indian & global appliances.",
-                        style = LensTypography.labelSm,
-                        color = LensColors.SlateCaption,
-                        maxLines = 2
-                    )
-                }
-            }
-
-            Surface(
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp),
-                color = LensColors.SurfaceContainerLowest,
-                border = BorderStroke(1.dp, LensColors.Outline)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = LensColors.Tertiary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "LOCAL COMPUTE",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.Tertiary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        "100% On-Device",
-                        style = LensTypography.metricValMd,
-                        color = LensColors.SlateText
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        "Offline inference with zero cloud transmission for complete privacy.",
-                        style = LensTypography.labelSm,
-                        color = LensColors.SlateCaption,
-                        maxLines = 2
-                    )
-                }
-            }
-        }
 
         // Primary Execution Action
         Button(
