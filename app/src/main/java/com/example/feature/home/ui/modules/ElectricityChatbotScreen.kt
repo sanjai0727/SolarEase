@@ -15,8 +15,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -547,11 +549,11 @@ private fun EmptyWelcomeStateStitch(
 ) {
     val isTamil = currentLanguage == "ta"
 
-    val welcomeTitle = if (isTamil) "இன்று உங்கள் மனதில் என்ன உள்ளது?" else "What's on your mind today?"
+    val welcomeTitle = if (isTamil) "SolarEase AI உதவியாளர்" else "SolarEase AI"
     val welcomeDesc = if (isTamil)
-        "சூரிய சக்தி, மின்சாரம், கட்டணங்கள் அல்லது ஆற்றல் சேமிப்பு பற்றி என்னிடம் எதையும் கேளுங்கள்."
+        "மின்சாரம், சோலார் பேனல்கள், மாதாந்திர மின்கட்டணம் மற்றும் PM சூர்யா கர் மானியம் பற்றிய உங்களின் கேள்விகளுக்கு துல்லியமான வழிகாட்டி."
     else
-        "Ask me anything about solar, electricity, bills, or energy savings."
+        "Your on-demand solar & energy advisory engine. Ask anything regarding solar sizing, electricity tariffs, government subsidies, and home energy."
 
     val suggestions = if (isTamil) {
         listOf(
@@ -572,7 +574,7 @@ private fun EmptyWelcomeStateStitch(
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Welcome Card (Centered inside existing chatbot layout)
+        // SolarEase AI Information Card (Restored)
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -581,41 +583,70 @@ private fun EmptyWelcomeStateStitch(
                 shadowElevation = 1.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(LensColors.SurfaceContainer),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.SolarPower,
-                            contentDescription = null,
-                            tint = LensColors.PrimaryContainer,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(LensColors.SurfaceContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SolarPower,
+                                    contentDescription = null,
+                                    tint = LensColors.PrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = welcomeTitle,
+                                    fontFamily = HankenGroteskFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp,
+                                    color = LensColors.OnSurface
+                                )
+                                Text(
+                                    text = "Residential & Commercial Advisory",
+                                    fontFamily = GeistFontFamily,
+                                    fontSize = 11.sp,
+                                    color = LensColors.OnSurfaceVariant
+                                )
+                            }
+                        }
 
-                    Text(
-                        text = welcomeTitle,
-                        fontFamily = HankenGroteskFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp,
-                        color = LensColors.OnSurface,
-                        textAlign = TextAlign.Center
-                    )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = LensColors.PrimaryFixed.copy(alpha = 0.25f)
+                        ) {
+                            Text(
+                                text = "READY",
+                                fontFamily = GeistFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                color = LensColors.Primary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
 
                     Text(
                         text = welcomeDesc,
                         fontFamily = GeistFontFamily,
                         fontSize = 13.sp,
                         color = LensColors.OnSurfaceVariant,
-                        lineHeight = 18.sp,
-                        textAlign = TextAlign.Center
+                        lineHeight = 18.sp
                     )
                 }
             }
@@ -1036,7 +1067,7 @@ private fun ErrorRetryCardStitch(
 }
 
 /**
- * Bottom Chat Input Bar with clean subtle blue accent outline
+ * Bottom Chat Input Bar with clean subtle blue accent outline and vertically centered input
  */
 @Composable
 private fun ChatInputBarStitch(
@@ -1074,7 +1105,7 @@ private fun ChatInputBarStitch(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 14.dp),
+                        .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (isTyping) {
@@ -1096,35 +1127,36 @@ private fun ChatInputBarStitch(
                             )
                         }
                     } else {
-                        TextField(
-                            value = inputText,
-                            onValueChange = onInputChanged,
-                            placeholder = {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (inputText.isEmpty()) {
                                 Text(
-                                    text = if (isTamil) "உங்கள் கேள்வியை தட்டச்சு செய்யவும்..." else "Ask anything about your home or energy...",
+                                    text = if (isTamil) "ஆற்றல் பற்றி எதையும் கேளுங்கள்" else "Ask anything about energy",
                                     fontFamily = GeistFontFamily,
                                     fontSize = 13.sp,
-                                    color = LensColors.OutlineVariant
+                                    color = LensColors.OutlineVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
-                            },
-                            maxLines = 2,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { onSend() }),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                fontFamily = GeistFontFamily,
-                                fontSize = 13.sp,
-                                color = LensColors.OnSurface
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            }
+                            BasicTextField(
+                                value = inputText,
+                                onValueChange = onInputChanged,
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    fontFamily = GeistFontFamily,
+                                    fontSize = 13.sp,
+                                    color = LensColors.OnSurface
+                                ),
+                                singleLine = true,
+                                maxLines = 1,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                                keyboardActions = KeyboardActions(onSend = { onSend() }),
+                                cursorBrush = SolidColor(ChatbotBlue),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
