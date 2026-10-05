@@ -61,8 +61,8 @@ object ApplianceMaster {
     val appliances = listOf(
         ApplianceDef(
             name = "LED Tube Light",
-            ratedWattage = 36f,
-            activeOperatingWattage = 36f,
+            ratedWattage = 20f,
+            activeOperatingWattage = 20f,
             usageMode = UsageMode.DAILY_HOURS,
             typicalDailyHours = 6f,
             monthlyDays = 30,
@@ -79,8 +79,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Ceiling Fan",
-            ratedWattage = 75f,
-            activeOperatingWattage = 75f,
+            ratedWattage = 65f,
+            activeOperatingWattage = 65f,
             usageMode = UsageMode.DAILY_HOURS,
             typicalDailyHours = 12f,
             monthlyDays = 30,
@@ -88,8 +88,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Table Fan",
-            ratedWattage = 50f,
-            activeOperatingWattage = 50f,
+            ratedWattage = 45f,
+            activeOperatingWattage = 45f,
             usageMode = UsageMode.DAILY_HOURS,
             typicalDailyHours = 8f,
             monthlyDays = 30,
@@ -97,7 +97,7 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Television (LED 43\")",
-            ratedWattage = 100f,
+            ratedWattage = 80f,
             activeOperatingWattage = 80f,
             usageMode = UsageMode.DAILY_HOURS,
             typicalDailyHours = 5f,
@@ -126,8 +126,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Air Conditioner (1.5T)",
-            ratedWattage = 1500f,
-            activeOperatingWattage = 1500f,
+            ratedWattage = 1200f,
+            activeOperatingWattage = 1200f,
             usageMode = UsageMode.CONTINUOUS_THERMOSTATIC,
             typicalDailyHours = 6f,
             monthlyDays = 30,
@@ -135,8 +135,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Microwave",
-            ratedWattage = 1000f,
-            activeOperatingWattage = 1000f,
+            ratedWattage = 1200f,
+            activeOperatingWattage = 1200f,
             usageMode = UsageMode.MINUTES_PER_USE,
             typicalDailyHours = 0.25f,
             minutesPerUse = 15f,
@@ -166,8 +166,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Air Cooler",
-            ratedWattage = 200f,
-            activeOperatingWattage = 200f,
+            ratedWattage = 150f,
+            activeOperatingWattage = 150f,
             usageMode = UsageMode.DAILY_HOURS,
             typicalDailyHours = 8f,
             monthlyDays = 30,
@@ -175,8 +175,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Induction Cooktop",
-            ratedWattage = 1800f,
-            activeOperatingWattage = 1400f,
+            ratedWattage = 1500f,
+            activeOperatingWattage = 1500f,
             usageMode = UsageMode.MINUTES_PER_USE,
             typicalDailyHours = 1f,
             minutesPerUse = 60f,
@@ -197,8 +197,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Mixer Grinder",
-            ratedWattage = 600f,
-            activeOperatingWattage = 600f,
+            ratedWattage = 500f,
+            activeOperatingWattage = 500f,
             usageMode = UsageMode.MINUTES_PER_USE,
             typicalDailyHours = 0.25f,
             minutesPerUse = 15f,
@@ -219,8 +219,8 @@ object ApplianceMaster {
         ),
         ApplianceDef(
             name = "Water Pump (0.5–1 HP)",
-            ratedWattage = 500f,
-            activeOperatingWattage = 500f,
+            ratedWattage = 750f,
+            activeOperatingWattage = 750f,
             usageMode = UsageMode.CYCLES_PER_MONTH,
             typicalDailyHours = 1f,
             minutesPerUse = 60f,

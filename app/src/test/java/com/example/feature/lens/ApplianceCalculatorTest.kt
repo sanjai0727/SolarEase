@@ -265,8 +265,8 @@ class ApplianceCalculatorTest {
             ApplianceMaster.getDefaults("Laptop")!! to 1
         )
 
-        // Ceiling Fan: 75W rated, 75W active, 12h, 30d, 1.0 duty -> 0.075 kW, 27.0 kWh
-        // LED Tube Light (x2): 36W rated, 36W active, 6h, 30d, 1.0 duty -> 0.072 kW, 12.96 kWh
+        // Ceiling Fan: 65W rated, 65W active, 12h, 30d, 1.0 duty -> 0.065 kW, 23.4 kWh
+        // LED Tube Light (x2): 20W rated, 20W active, 6h, 30d, 1.0 duty -> 0.040 kW, 7.2 kWh
         // Laptop: 60W rated, 30W active, 6h, 30d, 1.0 duty -> 0.060 kW, 5.4 kWh
 
         val totalLoadKw = bedroomAppliances.sumOf { (appliance, qty) ->
@@ -276,8 +276,8 @@ class ApplianceCalculatorTest {
             ApplianceMaster.calculateMonthlyEnergyKwh(appliance, qty)
         }
 
-        assertEquals(0.075 + 0.072 + 0.060, totalLoadKw, 0.0001)
-        assertEquals(27.0 + 12.96 + 5.4, totalMonthlyKwh, 0.0001)
+        assertEquals(0.065 + 0.040 + 0.060, totalLoadKw, 0.0001)
+        assertEquals(23.4 + 7.2 + 5.4, totalMonthlyKwh, 0.0001)
     }
 
     @Test
