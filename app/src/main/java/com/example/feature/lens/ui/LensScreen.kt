@@ -113,18 +113,37 @@ fun LensScreen(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Default.CameraAlt, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(48.dp))
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(LensColors.PrimaryFixed, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(28.dp))
+                }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Camera permission is required for Solar Lens.", style = LensTypography.headlineSm, color = LensColors.SlateText)
-                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Camera access needed",
+                    style = LensTypography.headlineMd,
+                    color = LensColors.SlateText
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Allow camera access to scan your rooms for appliances.",
+                    style = LensTypography.bodyMd,
+                    color = LensColors.SlateMuted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(20.dp))
                 Button(
                     onClick = { cameraPermissionState.launchPermissionRequest() },
-                    colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Grant Permission", color = LensColors.OnPrimary)
+                    Text("Allow Camera", color = LensColors.OnPrimary)
                 }
             }
         }
@@ -167,36 +186,24 @@ private fun LensCameraContent(
         topBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = LensColors.InverseSurface.copy(alpha = 0.9f)
+                color = LensColors.InverseSurface.copy(alpha = 0.85f)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
+                        IconButton(onClick = onNavigateBack, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = LensColors.InverseOnSurface)
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            "Array Calibration: ${uiState.room.name}",
-                            style = LensTypography.headlineSm.copy(fontSize = 15.sp),
+                            "Scanning: ${uiState.room.name}",
+                            style = LensTypography.headlineSm,
                             color = LensColors.InverseOnSurface
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = LensColors.PrimaryFixed.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            "CV-SCAN",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.PrimaryFixed,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
@@ -205,13 +212,12 @@ private fun LensCameraContent(
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = LensColors.InverseSurface,
-                border = BorderStroke(1.dp, LensColors.OutlineVariant.copy(alpha = 0.2f))
+                color = LensColors.InverseSurface.copy(alpha = 0.85f)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -222,9 +228,9 @@ private fun LensCameraContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "LIVE SCAN ACTIVE • ON-DEVICE OBJECT DETECTION (ML KIT)",
-                        style = LensTypography.labelCaps.copy(fontSize = 11.sp),
-                        color = LensColors.InverseOnSurface
+                        "Live scanning • On-device detection",
+                        style = LensTypography.labelSm,
+                        color = LensColors.InverseOnSurface.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -283,44 +289,8 @@ private fun LensCameraContent(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Precision Viewport Graticule Canvas & HUD
+            // Detection overlay — clean rounded corner brackets
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val cx = size.width / 2f
-                val cy = size.height / 2f
-
-                // Center Crosshair
-                drawLine(
-                    color = Color(0xFF10B981).copy(alpha = 0.45f),
-                    start = Offset(cx - 24.dp.toPx(), cy),
-                    end = Offset(cx - 8.dp.toPx(), cy),
-                    strokeWidth = 1.5f
-                )
-                drawLine(
-                    color = Color(0xFF10B981).copy(alpha = 0.45f),
-                    start = Offset(cx + 8.dp.toPx(), cy),
-                    end = Offset(cx + 24.dp.toPx(), cy),
-                    strokeWidth = 1.5f
-                )
-                drawLine(
-                    color = Color(0xFF10B981).copy(alpha = 0.45f),
-                    start = Offset(cx, cy - 24.dp.toPx()),
-                    end = Offset(cx, cy - 8.dp.toPx()),
-                    strokeWidth = 1.5f
-                )
-                drawLine(
-                    color = Color(0xFF10B981).copy(alpha = 0.45f),
-                    start = Offset(cx, cy + 8.dp.toPx()),
-                    end = Offset(cx, cy + 24.dp.toPx()),
-                    strokeWidth = 1.5f
-                )
-                drawCircle(
-                    color = Color(0xFF10B981).copy(alpha = 0.35f),
-                    radius = 4.dp.toPx(),
-                    center = Offset(cx, cy),
-                    style = Stroke(width = 1.5f)
-                )
-
-                // CAD-style Corner Brackets for detected appliances
                 if (uiState.mode == CameraMode.LIVE_SCAN) {
                     for (detection in currentFrameDetections) {
                         val rel = detection.boundingBoxRelative
@@ -328,160 +298,116 @@ private fun LensCameraContent(
                         val top = rel.top * size.height
                         val right = rel.right * size.width
                         val bottom = rel.bottom * size.height
-                        val bracketLen = 14.dp.toPx()
-                        val strokeW = 3.dp.toPx()
-                        val color = Color(0xFF10B981)
+                        val bracketLen = 16.dp.toPx()
+                        val strokeW = 2.5.dp.toPx()
+                        val color = Color(0xFF22C55E)
+                        val radius = 4.dp.toPx()
 
-                        // Interior soft tint
+                        // Soft fill
                         drawRect(
-                            color = color.copy(alpha = 0.08f),
+                            color = color.copy(alpha = 0.06f),
                             topLeft = Offset(left, top),
                             size = Size((right - left).coerceAtLeast(0f), (bottom - top).coerceAtLeast(0f))
                         )
 
-                        // Top-Left Bracket
-                        drawLine(color, Offset(left, top), Offset(left + bracketLen, top), strokeW)
-                        drawLine(color, Offset(left, top), Offset(left, top + bracketLen), strokeW)
+                        // Corner brackets
+                        drawLine(color, Offset(left, top + radius), Offset(left, top + bracketLen), strokeW)
+                        drawLine(color, Offset(left + radius, top), Offset(left + bracketLen, top), strokeW)
 
-                        // Top-Right Bracket
-                        drawLine(color, Offset(right, top), Offset(right - bracketLen, top), strokeW)
-                        drawLine(color, Offset(right, top), Offset(right, top + bracketLen), strokeW)
+                        drawLine(color, Offset(right, top + radius), Offset(right, top + bracketLen), strokeW)
+                        drawLine(color, Offset(right - radius, top), Offset(right - bracketLen, top), strokeW)
 
-                        // Bottom-Left Bracket
-                        drawLine(color, Offset(left, bottom), Offset(left + bracketLen, bottom), strokeW)
-                        drawLine(color, Offset(left, bottom), Offset(left, bottom - bracketLen), strokeW)
+                        drawLine(color, Offset(left, bottom - radius), Offset(left, bottom - bracketLen), strokeW)
+                        drawLine(color, Offset(left + radius, bottom), Offset(left + bracketLen, bottom), strokeW)
 
-                        // Bottom-Right Bracket
-                        drawLine(color, Offset(right, bottom), Offset(right - bracketLen, bottom), strokeW)
-                        drawLine(color, Offset(right, bottom), Offset(right, bottom - bracketLen), strokeW)
+                        drawLine(color, Offset(right, bottom - radius), Offset(right, bottom - bracketLen), strokeW)
+                        drawLine(color, Offset(right - radius, bottom), Offset(right - bracketLen, bottom), strokeW)
                     }
                 }
             }
 
-            // Floating CAD Labels & Tags for Detected Appliances
+            // Detection labels
             if (uiState.mode == CameraMode.LIVE_SCAN) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     for (detection in currentFrameDetections) {
                         val rel = detection.boundingBoxRelative
                         val left = (rel.left * maxWidth.value).coerceIn(8f, (maxWidth.value - 160f).coerceAtLeast(8f))
-                        val top = (rel.top * maxHeight.value - 32f).coerceIn(8f, (maxHeight.value - 60f).coerceAtLeast(8f))
+                        val top = (rel.top * maxHeight.value - 28f).coerceIn(8f, (maxHeight.value - 50f).coerceAtLeast(8f))
 
                         Surface(
-                            modifier = Modifier
-                                .offset(x = left.dp, y = top.dp),
-                            shape = RoundedCornerShape(4.dp),
-                            color = LensColors.InverseSurface.copy(alpha = 0.92f),
-                            border = BorderStroke(1.dp, LensColors.PrimaryLive.copy(alpha = 0.6f))
+                            modifier = Modifier.offset(x = left.dp, y = top.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            color = LensColors.InverseSurface.copy(alpha = 0.85f)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(LensColors.PrimaryLive, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    detection.label.uppercase(),
-                                    style = LensTypography.labelCaps.copy(fontSize = 10.sp),
+                                    detection.label,
+                                    style = LensTypography.labelSm.copy(fontSize = 11.sp),
                                     color = LensColors.InverseOnSurface,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Medium
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(2.dp),
-                                    color = LensColors.PrimaryContainer
-                                ) {
-                                    Text(
-                                        "~${detection.powerWatts.toInt()}W",
-                                        style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                        color = LensColors.OnPrimary,
-                                        modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                                    )
-                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "~${detection.powerWatts.toInt()}W",
+                                    style = LensTypography.labelSm.copy(fontSize = 10.sp),
+                                    color = LensColors.PrimaryLive
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Top Status Diagnostic Banner
+            // Detection count indicator
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = LensColors.InverseSurface.copy(alpha = 0.9f),
-                border = BorderStroke(1.dp, LensColors.OutlineVariant.copy(alpha = 0.2f))
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = LensColors.InverseSurface.copy(alpha = 0.8f)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(LensColors.PrimaryLive, CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Edge Vision v2.4 (Offline Engine)",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.InverseOnSurface
-                        )
-                    }
-                    val inReticle = if (uiState.mode == CameraMode.LIVE_SCAN) {
-                        "${currentFrameDetections.size} IN RETICLE"
-                    } else {
-                        "READY"
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = LensColors.PrimaryContainer
-                    ) {
-                        Text(
-                            inReticle,
-                            style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                            color = LensColors.OnPrimary,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(LensColors.PrimaryLive, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "${currentFrameDetections.size} detected",
+                        style = LensTypography.labelSm,
+                        color = LensColors.InverseOnSurface
+                    )
                 }
             }
 
-            // Bottom Action Controls Layer
+            // Finish scan button
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp)
+                    .padding(bottom = 20.dp)
             ) {
                 Button(
                     onClick = { viewModel.finishScan() },
                     colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
-                        .height(48.dp)
+                        .height(50.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            "Finish Live Scan (${scanSession.size} detected)",
-                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                            color = LensColors.OnPrimary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
-                    }
+                    Text(
+                        "Done Scanning (${scanSession.size} found)",
+                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                        color = LensColors.OnPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
                 }
             }
         }

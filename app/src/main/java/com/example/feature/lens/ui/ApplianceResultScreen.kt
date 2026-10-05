@@ -28,8 +28,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.feature.assessment.util.EstimateConstants
-import com.example.feature.lens.ui.theme.GeistFontFamily
-import com.example.feature.lens.ui.theme.HankenGroteskFontFamily
 import com.example.feature.lens.ui.theme.LensColors
 import com.example.feature.lens.ui.theme.LensTypography
 import kotlinx.coroutines.launch
@@ -53,7 +51,7 @@ fun ApplianceResultScreen(
         onNavigateBack()
     }
 
-    // Mathematical Aggregations & Formulas
+    // Aggregated calculations
     val totalConnectedKw: Double = rooms.sumOf { it.connectedLoadKw.toDouble() }
     val simultaneousKw: Double = totalConnectedKw * 0.68
     val totalMonthlyKwh: Double = rooms.sumOf { it.monthlyKwh.toDouble() }
@@ -61,8 +59,7 @@ fun ApplianceResultScreen(
     val totalSimplifiedBaselineCost: Double = rooms.sumOf { it.simplifiedBaselineCost }
     val totalAppliancesCount: Int = rooms.sumOf { room -> room.appliances.sumOf { it.quantity } }
 
-    // Solar Sizing Engine:
-    // PSH = 4.5, PR = 0.79 -> divisor = 4.5 * 0.79 = 3.555
+    // Solar sizing
     val rawPvSize: Double = if (dailyAvgKwh > 0.0) dailyAvgKwh / (4.5 * 0.79) else 3.0
     val recommendedPvKw: Double = if (rawPvSize <= 0.0) 3.0 else (ceil(rawPvSize * 2.0) / 2.0).coerceAtLeast(1.0)
     val solarMonthlyGen: Double = recommendedPvKw * 4.33 * 30.0 * 0.79
@@ -70,36 +67,25 @@ fun ApplianceResultScreen(
     val offsetPct: Double = if (totalMonthlyKwh > 0.0) ((solarMonthlyGen / totalMonthlyKwh) * 100.0).coerceAtMost(150.0) else 100.2
 
     val zonePalette = listOf(
-        LensColors.PrimaryContainer,     // Emerald #047857
-        LensColors.TertiaryContainer,    // Blue #006FA8
-        LensColors.Secondary,            // Slate #565E74
-        Color(0xFF93CCFF),              // Light Blue
-        Color(0xFFF59E0B),              // Amber
-        Color(0xFF8B5CF6)               // Purple
-    )
-
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseAlpha"
+        LensColors.Primary,
+        LensColors.Tertiary,
+        Color(0xFF8B5CF6),
+        Color(0xFFF59E0B),
+        Color(0xFFEC4899),
+        Color(0xFF06B6D4)
     )
 
     Scaffold(
-        containerColor = LensColors.Surface,
+        containerColor = LensColors.Background,
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Surface(
                     modifier = Modifier
                         .padding(16.dp)
                         .fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = LensColors.InverseSurface,
-                    shadowElevation = 8.dp
+                    shadowElevation = 4.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
@@ -109,13 +95,12 @@ fun ApplianceResultScreen(
                         Icon(
                             imageVector = Icons.Default.PictureAsPdf,
                             contentDescription = null,
-                            tint = LensColors.PrimaryFixedDim,
+                            tint = LensColors.PrimaryLive,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = data.visuals.message,
                             color = LensColors.InverseOnSurface,
-                            fontFamily = GeistFontFamily,
                             fontSize = 13.sp,
                             modifier = Modifier.weight(1f)
                         )
@@ -124,362 +109,168 @@ fun ApplianceResultScreen(
             }
         },
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(LensColors.PrimaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Bolt,
-                                contentDescription = null,
-                                tint = LensColors.OnPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = LensColors.Background
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onNavigateBack, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = LensColors.SlateText, modifier = Modifier.size(22.dp))
                         }
-                        Column {
-                            Text(
-                                text = "SolarEase",
-                                fontFamily = HankenGroteskFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp,
-                                color = LensColors.OnSurface
-                            )
-                            Text(
-                                text = "ANALYTICS",
-                                fontFamily = GeistFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp,
-                                letterSpacing = 0.8.sp,
-                                color = LensColors.OnSurfaceVariant
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = LensColors.OnSurface
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "Your Results",
+                            style = LensTypography.headlineMd,
+                            color = LensColors.SlateText
                         )
                     }
-                },
-                actions = {
                     IconButton(onClick = onNavigateHome) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Home",
-                            tint = LensColors.OnSurfaceVariant
-                        )
+                        Icon(Icons.Default.Home, contentDescription = "Home", tint = LensColors.SlateMuted, modifier = Modifier.size(22.dp))
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = LensColors.Surface
-                )
-            )
+                }
+            }
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            // 1. Sub-Header & Telemetry Milestone
+            // Header
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "AGGREGATED PROFILE",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.OnSurfaceVariant
-                            )
-                            Text(
-                                text = "Whole House Analysis",
-                                style = LensTypography.headlineMd,
-                                color = LensColors.OnSurface
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = LensColors.PrimaryFixed.copy(alpha = 0.25f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(LensColors.PrimaryContainer.copy(alpha = pulseAlpha))
-                                )
-                                Text(
-                                    text = "AUDIT COMPLETE",
-                                    fontFamily = GeistFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 11.sp,
-                                    letterSpacing = 0.5.sp,
-                                    color = LensColors.Primary
-                                )
-                            }
-                        }
-                    }
-
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "High-precision telemetry model based on ${rooms.size} surveyed spatial zones and $totalAppliancesCount identified active loads.",
+                        "Whole Home Analysis",
+                        style = LensTypography.headlineLg,
+                        color = LensColors.SlateText
+                    )
+                    val roomLabel = if (rooms.size == 1) "1 room" else "${rooms.size} rooms"
+                    val appLabel = if (totalAppliancesCount == 1) "1 appliance" else "$totalAppliancesCount appliances"
+                    Text(
+                        "Based on $roomLabel and $appLabel scanned.",
                         style = LensTypography.bodyMd,
-                        color = LensColors.OnSurfaceVariant
+                        color = LensColors.SlateMuted
                     )
                 }
             }
 
-            // 2. Visual Rooftop Context Card
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    shadowElevation = 1.dp
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(110.dp)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        LensColors.InverseSurface,
-                                        Color(0xFF0F172A)
-                                    )
-                                )
-                            )
-                            .padding(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.WbSunny,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.05f),
-                            modifier = Modifier
-                                .size(90.dp)
-                                .align(Alignment.CenterEnd)
-                                .offset(x = 10.dp)
-                        )
-
-                        Column(
-                            modifier = Modifier.align(Alignment.BottomStart)
-                        ) {
-                            Text(
-                                text = "SURVEYED PROPERTY PROFILE",
-                                fontFamily = GeistFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp,
-                                letterSpacing = 0.8.sp,
-                                color = LensColors.SecondaryFixed.copy(alpha = 0.9f)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "Residential Micro-Grid • ${rooms.size} Zones Complete",
-                                    fontFamily = HankenGroteskFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp,
-                                    color = Color.White
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.Verified,
-                                    contentDescription = "Verified",
-                                    tint = LensColors.PrimaryFixedDim,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 3. Top-Level Instrumentation Matrix (3-Tier Cluster)
+            // Key metrics — 3 cards
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Metric 1: Connected Load
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Bolt,
-                        iconTint = LensColors.Tertiary,
-                        label = "Connected Load",
+                    ResultMetricCard(
+                        label = "Load",
                         value = String.format(Locale.US, "%.2f", totalConnectedKw),
                         unit = "kW",
-                        subtext = "Simult: ${String.format(Locale.US, "%.1f", simultaneousKw)} kW"
+                        modifier = Modifier.weight(1f)
                     )
-
-                    // Metric 2: Estimated Monthly Energy
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Speed,
-                        iconTint = LensColors.PrimaryContainer,
-                        label = "Est. Monthly Energy",
-                        value = String.format(Locale.US, "%.1f", totalMonthlyKwh),
-                        unit = "kWh/month",
-                        subtext = "Avg ${String.format(Locale.US, "%.1f", dailyAvgKwh)}/d"
+                    ResultMetricCard(
+                        label = "Monthly",
+                        value = String.format(Locale.US, "%.0f", totalMonthlyKwh),
+                        unit = "kWh",
+                        modifier = Modifier.weight(1f)
                     )
-
-                    // Metric 3: Simplified Baseline Cost
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.CurrencyRupee,
-                        iconTint = LensColors.Primary,
-                        label = "Baseline Cost",
+                    ResultMetricCard(
+                        label = "Est. Cost",
                         value = "₹${String.format(Locale.US, "%,d", totalSimplifiedBaselineCost.toInt())}",
                         unit = "/mo",
-                        subtext = "Indicative estimate",
-                        valueColor = LensColors.OnSurface
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
 
             item {
                 Text(
-                    text = "Indicative estimate at ₹7/kWh. Actual household billing depends on total consumption, applicable tariff slabs, subsidies, fixed charges, and taxes.",
-                    style = LensTypography.labelSm.copy(fontSize = 10.sp),
-                    color = LensColors.Secondary,
-                    lineHeight = 14.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    "Estimate at ₹7/kWh. Actual bills depend on tariff slabs, subsidies, and taxes.",
+                    style = LensTypography.bodyMd.copy(fontSize = 11.sp),
+                    color = LensColors.SlateCaption,
+                    lineHeight = 15.sp
                 )
             }
 
-            // 4. Consumption Ratio By Zone (Segmented Bar)
+            // Room breakdown bar
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = LensColors.SurfaceContainerLowest,
-                    shadowElevation = 1.dp
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LensColors.Outline)
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PieChart,
-                                    contentDescription = null,
-                                    tint = LensColors.OnSurface,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "Consumption Ratio",
-                                    style = LensTypography.headlineSm,
-                                    color = LensColors.OnSurface
-                                )
-                            }
-                            Text(
-                                text = "${String.format(Locale.US, "%.1f", totalMonthlyKwh)} kWh TOTAL",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.Secondary
-                            )
-                        }
+                        Text(
+                            "Energy by Room",
+                            style = LensTypography.headlineSm,
+                            color = LensColors.SlateText
+                        )
 
-                        // Proportional Track
+                        // Proportional bar
                         if (totalMonthlyKwh > 0.0 && rooms.isNotEmpty()) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .background(LensColors.SurfaceContainer)
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(LensColors.Outline)
                             ) {
                                 rooms.forEachIndexed { index, room ->
-                                    val weight = if (totalMonthlyKwh > 0.0) (room.monthlyKwh.toDouble() / totalMonthlyKwh).toFloat().coerceAtLeast(0.01f) else 0.01f
-                                    val color = zonePalette[index % zonePalette.size]
+                                    val weight = (room.monthlyKwh.toDouble() / totalMonthlyKwh).toFloat().coerceAtLeast(0.01f)
                                     Box(
                                         modifier = Modifier
                                             .weight(weight)
                                             .fillMaxHeight()
-                                            .background(color)
+                                            .background(zonePalette[index % zonePalette.size])
                                     )
                                 }
                             }
                         }
 
-                        // Zone Legend Items
+                        // Legend
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            rooms.chunked(2).forEach { rowRooms ->
+                            rooms.forEachIndexed { index, room ->
+                                val pct = if (totalMonthlyKwh > 0.0) (room.monthlyKwh.toDouble() / totalMonthlyKwh * 100.0) else 0.0
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    rowRooms.forEachIndexed { colIndex, room ->
-                                        val actualIndex = rooms.indexOf(room)
-                                        val pct = if (totalMonthlyKwh > 0.0) (room.monthlyKwh.toDouble() / totalMonthlyKwh * 100.0) else 0.0
-                                        val color = zonePalette[actualIndex % zonePalette.size]
-                                        Row(
-                                            modifier = Modifier.weight(1f),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                modifier = Modifier.weight(1f, fill = false)
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(9.dp)
-                                                        .clip(RoundedCornerShape(2.dp))
-                                                        .background(color)
-                                                )
-                                                Text(
-                                                    text = room.name,
-                                                    style = LensTypography.bodyMd,
-                                                    color = LensColors.OnSurface,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            Text(
-                                                text = "${String.format(Locale.US, "%.1f", pct)}%",
-                                                fontFamily = GeistFontFamily,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 12.sp,
-                                                color = LensColors.OnSurface
-                                            )
-                                        }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(zonePalette[index % zonePalette.size])
+                                        )
+                                        Text(
+                                            room.name,
+                                            style = LensTypography.bodyMd,
+                                            color = LensColors.SlateText,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
-                                    if (rowRooms.size == 1) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
+                                    Text(
+                                        "${String.format(Locale.US, "%.0f", pct)}%",
+                                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                        color = LensColors.SlateText
+                                    )
                                 }
                             }
                         }
@@ -487,77 +278,47 @@ fun ApplianceResultScreen(
                 }
             }
 
-            // 5. Room Telemetry Audit (Zone Cards)
+            // Room detail cards
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Room Telemetry Audit",
-                        style = LensTypography.headlineSm,
-                        color = LensColors.OnSurface
-                    )
-                    Text(
-                        text = "${rooms.size} SURVEYED ZONES",
-                        style = LensTypography.labelCaps,
-                        color = LensColors.OnSurfaceVariant
-                    )
-                }
+                Text(
+                    "Room Details",
+                    style = LensTypography.headlineSm,
+                    color = LensColors.SlateText,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
 
             items(rooms) { room ->
-                RoomAuditCard(room = room)
+                CleanRoomCard(room = room)
             }
 
-            // 6. Appliance Audit Matrix (Table)
+            // Appliance table
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = LensColors.SurfaceContainerLowest,
-                    shadowElevation = 1.dp
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LensColors.Outline)
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Appliance Audit Matrix",
-                                    style = LensTypography.headlineSm,
-                                    color = LensColors.OnSurface
-                                )
-                                Text(
-                                    text = "Duty cycle calibrated against active tariffs",
-                                    style = LensTypography.labelSm,
-                                    color = LensColors.Secondary
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Default.TableRows,
-                                contentDescription = null,
-                                tint = LensColors.Secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Text(
+                            "All Appliances",
+                            style = LensTypography.headlineSm,
+                            color = LensColors.SlateText
+                        )
 
-                        // Horizontally scrollable data table
                         val allAppliances = rooms.flatMap { room ->
                             room.appliances.map { app -> Pair(room.name, app) }
                         }
 
                         if (allAppliances.isEmpty()) {
                             Text(
-                                text = "No appliances registered",
+                                "No appliances found",
                                 style = LensTypography.bodyMd,
-                                color = LensColors.OnSurfaceVariant,
+                                color = LensColors.SlateMuted,
                                 modifier = Modifier.padding(vertical = 12.dp)
                             )
                         } else {
@@ -567,478 +328,263 @@ fun ApplianceResultScreen(
                                     .fillMaxWidth()
                                     .horizontalScroll(tableScrollState)
                             ) {
-                                // Table Header
+                                // Header
                                 Row(
                                     modifier = Modifier
                                         .width(520.dp)
-                                        .clip(RoundedCornerShape(6.dp))
+                                        .clip(RoundedCornerShape(8.dp))
                                         .background(LensColors.SurfaceContainerLow)
-                                        .padding(horizontal = 8.dp, vertical = 7.dp),
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("APPLIANCE", style = LensTypography.labelCaps, color = LensColors.OnSurfaceVariant, modifier = Modifier.width(160.dp))
-                                    Text("QTY", style = LensTypography.labelCaps, color = LensColors.OnSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.width(40.dp))
-                                    Text("WATTS", style = LensTypography.labelCaps, color = LensColors.OnSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.width(70.dp))
-                                    Text("HRS/D", style = LensTypography.labelCaps, color = LensColors.OnSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.width(60.dp))
-                                    Text("MONTHLY", style = LensTypography.labelCaps, color = LensColors.OnSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.width(85.dp))
-                                    Text("COST", style = LensTypography.labelCaps, color = LensColors.OnSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.width(95.dp))
+                                    Text("Appliance", style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium), color = LensColors.SlateMuted, modifier = Modifier.width(160.dp))
+                                    Text("Qty", style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium), color = LensColors.SlateMuted, textAlign = TextAlign.Center, modifier = Modifier.width(40.dp))
+                                    Text("Watts", style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium), color = LensColors.SlateMuted, textAlign = TextAlign.End, modifier = Modifier.width(70.dp))
+                                    Text("Hrs/d", style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium), color = LensColors.SlateMuted, textAlign = TextAlign.End, modifier = Modifier.width(60.dp))
+                                    Text("kWh/mo", style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium), color = LensColors.SlateMuted, textAlign = TextAlign.End, modifier = Modifier.width(85.dp))
+                                    Text("Cost", style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium), color = LensColors.SlateMuted, textAlign = TextAlign.End, modifier = Modifier.width(95.dp))
                                 }
 
-                                // Table Rows
-                                allAppliances.forEachIndexed { idx, (roomName, appliance) ->
+                                // Rows
+                                allAppliances.forEach { (roomName, appliance) ->
                                     val rowMonthlyKwh = appliance.monthlyKwh.toDouble()
                                     val rowCost = appliance.monthlyCost.toDouble()
 
                                     Row(
                                         modifier = Modifier
                                             .width(520.dp)
-                                            .padding(horizontal = 8.dp, vertical = 7.dp),
+                                            .padding(horizontal = 10.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            modifier = Modifier.width(160.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        if (appliance.powerWatts >= 1000f) LensColors.Error
-                                                        else if (appliance.powerWatts >= 200f) LensColors.PrimaryContainer
-                                                        else LensColors.TertiaryContainer
-                                                    )
-                                            )
-                                            Text(
-                                                text = appliance.label,
-                                                fontFamily = GeistFontFamily,
-                                                fontWeight = FontWeight.Medium,
-                                                fontSize = 13.sp,
-                                                color = LensColors.OnSurface,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-
                                         Text(
-                                            text = "${appliance.quantity}",
-                                            fontFamily = GeistFontFamily,
-                                            fontSize = 12.sp,
-                                            color = LensColors.Secondary,
+                                            appliance.label,
+                                            style = LensTypography.bodyMd,
+                                            color = LensColors.SlateText,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.width(160.dp)
+                                        )
+                                        Text(
+                                            "${appliance.quantity}",
+                                            style = LensTypography.bodyMd,
+                                            color = LensColors.SlateMuted,
                                             textAlign = TextAlign.Center,
                                             modifier = Modifier.width(40.dp)
                                         )
-
                                         Text(
-                                            text = "${appliance.powerWatts.toInt()}W",
-                                            fontFamily = GeistFontFamily,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 12.sp,
-                                            color = LensColors.OnSurface,
+                                            "${appliance.powerWatts.toInt()}W",
+                                            style = LensTypography.bodyMd.copy(fontWeight = FontWeight.Medium),
+                                            color = LensColors.SlateText,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.width(70.dp)
                                         )
-
                                         Text(
-                                            text = "${String.format(Locale.US, "%.1f", appliance.usageHoursPerDay)}h",
-                                            fontFamily = GeistFontFamily,
-                                            fontSize = 12.sp,
-                                            color = LensColors.Secondary,
+                                            "${String.format(Locale.US, "%.1f", appliance.usageHoursPerDay)}h",
+                                            style = LensTypography.bodyMd,
+                                            color = LensColors.SlateMuted,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.width(60.dp)
                                         )
-
                                         Text(
-                                            text = String.format(Locale.US, "%.1f", rowMonthlyKwh),
-                                            fontFamily = GeistFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp,
-                                            color = LensColors.OnSurface,
+                                            String.format(Locale.US, "%.1f", rowMonthlyKwh),
+                                            style = LensTypography.bodyMd.copy(fontWeight = FontWeight.Medium),
+                                            color = LensColors.SlateText,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.width(85.dp)
                                         )
-
                                         Text(
-                                            text = "₹${String.format(Locale.US, "%,d", rowCost.toInt())}",
-                                            fontFamily = GeistFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp,
-                                            color = if (rowCost >= 1000.0) LensColors.Error else LensColors.OnSurface,
+                                            "₹${String.format(Locale.US, "%,d", rowCost.toInt())}",
+                                            style = LensTypography.bodyMd.copy(fontWeight = FontWeight.Medium),
+                                            color = LensColors.SlateText,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.width(95.dp)
                                         )
                                     }
                                 }
                             }
-
-                            Text(
-                                text = "*Continuous duty cycling computed via thermodynamic average",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.Secondary,
-                                modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
-                            )
                         }
                     }
                 }
             }
 
-            // 7. Engineered Solar Sizing Directive & System Spec
+            // Solar recommendation
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    shadowElevation = 2.dp
+                    color = LensColors.PrimaryFixed
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        LensColors.InverseSurface,
-                                        Color(0xFF0B1C30)
-                                    )
-                                )
-                            )
-                            .padding(16.dp),
+                        modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Badge Header
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = LensColors.PrimaryContainer
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(LensColors.Primary, RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
+                                Icon(Icons.Default.WbSunny, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
                                 Text(
-                                    text = "ENGINEERED SOLAR SIZING DIRECTIVE",
-                                    fontFamily = GeistFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 0.6.sp,
-                                    color = LensColors.OnPrimary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    "Recommended Solar System",
+                                    style = LensTypography.headlineSm,
+                                    color = LensColors.OnPrimaryFixed
+                                )
+                                Text(
+                                    "Sized to cover your usage",
+                                    style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                                    color = LensColors.OnPrimaryFixed.copy(alpha = 0.7f)
                                 )
                             }
-                            Text(
-                                text = "ZERO GRID DEFICIT",
-                                fontFamily = GeistFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp,
-                                letterSpacing = 0.6.sp,
-                                color = LensColors.PrimaryFixedDim
-                            )
                         }
 
-                        // Headline Specification
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "${String.format(Locale.US, "%.1f", recommendedPvKw)} kW On-Grid Rooftop PV",
-                                fontFamily = HankenGroteskFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp,
-                                color = LensColors.SurfaceContainerLowest
-                            )
-                            Text(
-                                text = "Configured to neutralize 100% of your ${String.format(Locale.US, "%.1f", totalMonthlyKwh)} kWh/month residential consumption profile.",
-                                fontFamily = GeistFontFamily,
-                                fontSize = 13.sp,
-                                color = LensColors.SecondaryFixedDim
-                            )
-                        }
+                        // System size
+                        Text(
+                            "${String.format(Locale.US, "%.1f", recommendedPvKw)} kW Solar System",
+                            style = LensTypography.headlineLg.copy(fontSize = 24.sp),
+                            color = LensColors.OnPrimaryFixed
+                        )
 
-                        // Key Engineering Metrics Strip
+                        // Key numbers
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Annual Savings
                             Surface(
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                color = LensColors.InverseSurface.copy(alpha = 0.8f)
+                                shape = RoundedCornerShape(10.dp),
+                                color = LensColors.SurfaceContainerLowest.copy(alpha = 0.7f)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.TrendingDown,
-                                            contentDescription = null,
-                                            tint = LensColors.PrimaryFixedDim,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                        Text(
-                                            text = "ANNUAL SAVINGS",
-                                            fontFamily = GeistFontFamily,
-                                            fontSize = 9.sp,
-                                            letterSpacing = 0.6.sp,
-                                            color = LensColors.PrimaryFixedDim
-                                        )
-                                    }
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text("Yearly Savings", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateMuted)
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "₹${String.format(Locale.US, "%,d", annualSavings.toInt())}",
-                                        fontFamily = GeistFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 20.sp,
-                                        color = LensColors.PrimaryFixed
-                                    )
-                                    Text(
-                                        text = "Direct utility reduction",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 9.sp,
-                                        color = LensColors.SecondaryFixedDim
+                                        "₹${String.format(Locale.US, "%,d", annualSavings.toInt())}",
+                                        style = LensTypography.metricValMd,
+                                        color = LensColors.Primary
                                     )
                                 }
                             }
-
-                            // Est. Generation
                             Surface(
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                color = LensColors.InverseSurface.copy(alpha = 0.8f)
+                                shape = RoundedCornerShape(10.dp),
+                                color = LensColors.SurfaceContainerLowest.copy(alpha = 0.7f)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.WbSunny,
-                                            contentDescription = null,
-                                            tint = LensColors.TertiaryFixedDim,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                        Text(
-                                            text = "EST. GENERATION",
-                                            fontFamily = GeistFontFamily,
-                                            fontSize = 9.sp,
-                                            letterSpacing = 0.6.sp,
-                                            color = LensColors.TertiaryFixedDim
-                                        )
-                                    }
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text("Monthly Generation", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateMuted)
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "~${solarMonthlyGen.toInt()} kWh/mo",
-                                        fontFamily = GeistFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 18.sp,
-                                        color = LensColors.SurfaceContainerLowest
-                                    )
-                                    Text(
-                                        text = "${String.format(Locale.US, "%.1f", offsetPct)}% bill offset target",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 9.sp,
-                                        color = LensColors.SecondaryFixedDim
+                                        "~${solarMonthlyGen.toInt()} kWh",
+                                        style = LensTypography.metricValMd,
+                                        color = LensColors.SlateText
                                     )
                                 }
                             }
                         }
 
-                        // Hardware Recommendation Card
+                        // Offset bar
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            color = LensColors.SurfaceContainerLow.copy(alpha = 0.12f)
+                            shape = RoundedCornerShape(10.dp),
+                            color = LensColors.SurfaceContainerLowest.copy(alpha = 0.7f)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(LensColors.PrimaryFixed.copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Memory,
-                                            contentDescription = null,
-                                            tint = LensColors.PrimaryFixed,
-                                            modifier = Modifier.size(17.dp)
-                                        )
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "Recommended Inverter Core",
-                                            fontFamily = GeistFontFamily,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 12.sp,
-                                            color = LensColors.SurfaceContainerLowest
-                                        )
-                                        Text(
-                                            text = "${String.format(Locale.US, "%.1f", recommendedPvKw)} kW High-Efficiency Hybrid / String Inverter",
-                                            fontFamily = GeistFontFamily,
-                                            fontSize = 10.sp,
-                                            color = LensColors.SecondaryFixedDim
-                                        )
-                                    }
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = LensColors.PrimaryContainer.copy(alpha = 0.35f)
-                                ) {
-                                    Text(
-                                        text = "98.4% EFF",
-                                        fontFamily = GeistFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 10.sp,
-                                        color = LensColors.PrimaryFixed,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Production vs Load Mini Graph
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            color = LensColors.InverseSurface.copy(alpha = 0.9f)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
+                                    Text("Bill offset", style = LensTypography.labelSm, color = LensColors.SlateMuted)
                                     Text(
-                                        text = "MONTHLY NET-ZERO MATCH",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 10.sp,
-                                        color = LensColors.SecondaryFixedDim
-                                    )
-                                    Text(
-                                        text = "${solarMonthlyGen.toInt()} kWh SOLAR vs ${totalMonthlyKwh.toInt()} kWh LOAD",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 10.sp,
-                                        color = LensColors.PrimaryFixed
+                                        "${String.format(Locale.US, "%.0f", offsetPct.coerceAtMost(100.0))}%",
+                                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.Bold),
+                                        color = LensColors.Primary
                                     )
                                 }
-
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(LensColors.SurfaceContainerHigh.copy(alpha = 0.2f))
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(LensColors.Outline)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
+                                            .fillMaxWidth((offsetPct / 100.0).coerceAtMost(1.0).toFloat())
                                             .fillMaxHeight()
-                                            .background(LensColors.PrimaryContainer)
-                                    )
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "CURRENT USAGE",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 9.sp,
-                                        color = LensColors.SecondaryFixedDim
-                                    )
-                                    Text(
-                                        text = "100% OFFSET ACHIEVED",
-                                        fontFamily = GeistFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 9.sp,
-                                        color = LensColors.PrimaryFixed
+                                            .background(LensColors.Primary)
                                     )
                                 }
                             }
                         }
 
-                        // Action Suite Buttons
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 4.dp)
+                        // Inverter info
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = LensColors.SurfaceContainerLowest.copy(alpha = 0.5f)
                         ) {
-                            Button(
-                                onClick = onNavigateHome,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = LensColors.PrimaryContainer,
-                                    contentColor = LensColors.OnPrimary
-                                )
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
+                                Icon(Icons.Default.Memory, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(20.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Explore Solar Options",
-                                        fontFamily = HankenGroteskFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 14.sp
+                                        "Inverter: ${String.format(Locale.US, "%.1f", recommendedPvKw)} kW",
+                                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                        color = LensColors.OnPrimaryFixed
                                     )
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowForward,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
+                                    Text(
+                                        "Hybrid / string inverter recommended",
+                                        style = LensTypography.bodyMd.copy(fontSize = 11.sp),
+                                        color = LensColors.OnPrimaryFixed.copy(alpha = 0.7f)
                                     )
                                 }
                             }
+                        }
 
-                            Button(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            message = "Compiling 6-page precision audit report for ${rooms.size} surveyed zones..."
-                                        )
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(42.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = LensColors.SurfaceContainerLowest.copy(alpha = 0.12f),
-                                    contentColor = LensColors.SurfaceContainerLowest
-                                )
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PictureAsPdf,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "Download Energy Audit Report (PDF)",
-                                        fontFamily = GeistFontFamily,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                        // Action buttons
+                        Button(
+                            onClick = onNavigateHome,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LensColors.Primary
+                            )
+                        ) {
+                            Text(
+                                "Explore Solar Options",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
+                                color = LensColors.OnPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Generating energy report for ${rooms.size} rooms..."
                                     )
                                 }
-                            }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, LensColors.OnPrimaryFixed.copy(alpha = 0.3f))
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = LensColors.OnPrimaryFixed, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Download Report (PDF)", style = LensTypography.labelSm, color = LensColors.OnPrimaryFixed)
                         }
                     }
                 }
@@ -1052,82 +598,39 @@ fun ApplianceResultScreen(
 }
 
 @Composable
-private fun MetricCard(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    iconTint: Color,
+private fun ResultMetricCard(
     label: String,
     value: String,
     unit: String,
-    subtext: String,
-    valueColor: Color = LensColors.OnSurface
+    modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         color = LensColors.SurfaceContainerLowest,
-        shadowElevation = 1.dp
+        border = androidx.compose.foundation.BorderStroke(1.dp, LensColors.Outline)
     ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(13.dp)
-                )
-                Text(
-                    text = label,
-                    style = LensTypography.labelCaps,
-                    color = LensColors.OnSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                label,
+                style = LensTypography.labelSm.copy(fontSize = 11.sp),
+                color = LensColors.SlateMuted
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = value,
-                    style = LensTypography.metricValMd,
-                    color = valueColor
-                )
+                Text(value, style = LensTypography.metricValMd.copy(fontSize = 18.sp), color = LensColors.SlateText)
                 if (unit.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = unit,
-                        fontFamily = GeistFontFamily,
-                        fontSize = 11.sp,
-                        color = LensColors.Secondary,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
+                    Text(unit, style = LensTypography.labelSm.copy(fontSize = 10.sp), color = LensColors.SlateMuted)
                 }
             }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = subtext,
-                fontFamily = GeistFontFamily,
-                fontSize = 9.sp,
-                color = LensColors.Secondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RoomAuditCard(room: Room) {
+private fun CleanRoomCard(room: Room) {
     val roomIcon = when {
         room.name.contains("Bed", ignoreCase = true) -> Icons.Default.Bed
         room.name.contains("Hall", ignoreCase = true) || room.name.contains("Living", ignoreCase = true) -> Icons.Default.Weekend
@@ -1136,20 +639,13 @@ private fun RoomAuditCard(room: Room) {
         else -> Icons.Default.HomeWork
     }
 
-    val iconColor = when {
-        room.name.contains("Bed", ignoreCase = true) -> LensColors.PrimaryContainer
-        room.name.contains("Hall", ignoreCase = true) || room.name.contains("Living", ignoreCase = true) -> LensColors.TertiaryContainer
-        room.name.contains("Kitchen", ignoreCase = true) -> LensColors.Secondary
-        else -> LensColors.Secondary
-    }
-
     val totalAppliances = room.appliances.sumOf { it.quantity }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         color = LensColors.SurfaceContainerLowest,
-        shadowElevation = 1.dp
+        border = androidx.compose.foundation.BorderStroke(1.dp, LensColors.Outline)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -1166,44 +662,38 @@ private fun RoomAuditCard(room: Room) {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(LensColors.SurfaceContainer),
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(LensColors.SurfaceContainerLow),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = roomIcon,
-                            contentDescription = null,
-                            tint = iconColor,
-                            modifier = Modifier.size(19.dp)
-                        )
+                        Icon(roomIcon, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(20.dp))
                     }
                     Column {
                         Text(
-                            text = room.name,
-                            fontFamily = HankenGroteskFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp,
-                            color = LensColors.OnSurface
+                            room.name,
+                            style = LensTypography.headlineSm,
+                            color = LensColors.SlateText
                         )
+                        val appLabel = if (totalAppliances == 1) "1 appliance" else "$totalAppliances appliances"
                         Text(
-                            text = "$totalAppliances APPLIANCES IDENTIFIED",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.Secondary
+                            appLabel,
+                            style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                            color = LensColors.SlateMuted
                         )
                     }
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "₹${room.monthlyCost.toInt()}/mo",
-                        style = LensTypography.metricValMd,
-                        color = if (room.name.contains("Bed", ignoreCase = true)) LensColors.PrimaryContainer else LensColors.OnSurface
+                        "₹${room.monthlyCost.toInt()}/mo",
+                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                        color = LensColors.SlateText
                     )
                     Text(
-                        text = "${String.format(Locale.US, "%.2f", room.connectedLoadKw)} kW • ${room.monthlyKwh.toInt()} kWh",
-                        style = LensTypography.labelCaps,
-                        color = LensColors.Secondary
+                        "${String.format(Locale.US, "%.2f", room.connectedLoadKw)} kW • ${room.monthlyKwh.toInt()} kWh",
+                        style = LensTypography.bodyMd.copy(fontSize = 11.sp),
+                        color = LensColors.SlateMuted
                     )
                 }
             }
@@ -1216,15 +706,14 @@ private fun RoomAuditCard(room: Room) {
                 ) {
                     room.appliances.forEach { appliance ->
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(6.dp),
                             color = LensColors.SurfaceContainerLow
                         ) {
                             Text(
-                                text = "${appliance.quantity}× ${appliance.label} (${appliance.powerWatts.toInt()}W)",
-                                fontFamily = GeistFontFamily,
-                                fontSize = 11.sp,
-                                color = LensColors.OnSurface,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                "${appliance.quantity}× ${appliance.label} (${appliance.powerWatts.toInt()}W)",
+                                style = LensTypography.bodyMd.copy(fontSize = 11.sp),
+                                color = LensColors.SlateText,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
