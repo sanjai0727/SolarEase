@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from uuid import UUID
 from datetime import datetime
 
@@ -28,6 +28,8 @@ class VerifyOtpRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str | None = None
     username: str | None
@@ -38,9 +40,6 @@ class UserResponse(BaseModel):
     longitude: float | None = None
     is_verified: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class UserUpdateRequest(BaseModel):
@@ -72,8 +71,9 @@ class RefreshTokenRequest(BaseModel):
 
 
 class FirebaseTokenRequest(BaseModel):
-    firebase_id_token: str = Field(..., min_length=1)
+    firebase_id_token: str | None = None
     username: str | None = None
+    name: str | None = None
     is_signup: bool = False
 
 
@@ -83,11 +83,10 @@ class FirebaseVerificationResponse(BaseModel):
 
 
 class FirebaseSyncResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     firebase_uid: str
     email: str | None = None
     mobile_number: str | None
     is_verified: bool
-    
-    class Config:
-        from_attributes = True

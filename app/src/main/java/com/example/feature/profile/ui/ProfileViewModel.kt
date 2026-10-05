@@ -3,6 +3,7 @@ package com.example.feature.profile.ui
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.network.RetrofitClient
@@ -265,10 +266,23 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun signOut(context: Context, onComplete: () -> Unit) {
-        UserSession.clear(context)
-        com.example.feature.home.ui.modules.TnebBillCache.clear(context)
-        com.example.feature.home.ui.modules.MeterReadingCache.clear(context)
-        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
-        onComplete()
+        viewModelScope.launch {
+            try {
+                com.example.core.network.RetrofitClient.apiService.logout()
+            } catch (e: Exception) {
+                Log.w("ProfileViewModel", "Backend logout failed or offline: ${e.message}")
+            } finally {
+                UserSession.clear(context)
+                com.example.feature.home.ui.modules.TnebBillCache.clear(context)
+                com.example.feature.home.ui.modules.MeterReadingCache.clear(context)
+                com.example.feature.home.ui.modules.BillCalculatorHistoryStorage.clearHistory()
+                com.example.feature.lens.data.LensRoomStorage.clear()
+                com.example.feature.home.ui.modules.ChatHistoryStorage.clearAll()
+                try {
+                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                } catch (_: Throwable) {}
+                onComplete()
+            }
+        }
     }
 }

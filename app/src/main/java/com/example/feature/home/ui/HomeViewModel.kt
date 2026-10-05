@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import java.util.Calendar
 
 import com.example.core.network.MeterApi
+import com.example.core.network.dto.BaselineRequestDto
 import com.example.core.network.dto.MeterReadingCreateDto
 import com.example.core.network.dto.MeterReadingUpdateDto
 import com.example.feature.home.ui.modules.CurrentCycleEnergyMetrics
@@ -197,6 +198,7 @@ class HomeViewModel(
         observeBillData()
         observeMeterData()
         loadAppliances()
+        syncMeterDataWithBackend()
     }
 
     private fun buildInitialUiState(): HomeUiState {
@@ -303,7 +305,44 @@ class HomeViewModel(
             _uiState.update { it.copy(isRefreshing = true) }
             loadUserProfile()
             loadAppliances()
+            syncMeterDataWithBackend()
             _uiState.update { it.copy(isRefreshing = false) }
+        }
+    }
+
+    private fun syncMeterDataWithBackend() {
+        val token = UserSession.accessToken
+        if (token.isNullOrBlank()) return
+
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val baseRes = meterApi.getCurrentBaseline()
+                if (baseRes.isSuccessful && baseRes.body() != null) {
+                    val serverBase = baseRes.body()!!
+                    MeterReadingCache.syncBaselineFromServer(serverBase)
+
+                    val readingsRes = meterApi.getReadings(serverBase.cycleId)
+                    if (readingsRes.isSuccessful && readingsRes.body() != null) {
+                        MeterReadingCache.mergeServerReadings(readingsRes.body()!!)
+                    }
+                } else if (baseRes.code() == 404 || baseRes.body() == null) {
+                    val localBase = MeterReadingCache.baseline.value
+                    if (localBase != null) {
+                        meterApi.setBaseline(
+                            BaselineRequestDto(
+                                cycleId = localBase.cycleId,
+                                baselineDate = localBase.baselineDate,
+                                baselineReading = localBase.baselineReading,
+                                previousBilledUnits = localBase.previousBilledUnits,
+                                tariffCode = localBase.tariffCode,
+                                serviceConnectionNumber = localBase.serviceConnectionNumber
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("HomeViewModel", "Could not sync meter data with backend", e)
+            }
         }
     }
 
@@ -615,12 +654,21 @@ class HomeViewModel(
                     try {
                         val token = UserSession.accessToken
                         if (!token.isNullOrBlank()) {
-                            meterApi.submitReading(
+                            val resp = meterApi.submitReading(
                                 MeterReadingCreateDto(
                                     readingValue = readingVal,
                                     readingDate = result.reading.readingDate
                                 )
                             )
+                            if (!resp.isSuccessful) {
+                                val errorDetail = resp.errorBody()?.string() ?: resp.message()
+                                Log.w("HomeViewModel", "Meter reading rejected by server: ${resp.code()} - $errorDetail")
+                                withContext(Dispatchers.Main) {
+                                    _uiState.update {
+                                        it.copy(meterValidationError = "Server synchronization conflict: ${resp.message() ?: "Reading rejected"}")
+                                    }
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         Log.w("HomeViewModel", "Could not sync meter reading to backend (offline mode)", e)
@@ -680,9 +728,18 @@ class HomeViewModel(
                     try {
                         val token = UserSession.accessToken
                         if (!token.isNullOrBlank()) {
-                            meterApi.updateTodayReading(
+                            val resp = meterApi.updateTodayReading(
                                 MeterReadingUpdateDto(readingValue = readingVal)
                             )
+                            if (!resp.isSuccessful) {
+                                val errorDetail = resp.errorBody()?.string() ?: resp.message()
+                                Log.w("HomeViewModel", "Today reading update rejected by server: ${resp.code()} - $errorDetail")
+                                withContext(Dispatchers.Main) {
+                                    _uiState.update {
+                                        it.copy(meterValidationError = "Server update conflict: ${resp.message() ?: "Update rejected"}")
+                                    }
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         Log.w("HomeViewModel", "Could not sync updated reading to backend", e)
@@ -842,9 +899,19 @@ class HomeViewModel(
                     try {
                         val token = UserSession.accessToken
                         if (!token.isNullOrBlank()) {
-                            meterApi.updateTodayReading(
-                                MeterReadingUpdateDto(readingValue = readingVal)
+                            val resp = meterApi.updateReadingByDate(
+                                readingDate = inputData.reading.readingDate,
+                                request = MeterReadingUpdateDto(readingValue = readingVal, notes = inputData.reason)
                             )
+                            if (!resp.isSuccessful) {
+                                val errorDetail = resp.errorBody()?.string() ?: resp.message()
+                                Log.w("HomeViewModel", "Historical correction rejected by server: ${resp.code()} - $errorDetail")
+                                withContext(Dispatchers.Main) {
+                                    _uiState.update {
+                                        it.copy(meterValidationError = "Server historical edit conflict: ${resp.message() ?: "Correction rejected"}")
+                                    }
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         Log.w("HomeViewModel", "Could not sync corrected reading to backend", e)

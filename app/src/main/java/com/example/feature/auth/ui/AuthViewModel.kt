@@ -97,7 +97,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun verifyOtp(otp: String, username: String? = null, phoneNumber: String? = null) {
+    fun verifyOtp(otp: String, username: String? = null, phoneNumber: String? = null, isSignUp: Boolean = true) {
         Log.d("AuthLifecycle", "verifyOtp() called on ViewModel: ${this.hashCode()}")
         val verificationId = storedVerificationId
         Log.d("AuthLifecycle", "storedVerificationId is ${if (verificationId == null) "NULL" else "NOT NULL"}")
@@ -112,21 +112,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 Log.d("AuthLifecycle", "Calling PhoneAuthProvider.getCredential() on ViewModel: ${this.hashCode()}")
                 val credential = PhoneAuthProvider.getCredential(verificationId, otp)
-                signInWithCredential(credential, username, phoneNumber)
+                signInWithCredential(credential, username, phoneNumber, isSignUp = isSignUp)
             } catch (e: Exception) {
                 _uiState.value = AuthUiState.Error(e.message ?: "Invalid OTP.")
             }
         }
     }
 
-    private fun signInWithCredential(credential: PhoneAuthCredential, username: String?, phoneNumber: String?) {
+    private fun signInWithCredential(credential: PhoneAuthCredential, username: String?, phoneNumber: String?, isSignUp: Boolean = true) {
         Log.d("AuthLifecycle", "signInWithCredential() called on ViewModel: ${this.hashCode()}")
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Log.d("AuthLifecycle", "signInWithCredential success on ViewModel: ${this.hashCode()}")
                     val user = task.result?.user
-                    handleFirebaseUser(user, username, isSignUp = false)
+                    handleFirebaseUser(user, username, isSignUp = isSignUp)
                 } else {
                     Log.e("AuthLifecycle", "signInWithCredential failed on ViewModel: ${this.hashCode()}")
                     if (task.exception is FirebaseAuthException) {

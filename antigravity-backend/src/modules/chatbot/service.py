@@ -251,11 +251,12 @@ def get_chatbot_response(
 
     start_time = time.time()
 
-    print("\n========== CHATBOT REQUEST ==========")
-    print(f"Query: {query}")
-    print(f"Mode: {mode}")
-    print(f"Language: {language}")
-    print("=====================================")
+    logger.info(
+        "Chatbot request received. Mode: %s, Language: %s, Query length: %d chars",
+        mode,
+        language,
+        len(query)
+    )
 
     client = get_gemini_client()
 

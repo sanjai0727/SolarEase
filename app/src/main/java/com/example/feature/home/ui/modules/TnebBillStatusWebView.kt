@@ -223,9 +223,7 @@ fun TnebBillStatusWebView(
                                                             else if (k === 'SERVICE NUMBER' && v) result.serviceNumber = v;
                                                             else if (k === 'ADDRESS' && v) result.address = v;
                                                             else if (k === 'SERVICE STATUS' && v) result.serviceStatus = v;
-                                                            else if (k === 'AADHAR' && v) result.aadhar = v;
                                                             else if (k === 'GST NUMBER' && v) result.gst = v;
-                                                            else if (k === 'PAN NUMBER' && v) result.pan = v;
                                                             else if (k === 'PHASE' && v) result.phase = v;
                                                             else if (k === 'SANCTIONED LOAD' && v) result.sanctionedLoad = v;
                                                             else if (k === 'TEMPORARILY REDUCED LOAD' && v) result.tempReducedLoad = v;
@@ -323,6 +321,24 @@ fun TnebBillStatusWebView(
                                 """.trimIndent()
                                 view.evaluateJavascript(js, null)
                             }
+                        }
+
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
+                            val uri = request?.url ?: return true
+                            val host = uri.host?.lowercase(java.util.Locale.ROOT) ?: return true
+                            val isAllowed = host == "www.tnebltd.gov.in" ||
+                                host == "tnebltd.gov.in" ||
+                                host == "nsc.tnebltd.gov.in" ||
+                                host.endsWith(".tnebnet.org")
+                            val isHttps = uri.scheme.equals("https", ignoreCase = true)
+                            if (isAllowed && isHttps) {
+                                return false
+                            }
+                            android.util.Log.w("BillStatusDiagnostic", "Blocked WebView navigation to unapproved host: $host")
+                            return true
                         }
 
                         override fun onReceivedError(

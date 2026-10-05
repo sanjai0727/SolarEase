@@ -2,5 +2,4 @@
 <paths>
     <cache-path name="receipts" path="receipts/" />
     <cache-path name="camera" path="camera/" />
-    <cache-path name="cache" path="." />
 </paths>

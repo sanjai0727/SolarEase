@@ -142,6 +142,7 @@ private fun CurrentBillView(
 ) {
     var technicalExpanded by remember { mutableStateOf(false) }
     val isPaid = consumerData.isDuesNil || currentBill.isPaid
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         topBar = {
@@ -330,7 +331,13 @@ private fun CurrentBillView(
 
                     // Pay Online Button (Disabled/No-dues indicator if paid)
                     Button(
-                        onClick = { /* Official Payment Portal */ },
+                        onClick = {
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://www.tnebltd.gov.in/BillStatus/billstatus.xhtml")
+                            )
+                            context.startActivity(intent)
+                        },
                         enabled = !isPaid,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -342,7 +349,7 @@ private fun CurrentBillView(
                             disabledContentColor = TextMuted
                         )
                     ) {
-                        Text(if (isPaid) "No Dues Pending" else "Pay Bill Online", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(if (isPaid) "No Dues Pending" else "Pay on Official Portal", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         if (!isPaid) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -381,22 +388,16 @@ private fun CurrentBillView(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Quick Actions 4-column Grid
+            // Quick Actions 3-column Grid
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 QuickActionItem(
                     icon = Icons.Default.ReceiptLong,
                     label = "View Bill",
                     modifier = Modifier.weight(1f),
                     onClick = onViewDetails
-                )
-                QuickActionItem(
-                    icon = Icons.Default.Download,
-                    label = "Download",
-                    modifier = Modifier.weight(1f),
-                    onClick = { /* PDF download */ }
                 )
                 QuickActionItem(
                     icon = Icons.Default.History,
@@ -408,89 +409,124 @@ private fun CurrentBillView(
                     icon = Icons.Default.Share,
                     label = "Share",
                     modifier = Modifier.weight(1f),
-                    onClick = { /* Share */ }
+                    onClick = {
+                        val sendIntent = android.content.Intent().apply {
+                            action = android.content.Intent.ACTION_SEND
+                            putExtra(
+                                android.content.Intent.EXTRA_TEXT,
+                                "TNEB Bill Summary\nConsumer No: ${consumerData.consumerNumber.ifBlank { serviceNo }}\nBill Date: ${currentBill.assessmentDate}\nUnits: ${currentBill.units} kWh\nAmount: ₹${currentBill.totalCharges.ifBlank { currentBill.amountDue }.ifBlank { "0" }}\nStatus: ${if (isPaid) "Paid" else "Pending"}"
+                            )
+                            type = "text/plain"
+                        }
+                        context.startActivity(android.content.Intent.createChooser(sendIntent, "Share Bill Details"))
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // SolarEase Solar Rooftop Offset Card (Separated Calculations based on Real Units)
-            val unitsDouble = currentBill.units.toDoubleOrNull() ?: 300.0
-            val solarKw = String.format(Locale.US, "%.1f", (unitsDouble / 150.0).coerceAtLeast(1.0))
-            val annualSavingsNum = (unitsDouble * 6.5 * 6).toInt().coerceAtLeast(5000)
-            val savingsFormatted = "₹" + NumberFormat.getNumberInstance(Locale.US).format(annualSavingsNum) + " / yr"
+            // Solar Rooftop Sizing & Return Card
+            val unitsDouble = currentBill.units.toDoubleOrNull()
+            if (unitsDouble != null && unitsDouble > 0) {
+                val solarKw = String.format(Locale.US, "%.1f", (unitsDouble / 150.0).coerceAtLeast(1.0))
+                val annualSavingsNum = (unitsDouble * 6.5 * 6).toInt()
+                val savingsFormatted = "₹" + NumberFormat.getNumberInstance(Locale.US).format(annualSavingsNum) + " / yr"
+                val systemCost = solarKw.toDouble() * 55000.0
+                val paybackYears = String.format(Locale.US, "%.1f Yrs ROI", (systemCost / annualSavingsNum.coerceAtLeast(1)).coerceIn(3.0, 8.0))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, CardBorderColor)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Bolt, contentDescription = null, tint = SolarEaseEmerald, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Solar Rooftop Offset", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextDark)
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = SolarEaseEmeraldContainer
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "SAVE UP TO 82%",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = SolarEaseEmerald,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Bolt, contentDescription = null, tint = SolarEaseEmerald, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Solar Rooftop Sizing", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextDark)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = SolarEaseEmeraldContainer
+                            ) {
+                                Text(
+                                    "ESTIMATED",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SolarEaseEmerald,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Based on ${currentBill.units} kWh bi-monthly consumption, a recommended $solarKw kW solar system can offset grid demand under Tamil Nadu Net Metering.",
+                            fontSize = 13.sp,
+                            color = TextMuted,
+                            lineHeight = 18.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFF8FAFC), RoundedCornerShape(10.dp))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Projected Savings", fontSize = 11.sp, color = TextMuted)
+                                Text(savingsFormatted, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SolarEaseEmerald)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("Estimated Return", fontSize = 11.sp, color = TextMuted)
+                                Text(paybackYears, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = onNavigateToSolarLens,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, SolarEaseEmerald),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = SolarEaseEmerald)
+                        ) {
+                            Icon(Icons.Default.Architecture, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Verify with Solar Lens", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Generating ${currentBill.units.ifBlank { "0" }} kWh grid demand? A $solarKw kW solar system cuts your bi-monthly bill to zero under Tamil Nadu Net Metering.",
-                        fontSize = 13.sp,
-                        color = TextMuted,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFF8FAFC), RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Projected Savings", fontSize = 11.sp, color = TextMuted)
-                            Text(savingsFormatted, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SolarEaseEmerald)
+                }
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = TextMuted, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Solar Sizing Unavailable", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextDark)
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("Grid Return", fontSize = 11.sp, color = TextMuted)
-                            Text("3.5 Yrs ROI", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextDark)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedButton(
-                        onClick = onNavigateToSolarLens,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, SolarEaseEmerald),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SolarEaseEmerald)
-                    ) {
-                        Icon(Icons.Default.Architecture, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Simulate In SolarEase Solar Lens", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Consumption units are not specified on this statement. Audit your connected appliances with Solar Lens for verified sizing.",
+                            fontSize = 13.sp,
+                            color = TextMuted
+                        )
                     }
                 }
             }

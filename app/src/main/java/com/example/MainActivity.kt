@@ -31,8 +31,7 @@ class MainActivity : ComponentActivity() {
                     .fillMaxSize()
                     .safeDrawingPadding()
             ) {
-                val isUserSignedIn = com.example.core.session.UserSession.currentUser != null ||
-                    try { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null } catch (_: Throwable) { false }
+                val isUserSignedIn = com.example.core.session.UserSession.hasValidSession()
                 val startDest = if (isUserSignedIn) com.example.navigation.Screen.Home else com.example.navigation.Screen.AuthGraph
                 SolarEaseNavGraph(navController = navController, startDestination = startDest)
             }

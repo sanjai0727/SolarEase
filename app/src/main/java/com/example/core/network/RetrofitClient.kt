@@ -9,12 +9,12 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 object RetrofitClient {
     // Production Google Cloud Run backend
-    private const val BASE_URL = "https://solarease-backend-612667385200.asia-south1.run.app/"
+    const val BASE_URL = "https://solarease-backend-612667385200.asia-south1.run.app/"
 
     // Rollback backend (Render):
-    // private const val BASE_URL = "https://solarease-backend.onrender.com/"
+    // const val BASE_URL = "https://solarease-backend.onrender.com/"
     // Local emulator testing:
-    // private const val BASE_URL = "http://10.0.2.2:8000/"
+    // const val BASE_URL = "http://10.0.2.2:8000/"
 
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
@@ -22,6 +22,7 @@ object RetrofitClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor())
+        .authenticator(TokenAuthenticator())
         .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
         .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)

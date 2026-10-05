@@ -1,10 +1,20 @@
 # ==============================================================================
 # Google Cloud Build Pipeline for SolarEase Backend
-# Builds container image and deploys to Google Cloud Run
+# Runs tests, builds container image, applies migrations, and deploys to Cloud Run
 # ==============================================================================
 
 steps:
-  # 1. Build container image using Dockerfile
+  # 1. Run backend unit and integration tests against clean isolated environment
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir -r requirements.txt pytest httpx
+        DATABASE_URL="sqlite:///:memory:" python -m pytest test_jwt.py test_meter_flow.py test_lens_auth.py
+    id: 'run-backend-tests'
+
+  # 2. Build container image using Dockerfile
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -15,7 +25,7 @@ steps:
       - '.'
     id: 'build-image'
 
-  # 2. Push container image to Google Artifact Registry
+  # 3. Push container image to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
@@ -28,7 +38,7 @@ steps:
       - '$_AR_HOSTNAME/$PROJECT_ID/$_REPO_NAME/$_SERVICE_NAME:latest'
     id: 'push-latest'
 
-  # 3. Deploy to Google Cloud Run
+  # 4. Deploy to Google Cloud Run (only executed if tests pass)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: gcloud
     args:
@@ -41,7 +51,6 @@ steps:
       - '$_DEPLOY_REGION'
       - '--platform'
       - 'managed'
-      - '--allow-unauthenticated'
       - '--memory'
       - '1Gi'
       - '--cpu'

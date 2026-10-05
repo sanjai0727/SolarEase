@@ -1,7 +1,8 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from src.core.database import get_db
+from src.core.config import settings
 from src.core.security import decode_token
 from src.modules.auth.repository import AuthRepository
 from src.modules.auth.models import User
@@ -9,9 +10,41 @@ import uuid
 from firebase_admin import auth as firebase_auth
 import logging
 from typing import Any, Optional
+
 security = HTTPBearer()
 firebase_security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
+
+
+def verify_app_check(request: Request) -> Optional[dict]:
+    """
+    Verifies Firebase App Check token on incoming requests.
+    Enforces check in production; warns or skips in development/testing.
+    """
+    app_check_token = request.headers.get("X-Firebase-AppCheck")
+    if not app_check_token:
+        if getattr(settings, "ENFORCE_APP_CHECK", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Firebase App Check token missing.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return None
+
+    try:
+        from firebase_admin import app_check
+        claims = app_check.verify_token(app_check_token)
+        return claims
+    except Exception as e:
+        if getattr(settings, "ENFORCE_APP_CHECK", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Firebase App Check verification failed: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        logger.warning(f"Non-production App Check token failed: {e}")
+        return None
+
 
 def get_verified_firebase_token(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(firebase_security)
@@ -65,6 +98,7 @@ def get_verified_firebase_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
@@ -97,6 +131,14 @@ def get_current_user(
         )
 
     repository = AuthRepository(db)
+    jti = payload.get("jti")
+    if jti and repository.is_token_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user = repository.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
@@ -105,4 +147,8 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    try:
+        setattr(user, "_token_payload", payload)
+    except (AttributeError, TypeError):
+        pass
     return user

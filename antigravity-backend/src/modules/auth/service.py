@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 import re
+from datetime import datetime, timezone, timedelta
 
 from src.modules.auth.schemas import (
     SendOtpRequest,
@@ -50,6 +51,8 @@ class AuthService:
         self,
         firebase_uid: str,
         phone_number: str,
+        username: str | None = None,
+        name: str | None = None,
         is_signup: bool = False
     ):
         # Step 1: Find by firebase_uid
@@ -76,6 +79,8 @@ class AuthService:
             return self.repository.create_user(
                 mobile_number=normalized_phone,
                 firebase_uid=firebase_uid,
+                username=username,
+                name=name,
                 is_verified=True
             )
         else: # is_signup == False
@@ -298,8 +303,26 @@ class AuthService:
                 detail="User associated with this token no longer exists."
             )
 
-        # Issue a new access token.
+        jti = payload.get("jti")
+        if jti and self.repository.is_token_revoked(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token has been revoked. Please sign in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Token Rotation: Revoke the presented refresh token
+        if jti:
+            exp_timestamp = payload.get("exp")
+            expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc) if exp_timestamp else datetime.now(timezone.utc) + timedelta(days=30)
+            self.repository.revoke_token(jti=jti, user_id=str(user.id), expires_at=expires_at, token_type="refresh")
+
+        # Issue a new access token AND a new rotated refresh token.
         access_token = create_access_token(
+            user.id,
+            user.mobile_number
+        )
+        new_refresh_token = create_refresh_token(
             user.id,
             user.mobile_number
         )
@@ -308,6 +331,15 @@ class AuthService:
 
         return TokenResponse(
             access_token=access_token,
-            refresh_token=request.refresh_token,
+            refresh_token=new_refresh_token,
             user=user_response,
         )
+
+    def logout(self, user, token_payload: dict | None = None):
+        if token_payload:
+            jti = token_payload.get("jti")
+            if jti:
+                exp_timestamp = token_payload.get("exp")
+                expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc) if exp_timestamp else datetime.now(timezone.utc) + timedelta(days=1)
+                self.repository.revoke_token(jti=jti, user_id=str(user.id), expires_at=expires_at, token_type=token_payload.get("type", "access"))
+        return {"success": True, "message": "Successfully logged out."}

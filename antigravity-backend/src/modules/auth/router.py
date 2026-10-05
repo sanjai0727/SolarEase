@@ -1,59 +1,30 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import logging
 
 from src.core.database import get_db
-
 from src.modules.auth.schemas import (
-    SendOtpRequest,
-    SendOtpResponse,
-    VerifyOtpRequest,
     TokenResponse,
     UserResponse,
+    UserUpdateRequest,
     RefreshTokenRequest,
     FirebaseTokenRequest,
-    FirebaseVerificationResponse,
-    FirebaseSyncResponse,
 )
-
 from src.modules.auth.repository import AuthRepository
 from src.modules.auth.service import AuthService
-from src.modules.auth.dependencies import get_current_user, get_verified_firebase_token
+from src.modules.auth.dependencies import get_current_user, get_verified_firebase_token, verify_app_check
 from src.modules.auth.models import User
 from src.core.security import create_access_token, create_refresh_token
 
-
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger("auth_router")
 
 
 def get_auth_service(
     db: Session = Depends(get_db),
 ) -> AuthService:
-
     repository = AuthRepository(db)
-
     return AuthService(repository)
-
-
-@router.post(
-    "/send-otp",
-    response_model=SendOtpResponse
-)
-async def send_otp(
-    request: SendOtpRequest,
-    service: AuthService = Depends(get_auth_service),
-):
-    return await service.send_otp(request)
-
-
-@router.post(
-    "/verify-otp",
-    response_model=TokenResponse
-)
-async def verify_otp(
-    request: VerifyOtpRequest,
-    service: AuthService = Depends(get_auth_service),
-):
-    return await service.verify_otp(request)
 
 
 @router.post(
@@ -64,22 +35,26 @@ async def verify_firebase(
     request: FirebaseTokenRequest,
     firebase_claims: dict = Depends(get_verified_firebase_token),
     service: AuthService = Depends(get_auth_service),
+    _app_check: dict | None = Depends(verify_app_check),
 ):
-    import logging
-    logger = logging.getLogger("auth_router")
-    
     firebase_uid = firebase_claims.get("uid")
     phone_number = firebase_claims.get("phone_number")
     email = firebase_claims.get("email")
     provider = firebase_claims.get("firebase", {}).get("sign_in_provider")
-    
-    logger.info(f"verify_firebase called. UID exists: {bool(firebase_uid)}, Phone: {bool(phone_number)}, Email: {bool(email)}, Provider: {provider}")
-    
+
+    logger.info(f"verify_firebase called for UID: {bool(firebase_uid)}, Provider: {provider}, is_signup: {request.is_signup}")
+
     if phone_number:
-        user = service.sync_phone_user(firebase_uid, phone_number, is_signup=request.is_signup)
+        user = service.sync_phone_user(
+            firebase_uid=firebase_uid,
+            phone_number=phone_number,
+            username=request.username,
+            name=request.name,
+            is_signup=request.is_signup
+        )
     elif email:
         username = request.username
-        name = firebase_claims.get("name")
+        name = request.name or firebase_claims.get("name")
         user = service.sync_social_user(
             firebase_uid=firebase_uid,
             email=email,
@@ -88,8 +63,7 @@ async def verify_firebase(
             is_signup=request.is_signup
         )
     else:
-        logger.error(f"HTTP 400 Bad Request: Firebase token missing both phone number and email. Available claims keys: {list(firebase_claims.keys())}")
-        from fastapi import HTTPException, status
+        logger.error(f"Firebase token missing phone and email. Claims: {list(firebase_claims.keys())}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Firebase token must contain either a phone number or an email address."
@@ -99,7 +73,6 @@ async def verify_firebase(
         user.id,
         user.mobile_number
     )
-
     refresh_token = create_refresh_token(
         user.id,
         user.mobile_number
@@ -128,11 +101,10 @@ def refresh_token(
 @router.post("/logout")
 def logout(
     current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
 ):
-    return {
-        "success": True,
-        "message": "Successfully logged out."
-    }
+    token_payload = getattr(current_user, "_token_payload", None)
+    return service.logout(current_user, token_payload)
 
 
 @router.get(
@@ -145,7 +117,6 @@ def get_me(
     return current_user
 
 
-from src.modules.auth.schemas import UserUpdateRequest
 @router.patch(
     "/me",
     response_model=UserResponse
@@ -156,13 +127,3 @@ def update_me(
     service: AuthService = Depends(get_auth_service),
 ):
     return service.update_profile(current_user, request)
-
-
-@router.get("/session")
-def get_session(
-    current_user: User = Depends(get_current_user),
-):
-    return {
-        "success": True,
-        "message": "Session endpoint placeholder."
-    }

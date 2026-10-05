@@ -26,4 +26,10 @@ interface ApiService {
     
     @retrofit2.http.GET("auth/me")
     suspend fun getProfile(): Response<com.example.core.network.dto.UserResponse>
+
+    @POST("auth/refresh")
+    suspend fun refreshToken(@Body request: com.example.core.network.dto.RefreshTokenRequest): Response<TokenResponse>
+
+    @POST("auth/logout")
+    suspend fun logout(): Response<Unit>
 }

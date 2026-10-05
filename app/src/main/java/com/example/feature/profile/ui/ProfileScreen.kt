@@ -1142,20 +1142,11 @@ private fun AccountAppSection(
         ) {
             Column {
                 AccountRow(
-                    icon = Icons.Filled.NotificationsActive,
-                    iconBgColor = StitchSurfaceContainerHigh,
-                    iconTint = StitchTertiary,
-                    title = "Notifications",
-                    subtitle = "Bill alerts, meter reminders, mantra notices",
-                    onClick = onNotificationsClick,
-                    showDivider = true
-                )
-                AccountRow(
                     icon = Icons.Filled.Security,
                     iconBgColor = StitchSurfaceContainerHigh,
                     iconTint = StitchPrimaryContainer,
-                    title = "Privacy & Security",
-                    subtitle = "Biometric lock, data sovereignty, permissions",
+                    title = "Privacy & Permissions",
+                    subtitle = "Data sovereignty & device permissions",
                     onClick = onPrivacyClick,
                     showDivider = true
                 )
@@ -1166,16 +1157,6 @@ private fun AccountAppSection(
                     title = "Help & Support",
                     subtitle = "FAQ, meter reading guides, solar lens support",
                     onClick = onHelpClick,
-                    showDivider = true
-                )
-                // App Language item (NEW ITEM per user prompt)
-                AccountRow(
-                    icon = Icons.Filled.Translate,
-                    iconBgColor = StitchSecondaryContainer,
-                    iconTint = StitchTertiary,
-                    title = "App Language",
-                    subtitle = selectedLanguage,
-                    onClick = onLanguageClick,
                     showDivider = true
                 )
                 AccountRow(
@@ -2490,14 +2471,6 @@ private fun PrivacySecuritySheet(
                 border = BorderStroke(1.dp, StitchSurfaceContainer)
             ) {
                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    PreferenceToggleRow(
-                        title = "App / Biometric Lock",
-                        description = "Require biometric authentication (fingerprint / PIN) when opening SolarEase",
-                        checked = biometricLock,
-                        onCheckedChange = onToggleBiometric,
-                        showDivider = true
-                    )
-
                     // Permission Status Rows
                     Row(
                         modifier = Modifier

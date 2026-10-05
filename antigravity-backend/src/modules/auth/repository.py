@@ -112,3 +112,21 @@ class AuthRepository:
         self.db.commit()
         self.db.refresh(otp_record)
         return otp_record
+
+    def revoke_token(self, jti: str, user_id: str, expires_at: datetime, token_type: str = "refresh"):
+        from src.modules.auth.models import RevokedToken
+        revoked = RevokedToken(
+            jti=jti,
+            user_id=str(user_id),
+            expires_at=expires_at,
+            token_type=token_type
+        )
+        self.db.add(revoked)
+        self.db.commit()
+        return revoked
+
+    def is_token_revoked(self, jti: str) -> bool:
+        from src.modules.auth.models import RevokedToken
+        stmt = select(RevokedToken).where(RevokedToken.jti == jti)
+        return self.db.scalar(stmt) is not None
+

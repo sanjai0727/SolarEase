@@ -79,6 +79,21 @@ def update_today_reading(
     return MeterService.update_today_reading(db, current_user.id, data)
 
 
+@router.put("/readings/{reading_date}", response_model=MeterReadingResponse)
+def update_reading_by_date(
+    reading_date: str,
+    data: MeterReadingUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Safely edits a historical meter reading by date (YYYY-MM-DD) and recalculates daily consumption.
+    """
+    from datetime import date as dt_date
+    parsed_date = dt_date.fromisoformat(reading_date)
+    return MeterService.update_reading_by_date(db, current_user.id, parsed_date, data)
+
+
 @router.get("/readings", response_model=List[MeterReadingResponse])
 def get_readings(
     cycle_id: Optional[str] = Query(None, description="Optional cycle id to filter"),

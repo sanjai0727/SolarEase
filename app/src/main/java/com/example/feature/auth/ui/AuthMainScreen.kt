@@ -469,68 +469,6 @@ fun AuthMainRoute(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // â”€â”€ Facebook Auth Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Surface(
-                onClick = {
-                    val sanitized = username.filterNot { it.isWhitespace() }
-                    username = sanitized
-                    if (authMode == AuthMode.SIGN_UP) {
-                        if (!usernameRegex.matches(sanitized)) {
-                            usernameError = "Username must be 3–30 characters and can contain letters, numbers, and underscores."
-                            return@Surface
-                        }
-                        usernameError = null
-                    }
-                    Log.d("AuthFlow", "Username validation passed")
-                    activeAuthAction = ActiveAuthAction.FACEBOOK
-                    Log.d("AuthMainRoute", "Sign in with Facebook clicked (Not Implemented)")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                color = Color.White,
-                shadowElevation = 2.dp,
-                border = ButtonDefaults.outlinedButtonBorder,
-                enabled = uiState !is AuthUiState.Loading
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    if (uiState is AuthUiState.Loading && activeAuthAction == ActiveAuthAction.FACEBOOK) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            color = primaryGreen,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = if (authMode == AuthMode.SIGN_UP) "Signing up..." else "Signing in...",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1E1E1E)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_facebook),
-                            contentDescription = "Facebook Icon",
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = if (authMode == AuthMode.SIGN_UP) "Sign up with Facebook" else "Continue with Facebook",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1E1E1E)
-                        )
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(28.dp))
 
             // â”€â”€ Toggle Sign In / Sign Up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

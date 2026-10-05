@@ -4,10 +4,11 @@ import json
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SolarEase AntiGravity Backend"
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    ENVIRONMENT: str = "production"
+    DEBUG: bool = False
     DATABASE_URL: str
     CORS_ORIGINS: str = '["*"]'
+    ENFORCE_APP_CHECK: bool = False
 
 
     # JWT Config

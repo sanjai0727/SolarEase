@@ -24,3 +24,11 @@ class OTPVerification(Base, UUIDMixin, TimestampMixin):
     expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
     attempt_count: Mapped[int] = mapped_column(default=0)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+class RevokedToken(Base, UUIDMixin, TimestampMixin):
+    __tablename__ = "revoked_tokens"
+
+    jti: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    token_type: Mapped[str] = mapped_column(String(20), default="refresh")

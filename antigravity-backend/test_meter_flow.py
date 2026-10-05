@@ -51,7 +51,7 @@ app.dependency_overrides[get_current_user] = override_get_current_user
 
 client = TestClient(app)
 
-def run_all_tests():
+def test_meter_flow():
     print("========================================")
     print("RUNNING BACKEND METER READING TESTS")
     print("========================================")
@@ -155,16 +155,32 @@ def run_all_tests():
     assert "already exists" in resp.json()["detail"]
     print("  [OK] Duplicate reading on same day correctly rejected.")
 
-    # 8. Test Edit / Update Today's Reading
-    print("[8] Testing Update Today's reading...")
-    resp = client.put("/meter/readings/today", json={
+    # 7b. Test Future Date and Pre-Baseline Date Rejection
+    print("[7b] Testing Future and Pre-Baseline Date Rejections...")
+    future_date = (date.today() + timedelta(days=2)).isoformat()
+    resp_future = client.post("/meter/readings", json={
+        "reading_value": 12600.0,
+        "reading_date": future_date
+    })
+    assert resp_future.status_code == 400, "Future reading date must be rejected"
+
+    resp_past = client.post("/meter/readings", json={
+        "reading_value": 12460.0,
+        "reading_date": "2026-08-15"
+    })
+    assert resp_past.status_code == 400, "Pre-baseline reading date must be rejected"
+    print("  [OK] Invalid reading dates properly rejected.")
+
+    # 8. Test Edit / Update Reading by Date
+    print("[8] Testing Update Reading by Date...")
+    resp = client.put(f"/meter/readings/{today_iso}", json={
         "reading_value": 12584.0,
         "notes": "Corrected today reading"
     })
     assert resp.status_code == 200
     assert resp.json()["reading_value"] == 12584.0
     assert resp.json()["daily_consumption"] == 134.0  # 12584 - 12450
-    print("  [OK] Today's reading updated successfully to 12,584 kWh.")
+    print("  [OK] Reading updated by date successfully to 12,584 kWh.")
 
     # 9. Test Consumption & Estimated Bill
     print("[9] Testing Current Consumption metrics...")

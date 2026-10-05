@@ -53,10 +53,28 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    # Health check for Render
+    # Health and readiness checks
     @app.get("/healthz")
+    @app.get("/health")
     async def health_check():
-        return {"status": "healthy"}
+        return {
+            "status": "healthy",
+            "environment": settings.ENVIRONMENT,
+            "version": "1.0.0"
+        }
+
+    @app.get("/ready")
+    async def readiness_check():
+        from src.core.database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            return {"status": "ready", "database": "connected"}
+        except Exception as e:
+            return {"status": "degraded", "database": str(e)}
+        finally:
+            db.close()
 
     setup_middleware(app)
 

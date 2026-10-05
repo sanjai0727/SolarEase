@@ -37,6 +37,12 @@ interface MeterApi {
         @Body request: MeterReadingUpdateDto
     ): Response<MeterReadingResponseDto>
 
+    @PUT("meter/readings/{reading_date}")
+    suspend fun updateReadingByDate(
+        @retrofit2.http.Path("reading_date") readingDate: String,
+        @Body request: MeterReadingUpdateDto
+    ): Response<MeterReadingResponseDto>
+
     @GET("meter/readings")
     suspend fun getReadings(
         @Query("cycle_id") cycleId: String? = null

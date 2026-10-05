@@ -3,6 +3,8 @@ package com.example.feature.home.ui.modules
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.example.core.network.dto.BaselineResponseDto
+import com.example.core.network.dto.MeterReadingResponseDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -143,6 +145,67 @@ object MeterReadingCache {
         recalculateMetrics()
         saveToPrefs()
         logD("Synchronized baseline: $billKwh kWh on $formattedDate (Previous units: $prevBilledUnits kWh)")
+    }
+
+    /**
+     * Synchronizes authoritative baseline received from the backend server.
+     */
+    fun syncBaselineFromServer(serverBase: BaselineResponseDto) {
+        val currentBase = _baseline.value
+        if (currentBase != null && currentBase.cycleId != serverBase.cycleId) {
+            logD("Server baseline cycle rollover from ${currentBase.cycleId} to ${serverBase.cycleId}")
+            archiveCycle(currentBase.cycleId, _readings.value)
+            _readings.value = emptyList()
+        }
+
+        val formattedDate = normalizeDateString(serverBase.baselineDate)
+        val newBase = MeterCycleBaseline(
+            cycleId = serverBase.cycleId,
+            baselineDate = formattedDate,
+            baselineReading = serverBase.baselineReading,
+            previousBilledUnits = serverBase.previousBilledUnits,
+            tariffCode = serverBase.tariffCode ?: "LT-IA · Domestic",
+            serviceConnectionNumber = serverBase.serviceConnectionNumber
+        )
+        _baseline.value = newBase
+        recalculateMetrics()
+        saveToPrefs()
+        logD("Synchronized server baseline: ${serverBase.baselineReading} kWh on $formattedDate")
+    }
+
+    /**
+     * Merges server readings authoritatively into local cache and recomputes consumption sequences.
+     */
+    fun mergeServerReadings(serverReadings: List<MeterReadingResponseDto>) {
+        val base = _baseline.value ?: return
+        val currentMap = _readings.value.associateBy { it.readingDate }.toMutableMap()
+
+        for (serverItem in serverReadings) {
+            val existing = currentMap[serverItem.readingDate]
+            val record = if (existing != null) {
+                existing.copy(
+                    readingValue = serverItem.readingValue,
+                    billingCycleId = serverItem.billingCycleId,
+                    notes = serverItem.notes ?: existing.notes
+                )
+            } else {
+                MeterReadingRecord(
+                    id = serverItem.id,
+                    billingCycleId = serverItem.billingCycleId,
+                    readingValue = serverItem.readingValue,
+                    readingDate = serverItem.readingDate,
+                    displayDate = formatIsoToDisplay(serverItem.readingDate),
+                    notes = serverItem.notes
+                )
+            }
+            currentMap[serverItem.readingDate] = record
+        }
+
+        val updatedList = recomputeSequence(currentMap.values.toList(), base.baselineReading)
+        _readings.value = updatedList
+        recalculateMetrics()
+        saveToPrefs()
+        logD("Merged ${serverReadings.size} readings from server into cache")
     }
 
     /**

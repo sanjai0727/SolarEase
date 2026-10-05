@@ -3,7 +3,7 @@ from typing import List, Optional
 import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, update
 
 from .models import BillingCycle, MeterReading
 from .schemas import (
@@ -39,9 +39,12 @@ class MeterService:
                 db.refresh(existing)
                 return existing
             else:
-                # New billing cycle detected! Archive previous cycle
-                existing.is_active = False
-                db.add(existing)
+                # Deactivate all existing active cycles atomically
+                db.execute(
+                    update(BillingCycle).where(
+                        and_(BillingCycle.user_id == user_id, BillingCycle.is_active == True)
+                    ).values(is_active=False)
+                )
 
         new_cycle = BillingCycle(
             user_id=user_id,
@@ -76,6 +79,18 @@ class MeterService:
             )
 
         reading_date = data.reading_date or date.today()
+
+        if reading_date < baseline.baseline_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Reading date ({reading_date.isoformat()}) cannot be earlier than baseline date ({baseline.baseline_date.isoformat()})."
+            )
+
+        if reading_date > date.today():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Reading date ({reading_date.isoformat()}) cannot be in the future."
+            )
 
         if data.reading_value < 0:
             raise HTTPException(
@@ -142,7 +157,7 @@ class MeterService:
         return reading
 
     @staticmethod
-    def update_today_reading(db: Session, user_id: uuid.UUID, data: MeterReadingUpdate) -> MeterReading:
+    def update_reading_by_date(db: Session, user_id: uuid.UUID, target_date: date, data: MeterReadingUpdate) -> MeterReading:
         baseline = MeterService.get_active_baseline(db, user_id)
         if not baseline:
             raise HTTPException(
@@ -150,13 +165,24 @@ class MeterService:
                 detail="No active billing cycle found."
             )
 
-        today_date = date.today()
+        if target_date < baseline.baseline_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Reading date ({target_date.isoformat()}) cannot be earlier than baseline date ({baseline.baseline_date.isoformat()})."
+            )
+
+        if target_date > date.today():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Reading date ({target_date.isoformat()}) cannot be in the future."
+            )
+
         reading = db.execute(
             select(MeterReading).where(
                 and_(
                     MeterReading.user_id == user_id,
                     MeterReading.billing_cycle_id == baseline.cycle_id,
-                    MeterReading.reading_date == today_date
+                    MeterReading.reading_date == target_date
                 )
             )
         ).scalar_one_or_none()
@@ -164,7 +190,7 @@ class MeterService:
         if not reading:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No meter reading recorded for today to update."
+                detail=f"No meter reading recorded for {target_date.isoformat()} to update."
             )
 
         if data.reading_value < 0:
@@ -185,7 +211,7 @@ class MeterService:
                 and_(
                     MeterReading.user_id == user_id,
                     MeterReading.billing_cycle_id == baseline.cycle_id,
-                    MeterReading.reading_date < today_date
+                    MeterReading.reading_date < target_date
                 )
             ).order_by(desc(MeterReading.reading_date))
         ).scalars().first()
@@ -202,9 +228,30 @@ class MeterService:
         if data.notes is not None:
             reading.notes = data.notes
 
+        MeterService._recompute_cycle_consumptions(db, user_id, baseline)
         db.commit()
         db.refresh(reading)
         return reading
+
+    @staticmethod
+    def update_today_reading(db: Session, user_id: uuid.UUID, data: MeterReadingUpdate) -> MeterReading:
+        return MeterService.update_reading_by_date(db, user_id, date.today(), data)
+
+    @staticmethod
+    def _recompute_cycle_consumptions(db: Session, user_id: uuid.UUID, baseline: BillingCycle):
+        readings = db.execute(
+            select(MeterReading).where(
+                and_(
+                    MeterReading.user_id == user_id,
+                    MeterReading.billing_cycle_id == baseline.cycle_id
+                )
+            ).order_by(MeterReading.reading_date)
+        ).scalars().all()
+
+        prev_val = baseline.baseline_reading
+        for r in readings:
+            r.daily_consumption = max(0.0, r.reading_value - prev_val)
+            prev_val = r.reading_value
 
     @staticmethod
     def get_today_reading(db: Session, user_id: uuid.UUID) -> Optional[MeterReading]:
@@ -231,8 +278,7 @@ class MeterService:
             baseline = MeterService.get_active_baseline(db, user_id)
             if baseline:
                 query = query.where(MeterReading.billing_cycle_id == baseline.cycle_id)
-            else:
-                return []
+
         query = query.order_by(MeterReading.reading_date.asc())
         return list(db.execute(query).scalars().all())
 
@@ -242,11 +288,17 @@ class MeterService:
         if not baseline:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No active billing cycle baseline connected yet."
+                detail="No active billing cycle found. Please connect your TNEB bill first."
             )
 
-        readings = MeterService.get_readings(db, user_id, baseline.cycle_id)
-        latest_reading = readings[-1] if readings else None
+        latest_reading = db.execute(
+            select(MeterReading).where(
+                and_(
+                    MeterReading.user_id == user_id,
+                    MeterReading.billing_cycle_id == baseline.cycle_id
+                )
+            ).order_by(desc(MeterReading.reading_date))
+        ).scalars().first()
 
         today_reading = MeterService.get_today_reading(db, user_id)
         is_today_logged = today_reading is not None
@@ -263,7 +315,8 @@ class MeterService:
             days_elapsed = max(1, (date.today() - baseline.baseline_date).days)
 
         avg_daily = round(units_consumed / days_elapsed, 1)
-        bill_calc = calculate_tneb_bill(units_consumed)
+        tariff = baseline.tariff_code or "LT-1A"
+        bill_calc = calculate_tneb_bill(units_consumed, tariff_code=tariff)
 
         return CurrentCycleConsumptionResponse(
             billing_cycle_id=baseline.cycle_id,
@@ -277,13 +330,13 @@ class MeterService:
             estimated_bill=bill_calc["total_estimated_bill"],
             is_today_logged=is_today_logged,
             today_reading=today_reading.reading_value if today_reading else None,
-            tariff_code=baseline.tariff_code or "LT-1A"
+            tariff_code=tariff
         )
 
     @staticmethod
     def get_estimated_bill(db: Session, user_id: uuid.UUID) -> EstimatedBillResponse:
         consumption = MeterService.get_current_consumption(db, user_id)
-        bill_dict = calculate_tneb_bill(consumption.units_consumed)
+        bill_dict = calculate_tneb_bill(consumption.units_consumed, tariff_code=consumption.tariff_code or "LT-1A")
         return EstimatedBillResponse(
             units=bill_dict["units"],
             free_units=bill_dict["free_units"],

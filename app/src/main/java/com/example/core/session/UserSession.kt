@@ -2,6 +2,7 @@ package com.example.core.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -28,7 +29,9 @@ object UserSession {
     var accessToken: String? = null
     var refreshToken: String? = null
 
-    private const val PREFS_NAME = "SolarEaseSessionPrefs"
+    private const val TAG = "UserSession"
+    private const val OLD_PLAINTEXT_PREFS = "SolarEaseSessionPrefs"
+    private const val SECURE_PREFS_NAME = "SolarEaseSecureSessionPrefs"
     private const val KEY_USER = "current_user"
     private const val KEY_ACCESS_TOKEN = "access_token"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
@@ -44,9 +47,41 @@ object UserSession {
 
     private var appContext: Context? = null
 
+    private fun getPrefs(context: Context? = null): SharedPreferences {
+        val ctx = context?.applicationContext ?: appContext
+            ?: throw IllegalStateException("UserSession has not been initialized with Context")
+        return SecurePreferencesHelper.getEncryptedPrefs(ctx, SECURE_PREFS_NAME)
+    }
+
     fun init(context: Context) {
         appContext = context.applicationContext
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getPrefs(context)
+
+        // One-time migration from legacy plaintext SharedPreferences to EncryptedSharedPreferences
+        try {
+            val legacyPrefs = context.getSharedPreferences(OLD_PLAINTEXT_PREFS, Context.MODE_PRIVATE)
+            val legacyAccess = legacyPrefs.getString(KEY_ACCESS_TOKEN, null)
+            val legacyRefresh = legacyPrefs.getString(KEY_REFRESH_TOKEN, null)
+            val legacyUser = legacyPrefs.getString(KEY_USER, null)
+            val legacyEb = legacyPrefs.getString(KEY_EB_SERVICE_NUMBER, null)
+            val legacyMob = legacyPrefs.getString(KEY_TNEB_REGISTERED_MOBILE, null)
+
+            if (legacyAccess != null || legacyUser != null || legacyEb != null) {
+                val editor = prefs.edit()
+                if (legacyAccess != null) editor.putString(KEY_ACCESS_TOKEN, legacyAccess)
+                if (legacyRefresh != null) editor.putString(KEY_REFRESH_TOKEN, legacyRefresh)
+                if (legacyUser != null) editor.putString(KEY_USER, legacyUser)
+                if (legacyEb != null) editor.putString(KEY_EB_SERVICE_NUMBER, legacyEb)
+                if (legacyMob != null) editor.putString(KEY_TNEB_REGISTERED_MOBILE, legacyMob)
+                editor.apply()
+
+                legacyPrefs.edit().clear().apply()
+                Log.i(TAG, "Successfully migrated legacy plaintext session prefs to EncryptedSharedPreferences")
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Legacy preferences migration notice: ${e.message}")
+        }
+
         accessToken = prefs.getString(KEY_ACCESS_TOKEN, null)
         refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null)
         val userJson = prefs.getString(KEY_USER, null)
@@ -54,28 +89,7 @@ object UserSession {
             try {
                 currentUser = json.decodeFromString<User>(userJson)
             } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        // If user session is null in local prefs, but Firebase session is still active and signed in,
-        // restore user session from the active Firebase session to prevent state loss on cold restart.
-        if (currentUser == null) {
-            try {
-                val fbUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                if (fbUser != null) {
-                    val restoredUser = User(
-                        id = fbUser.uid,
-                        name = fbUser.displayName,
-                        username = fbUser.displayName?.ifBlank { null } ?: fbUser.phoneNumber ?: "User",
-                        email = fbUser.email,
-                        mobileNumber = fbUser.phoneNumber
-                    )
-                    currentUser = restoredUser
-                    saveUser(context, restoredUser)
-                }
-            } catch (_: Throwable) {
-                // Ignore in testing environments where FirebaseAuth is not mocked/initialized
+                Log.e(TAG, "Failed to decode saved user session", e)
             }
         }
 
@@ -100,24 +114,33 @@ object UserSession {
         }
     }
 
+    /**
+     * Checks if there is a verified, authenticated SolarEase backend session.
+     */
+    fun hasValidSession(): Boolean {
+        return currentUser != null && !accessToken.isNullOrBlank()
+    }
+
     fun getSavedEbServiceNumber(context: Context? = null): String? {
         val ctx = context?.applicationContext ?: appContext
         return currentUser?.ebServiceNumber?.ifBlank { null }
-            ?: ctx?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                ?.getString(KEY_EB_SERVICE_NUMBER, null)?.ifBlank { null }
+            ?: ctx?.let {
+                getPrefs(it).getString(KEY_EB_SERVICE_NUMBER, null)?.ifBlank { null }
+            }
     }
 
     fun getSavedTnebMobile(context: Context? = null): String? {
         val ctx = context?.applicationContext ?: appContext
         return currentUser?.tnebRegisteredMobile?.ifBlank { null }
-            ?: ctx?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                ?.getString(KEY_TNEB_REGISTERED_MOBILE, null)?.ifBlank { null }
+            ?: ctx?.let {
+                getPrefs(it).getString(KEY_TNEB_REGISTERED_MOBILE, null)?.ifBlank { null }
+            }
     }
 
     fun saveExplicitElectricityDetails(context: Context? = null, consumerNumber: String?, tnebMobile: String?) {
         val ctx = context?.applicationContext ?: appContext
         if (ctx != null) {
-            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val prefs = getPrefs(ctx)
             val editor = prefs.edit()
             if (!consumerNumber.isNullOrBlank()) {
                 editor.putString(KEY_EB_SERVICE_NUMBER, consumerNumber)
@@ -146,7 +169,7 @@ object UserSession {
     fun saveTokens(context: Context, access: String, refresh: String) {
         accessToken = access
         refreshToken = refresh
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getPrefs(context)
         prefs.edit()
             .putString(KEY_ACCESS_TOKEN, access)
             .putString(KEY_REFRESH_TOKEN, refresh)
@@ -156,7 +179,7 @@ object UserSession {
     fun saveUser(context: Context? = null, user: User) {
         val ctx = context?.applicationContext ?: appContext
         if (ctx != null) {
-            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val prefs = getPrefs(ctx)
             val existingEb = prefs.getString(KEY_EB_SERVICE_NUMBER, null)?.ifBlank { null }
             val existingTnebMobile = prefs.getString(KEY_TNEB_REGISTERED_MOBILE, null)?.ifBlank { null }
 
@@ -186,28 +209,36 @@ object UserSession {
     fun saveUser(user: User) {
         saveUser(null, user)
     }
-    
+
     fun clear(context: Context) {
         currentUser = null
         accessToken = null
         refreshToken = null
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .remove(KEY_USER)
-            .remove(KEY_ACCESS_TOKEN)
-            .remove(KEY_REFRESH_TOKEN)
-            .remove(KEY_EB_SERVICE_NUMBER)
-            .remove(KEY_TNEB_REGISTERED_MOBILE)
-            .apply()
+        try {
+            val prefs = getPrefs(context)
+            prefs.edit().clear().apply()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error clearing secure session prefs: ${e.message}")
+        }
+        try {
+            val legacy = context.getSharedPreferences(OLD_PLAINTEXT_PREFS, Context.MODE_PRIVATE)
+            legacy.edit().clear().apply()
+        } catch (_: Throwable) {}
     }
 
     fun setProfilePromptDismissed(context: Context, userId: String) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("profile_dismissed_$userId", true).apply()
+        try {
+            val prefs = getPrefs(context)
+            prefs.edit().putBoolean("profile_dismissed_$userId", true).apply()
+        } catch (_: Throwable) {}
     }
 
     fun isProfilePromptDismissed(context: Context, userId: String): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean("profile_dismissed_$userId", false)
+        return try {
+            val prefs = getPrefs(context)
+            prefs.getBoolean("profile_dismissed_$userId", false)
+        } catch (_: Throwable) {
+            false
+        }
     }
 }
