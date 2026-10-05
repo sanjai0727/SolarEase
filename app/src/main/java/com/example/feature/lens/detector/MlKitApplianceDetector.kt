@@ -62,7 +62,7 @@ class MlKitApplianceDetector : ApplianceDetector {
                             trackingId = obj.trackingId,
                             boundingBox = box,
                             boundingBoxRelative = RectF(leftRel, topRel, rightRel, bottomRel),
-                            label = "Appliance",
+                            label = "Object Candidate",
                             confidence = null
                         )
                     )
@@ -73,6 +73,44 @@ class MlKitApplianceDetector : ApplianceDetector {
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e("MlKitApplianceDetector", "Error detecting objects", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun processBitmap(bitmap: android.graphics.Bitmap): List<DetectedCandidate> {
+        return try {
+            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            val mlObjects = objectDetector.process(inputImage).await()
+            val rotatedWidth = bitmap.width
+            val rotatedHeight = bitmap.height
+            val candidates = mutableListOf<DetectedCandidate>()
+
+            for (obj in mlObjects) {
+                val box = obj.boundingBox
+                val width = box.width()
+                val height = box.height()
+                if (width < rotatedWidth * 0.05f || height < rotatedHeight * 0.05f) continue
+                val leftRel = (box.left.toFloat() / rotatedWidth).coerceIn(0f, 1f)
+                val topRel = (box.top.toFloat() / rotatedHeight).coerceIn(0f, 1f)
+                val rightRel = (box.right.toFloat() / rotatedWidth).coerceIn(0f, 1f)
+                val bottomRel = (box.bottom.toFloat() / rotatedHeight).coerceIn(0f, 1f)
+
+                if (rightRel > leftRel && bottomRel > topRel) {
+                    candidates.add(
+                        DetectedCandidate(
+                            trackingId = obj.trackingId,
+                            boundingBox = box,
+                            boundingBoxRelative = RectF(leftRel, topRel, rightRel, bottomRel),
+                            label = "Object Candidate",
+                            confidence = null
+                        )
+                    )
+                }
+            }
+            candidates
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e("MlKitApplianceDetector", "Error detecting objects from bitmap", e)
             emptyList()
         }
     }

@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.cancel
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -154,8 +155,10 @@ private fun LensCameraContent(
                 val cameraProvider = ProcessCameraProvider.getInstance(context).get()
                 cameraProvider.unbindAll()
                 scanDetector.close()
+                analysisExecutor.shutdown()
+                analysisScope.cancel()
             } catch (e: Exception) {
-                Log.w("LensScreen", "Failed to unbind camera", e)
+                Log.w("LensScreen", "Failed to unbind camera or clean up executor", e)
             }
         }
     }
@@ -219,7 +222,7 @@ private fun LensCameraContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "LIVE SCAN ACTIVE • ZERO NETWORK REQUESTS (OFFLINE YOLO)",
+                        "LIVE SCAN ACTIVE • ON-DEVICE OBJECT DETECTION (ML KIT)",
                         style = LensTypography.labelCaps.copy(fontSize = 11.sp),
                         color = LensColors.InverseOnSurface
                     )

@@ -1,5 +1,6 @@
 package com.example.feature.lens.ui
 
+import java.util.Locale
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1180,7 +1181,7 @@ fun RoomOverviewContent(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Choose an audit workflow: upload media for Gemini 3.8 Flash analysis, or scan the room in real time using on-device YOLO.",
+                            "Choose an audit workflow: upload media for cloud analysis, or scan the room in real time using the on-device detector.",
                             style = LensTypography.bodyMd,
                             color = LensColors.SlateCaption,
                             lineHeight = 18.sp
@@ -1370,7 +1371,7 @@ fun RoomOverviewContent(
         }
 
         // ══════════════════════════════════════════════════════════════════
-        // WORKFLOW 2: LIVE SCAN (On-Device Local YOLO)
+        // WORKFLOW 2: LIVE SCAN (On-Device Local Detector)
         // ══════════════════════════════════════════════════════════════════
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -1411,7 +1412,7 @@ fun RoomOverviewContent(
                                 color = LensColors.SurfaceContainerHighest
                             ) {
                                 Text(
-                                    "OFFLINE YOLO",
+                                    "ON-DEVICE ML KIT",
                                     style = LensTypography.labelCaps.copy(fontSize = 9.sp),
                                     color = LensColors.SlateText,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1439,7 +1440,7 @@ fun RoomOverviewContent(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DocumentScanner, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Start Live Scan (Local YOLO)", style = LensTypography.labelSm, color = LensColors.OnPrimary)
+                        Text("Start Live Scan (On-Device)", style = LensTypography.labelSm, color = LensColors.OnPrimary)
                     }
                 }
             }
@@ -1712,12 +1713,14 @@ fun RoomCompletedContent(
             border = BorderStroke(1.dp, LensColors.Outline)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
+                val totalActiveAppliances = room.appliances.sumOf { it.quantity }
+                val appliancesActiveLabel = if (totalActiveAppliances == 1) "1 APPLIANCE ACTIVE" else "$totalActiveAppliances APPLIANCES ACTIVE"
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("LOAD TELEMETRY BREAKDOWN", style = LensTypography.labelCaps, color = LensColors.SlateMuted)
-                    Text("${room.appliances.size} APPLIANCES ACTIVE", style = LensTypography.labelCaps, color = LensColors.Primary)
+                    Text(appliancesActiveLabel, style = LensTypography.labelCaps, color = LensColors.Primary)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -1727,14 +1730,14 @@ fun RoomCompletedContent(
                 ) {
                     MetricBox(
                         label = "Connected Load",
-                        value = "%.2f".format(room.connectedLoadKw),
+                        value = "%.2f".format(Locale.US, room.connectedLoadKw),
                         unit = "kW",
                         icon = Icons.Default.Bolt,
                         modifier = Modifier.weight(1f)
                     )
                     MetricBox(
                         label = "Est. Monthly Power",
-                        value = "%.1f".format(room.monthlyKwh),
+                        value = "%.1f".format(Locale.US, room.monthlyKwh),
                         unit = "kWh",
                         icon = Icons.Default.Speed,
                         modifier = Modifier.weight(1f)
@@ -1747,14 +1750,14 @@ fun RoomCompletedContent(
                 ) {
                     MetricBox(
                         label = "Monthly Cost",
-                        value = "₹%.0f".format(room.monthlyCost),
+                        value = "₹%.0f".format(Locale.US, room.monthlyCost),
                         unit = "/mo",
                         icon = Icons.Default.CurrencyRupee,
                         modifier = Modifier.weight(1f)
                     )
                     MetricBox(
                         label = "Solar Offset Target",
-                        value = "100.0",
+                        value = if (room.monthlyKwh > 0f) "100.0" else "0.0",
                         unit = "%",
                         icon = Icons.Default.Eco,
                         modifier = Modifier.weight(1f)
@@ -1764,21 +1767,57 @@ fun RoomCompletedContent(
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("CONFIGURED HARDWARE NODES", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
                 Spacer(modifier = Modifier.height(6.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    room.appliances.forEach { app ->
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = LensColors.SurfaceContainerLow
+                if (room.appliances.isEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = LensColors.SurfaceContainerLow,
+                        border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = LensColors.SlateCaption,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                "No appliances confirmed",
+                                style = LensTypography.headlineSm.copy(fontSize = 14.sp),
+                                color = LensColors.SlateText
+                            )
+                            Text(
+                                "No appliances were added to this room.\nYou can add appliances from the review screen.",
+                                style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                                color = LensColors.SlateCaption,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        room.appliances.forEach { app ->
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.SurfaceContainerLow
                             ) {
-                                Text("${app.quantity}× ${app.label}", style = LensTypography.bodyMd, color = LensColors.SlateText)
-                                Text("${app.powerWatts.toInt()}W • ${app.usageHoursPerDay}h/d", style = LensTypography.labelSm, color = LensColors.SlateCaption)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val formattedUsage = String.format(Locale.US, "%.1f", app.usageHoursPerDay)
+                                    Text("${app.quantity} × ${app.label}", style = LensTypography.bodyMd, color = LensColors.SlateText)
+                                    Text("${app.powerWatts.toInt()}W • ${formattedUsage}h/d", style = LensTypography.labelSm, color = LensColors.SlateCaption)
+                                }
                             }
                         }
                     }

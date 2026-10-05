@@ -223,7 +223,9 @@ fun ApplianceReviewScreen(
                     }
 
                     Text("Review Detected Appliances", style = LensTypography.headlineMd, color = LensColors.SlateText)
-                    Text("${room.name} • ${appliances.size} Electrical Loads Identified", style = LensTypography.bodyMd, color = LensColors.SlateCaption)
+                    val loadsCount = appliances.sumOf { it.quantity }
+                    val loadsText = if (loadsCount == 1) "1 Electrical Load Identified" else "$loadsCount Electrical Loads Identified"
+                    Text("${room.name} • $loadsText", style = LensTypography.bodyMd, color = LensColors.SlateCaption)
                 }
             }
 
@@ -278,7 +280,7 @@ fun ApplianceReviewScreen(
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Row(verticalAlignment = Alignment.Bottom) {
                                         Text(
-                                            "%.2f".format(roomPeakKw),
+                                            String.format(java.util.Locale.US, "%.2f", roomPeakKw),
                                             style = LensTypography.metricValLg,
                                             color = LensColors.SlateText
                                         )
@@ -331,16 +333,53 @@ fun ApplianceReviewScreen(
             }
 
             // Interactive Appliance Review Cards
-            items(appliances) { appliance ->
-                ApplianceCardStitch(
-                    appliance = appliance,
-                    onUpdate = { id, label, watts, hours, days, qty ->
-                        viewModel.updateReviewAppliance(id, label, watts, hours, days, qty)
-                    },
-                    onRemove = { id ->
-                        viewModel.removeReviewAppliance(id)
+            if (appliances.isEmpty()) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        color = LensColors.SurfaceContainerLow,
+                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Outlined.DevicesOther,
+                                contentDescription = null,
+                                tint = LensColors.SlateCaption,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                "No appliances selected",
+                                style = LensTypography.headlineSm.copy(fontSize = 14.sp),
+                                color = LensColors.SlateText
+                            )
+                            Text(
+                                "All detected items have been removed. Tap '+ Add Appliance' below to add appliances manually.",
+                                style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                                color = LensColors.SlateCaption,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                )
+                }
+            } else {
+                items(appliances) { appliance ->
+                    ApplianceCardStitch(
+                        appliance = appliance,
+                        onUpdate = { id, label, watts, hours, days, qty ->
+                            viewModel.updateReviewAppliance(id, label, watts, hours, days, qty)
+                        },
+                        onRemove = { id ->
+                            viewModel.removeReviewAppliance(id)
+                        }
+                    )
+                }
             }
 
             item {
