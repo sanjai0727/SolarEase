@@ -58,7 +58,7 @@ fun ApplianceResultScreen(
     val simultaneousKw: Double = totalConnectedKw * 0.68
     val totalMonthlyKwh: Double = rooms.sumOf { it.monthlyKwh.toDouble() }
     val dailyAvgKwh: Double = if (totalMonthlyKwh > 0.0) totalMonthlyKwh / 30.0 else 0.0
-    val totalMonthlyBill: Double = rooms.sumOf { it.monthlyCost.toDouble() }
+    val totalSimplifiedBaselineCost: Double = rooms.sumOf { it.simplifiedBaselineCost }
     val totalAppliancesCount: Int = rooms.sumOf { room -> room.appliances.sumOf { it.quantity } }
 
     // Solar Sizing Engine:
@@ -325,40 +325,50 @@ fun ApplianceResultScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Metric 1: Total Load
+                    // Metric 1: Connected Load
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Bolt,
                         iconTint = LensColors.Tertiary,
-                        label = "Total Load",
+                        label = "Connected Load",
                         value = String.format(Locale.US, "%.2f", totalConnectedKw),
                         unit = "kW",
-                        subtext = "Peak: ${String.format(Locale.US, "%.1f", simultaneousKw)} kW"
+                        subtext = "Simult: ${String.format(Locale.US, "%.1f", simultaneousKw)} kW"
                     )
 
-                    // Metric 2: Estimated Usage
+                    // Metric 2: Estimated Monthly Energy
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Speed,
                         iconTint = LensColors.PrimaryContainer,
-                        label = "Est. Usage",
+                        label = "Est. Monthly Energy",
                         value = String.format(Locale.US, "%.1f", totalMonthlyKwh),
-                        unit = "kWh",
+                        unit = "kWh/month",
                         subtext = "Avg ${String.format(Locale.US, "%.1f", dailyAvgKwh)}/d"
                     )
 
-                    // Metric 3: Monthly Bill
+                    // Metric 3: Simplified Baseline Cost
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.CurrencyRupee,
-                        iconTint = LensColors.Error,
-                        label = "Mo. Bill",
-                        value = "₹${String.format(Locale.US, "%,d", totalMonthlyBill.toInt())}",
-                        unit = "",
-                        subtext = "Tier-2 Discom",
-                        valueColor = LensColors.Error
+                        iconTint = LensColors.Primary,
+                        label = "Baseline Cost",
+                        value = "₹${String.format(Locale.US, "%,d", totalSimplifiedBaselineCost.toInt())}",
+                        unit = "/mo",
+                        subtext = "Indicative estimate",
+                        valueColor = LensColors.OnSurface
                     )
                 }
+            }
+
+            item {
+                Text(
+                    text = "Indicative estimate at ₹7/kWh. Actual household billing depends on total consumption, applicable tariff slabs, subsidies, fixed charges, and taxes.",
+                    style = LensTypography.labelSm.copy(fontSize = 10.sp),
+                    color = LensColors.Secondary,
+                    lineHeight = 14.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
             }
 
             // 4. Consumption Ratio By Zone (Segmented Bar)

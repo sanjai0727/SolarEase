@@ -244,11 +244,11 @@ class LensViewModelTest {
         assertEquals(6.0f, confirmedAppliance.usageHoursPerDay)
         assertEquals(1, confirmedAppliance.quantity)
 
-        // Verify calculations match only the 1x Laptop
+        // Verify calculations match only the 1x Laptop (60W rated, 30W active, 6h/d, 30d -> 5.4 kWh, ₹37.80)
         assertEquals(60f, certifiedRoom.connectedLoadWatts, 0.001f)
         assertEquals(0.06f, certifiedRoom.connectedLoadKw, 0.001f)
-        assertEquals(10.8f, certifiedRoom.monthlyKwh, 0.001f)
-        assertEquals(75.6f, certifiedRoom.monthlyCost, 0.001f)
+        assertEquals(5.4f, certifiedRoom.monthlyKwh, 0.001f)
+        assertEquals(37.8f, certifiedRoom.monthlyCost, 0.001f)
 
         // Verify NO default/mock appliances were inserted
         val applianceLabels = certifiedRoom.appliances.map { it.label }
@@ -299,12 +299,12 @@ class LensViewModelTest {
         assertEquals(2, app.quantity)
         assertEquals(5f, app.usageHoursPerDay)
 
-        // 80W * 2 = 160W = 0.16 kW
+        // 80W rated * 2 = 160W = 0.16 kW connected load
         assertEquals(0.16f, completed.room.connectedLoadKw, 0.001f)
-        // 80W * 5h * 30d * 2 / 1000 = 24 kWh
-        assertEquals(24.0f, completed.room.monthlyKwh, 0.001f)
-        // 24 kWh * 7 = 168
-        assertEquals(168.0f, completed.room.monthlyCost, 0.001f)
+        // 40W active * 5h * 30d * 2 / 1000 = 12.0 kWh
+        assertEquals(12.0f, completed.room.monthlyKwh, 0.001f)
+        // 12.0 kWh * 7.0 = 84.0
+        assertEquals(84.0f, completed.room.monthlyCost, 0.001f)
     }
 
     @Test
@@ -447,7 +447,7 @@ class LensViewModelTest {
         assertEquals(1, savedBedroom.appliances.size)
         assertEquals("Laptop", savedBedroom.appliances.first().label)
         assertEquals(0.06f, savedBedroom.connectedLoadKw, 0.001f)
-        assertEquals(10.8f, savedBedroom.monthlyKwh, 0.001f)
-        assertEquals(75.6f, savedBedroom.monthlyCost, 0.001f)
+        assertEquals(5.4f, savedBedroom.monthlyKwh, 0.001f)
+        assertEquals(37.8f, savedBedroom.monthlyCost, 0.001f)
     }
 }

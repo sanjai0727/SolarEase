@@ -63,10 +63,10 @@ fun ApplianceReviewScreen(
     val totalRooms = sortedRooms.size.coerceAtLeast(4)
 
     // Dynamic Live Calculations for Room Power Envelope
-    val roomPeakWatts = appliances.sumOf { (it.powerWatts * it.quantity).toDouble() }.toFloat()
+    val roomPeakWatts = appliances.sumOf { (it.ratedWattage * it.quantity).toDouble() }.toFloat()
     val roomPeakKw = roomPeakWatts / 1000f
-    val roomMonthlyKwh = appliances.sumOf { it.monthlyKwh.toDouble() }.toFloat()
-    val roomMonthlyCost = ApplianceMaster.calculateMonthlyCost(roomMonthlyKwh)
+    val roomMonthlyEnergyKwh = appliances.sumOf { it.monthlyEnergyKwh }
+    val roomSimplifiedBaselineCost = appliances.sumOf { it.simplifiedBaselineCost }
 
     Scaffold(
         topBar = {
@@ -123,6 +123,16 @@ fun ApplianceReviewScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val hasInvalidAppliance = appliances.any { it.powerWatts <= 0f }
+                    if (hasInvalidAppliance) {
+                        Text(
+                            "Enter a wattage greater than 0 W for custom appliance(s) before continuing.",
+                            style = LensTypography.labelSm.copy(fontSize = 11.sp, color = LensColors.Error),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     OutlinedButton(
                         onClick = { viewModel.addReviewAppliance() },
                         modifier = Modifier
@@ -138,6 +148,7 @@ fun ApplianceReviewScreen(
 
                     Button(
                         onClick = { viewModel.confirmReview() },
+                        enabled = !hasInvalidAppliance,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
@@ -276,7 +287,7 @@ fun ApplianceReviewScreen(
                                 color = LensColors.SurfaceContainerLowest
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Peak Connected Load", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
+                                    Text("Connected Load", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Row(verticalAlignment = Alignment.Bottom) {
                                         Text(
@@ -296,36 +307,44 @@ fun ApplianceReviewScreen(
                                 color = LensColors.SurfaceContainerLowest
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Est. Room Consumption", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
+                                    Text("Est. Monthly Energy", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Row(verticalAlignment = Alignment.Bottom) {
                                         Text(
-                                            "~${roomMonthlyKwh.toInt()}",
+                                            String.format(java.util.Locale.US, "%.1f", roomMonthlyEnergyKwh),
                                             style = LensTypography.metricValLg,
                                             color = LensColors.SlateText
                                         )
                                         Spacer(modifier = Modifier.width(3.dp))
-                                        Text("kWh/mo", style = LensTypography.labelSm, color = LensColors.SlateCaption)
+                                        Text("kWh/month", style = LensTypography.labelSm, color = LensColors.SlateCaption)
                                     }
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Simplified Baseline Cost",
+                                    style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                                    color = LensColors.SlateCaption
+                                )
+                                Text(
+                                    "≈ ₹${String.format(java.util.Locale.US, "%.0f", roomSimplifiedBaselineCost)}",
+                                    style = LensTypography.labelSm.copy(fontWeight = FontWeight.Bold),
+                                    color = LensColors.SlateText
+                                )
+                            }
                             Text(
-                                "Calibrated tariff basis: ₹7.00 / kWh",
-                                style = LensTypography.labelSm.copy(fontSize = 11.sp),
-                                color = LensColors.SlateCaption
-                            )
-                            Text(
-                                "≈ ₹${roomMonthlyCost.toInt()} / mo",
-                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                                color = LensColors.SlateText
+                                "Indicative estimate at ₹7/kWh. Actual household billing depends on total consumption, applicable tariff slabs, subsidies, fixed charges, and taxes.",
+                                style = LensTypography.labelSm.copy(fontSize = 10.sp),
+                                color = LensColors.SlateCaption,
+                                lineHeight = 14.sp
                             )
                         }
                     }
@@ -447,11 +466,16 @@ private fun ApplianceCardStitch(
                 Column {
                     Text("Enter rated power in Watts for ${appliance.label}:", style = LensTypography.bodyMd, color = LensColors.SlateCaption)
                     Spacer(modifier = Modifier.height(8.dp))
+                    val isInvalid = wattageInput.isNotEmpty() && (wattageInput.toFloatOrNull() ?: 0f) <= 0f
                     OutlinedTextField(
                         value = wattageInput,
                         onValueChange = { wattageInput = it.filter { ch -> ch.isDigit() } },
                         label = { Text("Power Rating (Watts)") },
                         suffix = { Text("W") },
+                        isError = isInvalid,
+                        supportingText = if (isInvalid) {
+                            { Text("Enter a wattage greater than 0 W for this custom appliance.", color = LensColors.Error) }
+                        } else null,
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -459,12 +483,15 @@ private fun ApplianceCardStitch(
                 }
             },
             confirmButton = {
+                val inputWatts = wattageInput.toFloatOrNull() ?: 0f
                 Button(
                     onClick = {
-                        val w = wattageInput.toFloatOrNull() ?: appliance.powerWatts
-                        onUpdate(appliance.id, appliance.label, w.coerceAtLeast(1f), appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
-                        showWattageDialog = false
+                        if (inputWatts > 0f) {
+                            onUpdate(appliance.id, appliance.label, inputWatts, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
+                            showWattageDialog = false
+                        }
                     },
+                    enabled = inputWatts > 0f,
                     colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary)
                 ) {
                     Text("Save")
@@ -517,10 +544,10 @@ private fun ApplianceCardStitch(
                                 )
                             }
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("• ${(appliance.monthlyKwh).toInt()} kWh/mo", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateCaption)
+                            Text("• ${String.format(java.util.Locale.US, "%.1f", appliance.monthlyEnergyKwh)} kWh/month", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateCaption)
                         }
                         Text(
-                            "₹${appliance.monthlyCost.toInt()} / mo estimated",
+                            "Est. baseline: ₹${String.format(java.util.Locale.US, "%.0f", appliance.simplifiedBaselineCost)}",
                             style = LensTypography.labelSm.copy(fontSize = 10.sp),
                             color = LensColors.SlateCaption
                         )
@@ -528,6 +555,35 @@ private fun ApplianceCardStitch(
                 }
                 IconButton(onClick = { onRemove(appliance.id) }, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = LensColors.SlateCaption, modifier = Modifier.size(18.dp))
+                }
+            }
+
+            if (appliance.powerWatts <= 0f) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = LensColors.Error.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(1.dp, LensColors.Error)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = LensColors.Error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "Enter a wattage greater than 0 W for this custom appliance.",
+                            style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
+                            color = LensColors.Error
+                        )
+                    }
                 }
             }
 

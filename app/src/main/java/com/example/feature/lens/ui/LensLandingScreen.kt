@@ -1736,9 +1736,9 @@ fun RoomCompletedContent(
                         modifier = Modifier.weight(1f)
                     )
                     MetricBox(
-                        label = "Est. Monthly Power",
-                        value = "%.1f".format(Locale.US, room.monthlyKwh),
-                        unit = "kWh",
+                        label = "Est. Monthly Energy",
+                        value = "%.1f".format(Locale.US, room.monthlyEnergyKwh),
+                        unit = "kWh/month",
                         icon = Icons.Default.Speed,
                         modifier = Modifier.weight(1f)
                     )
@@ -1749,20 +1749,27 @@ fun RoomCompletedContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     MetricBox(
-                        label = "Monthly Cost",
-                        value = "₹%.0f".format(Locale.US, room.monthlyCost),
+                        label = "Simplified Baseline Cost",
+                        value = "₹%.0f".format(Locale.US, room.simplifiedBaselineCost),
                         unit = "/mo",
                         icon = Icons.Default.CurrencyRupee,
                         modifier = Modifier.weight(1f)
                     )
                     MetricBox(
                         label = "Solar Offset Target",
-                        value = if (room.monthlyKwh > 0f) "100.0" else "0.0",
+                        value = if (room.monthlyEnergyKwh > 0.0) "100.0" else "0.0",
                         unit = "%",
                         icon = Icons.Default.Eco,
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Indicative estimate at ₹7/kWh. Actual household billing depends on total consumption, applicable tariff slabs, subsidies, fixed charges, and taxes.",
+                    style = LensTypography.labelSm.copy(fontSize = 10.sp),
+                    color = LensColors.SlateCaption,
+                    lineHeight = 14.sp
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("CONFIGURED HARDWARE NODES", style = LensTypography.labelCaps, color = LensColors.SlateCaption)

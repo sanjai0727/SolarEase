@@ -8,6 +8,7 @@ import com.example.feature.lens.data.LensRepository
 import com.example.feature.lens.detector.DetectedCandidate
 import com.example.feature.lens.utils.ApplianceMaster
 import com.example.feature.lens.utils.DetectedAppliance
+import com.example.feature.lens.utils.UsageMode
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -43,16 +44,26 @@ data class Room(
     val appliances: List<EditableAppliance> = emptyList()
 ) {
     val connectedLoadWatts: Float
-        get() = appliances.sumOf { (it.powerWatts * it.quantity).toDouble() }.toFloat()
+        get() = appliances.sumOf { (it.ratedWattage * it.quantity).toDouble() }.toFloat()
 
     val connectedLoadKw: Float
-        get() = connectedLoadWatts / 1000f
+        get() = appliances.sumOf { it.connectedLoadKw }.toFloat()
 
+    val connectedLoadKwPrecise: Double
+        get() = appliances.sumOf { it.connectedLoadKw }
+
+    val monthlyEnergyKwh: Double
+        get() = appliances.sumOf { it.monthlyEnergyKwh }
+
+    val simplifiedBaselineCost: Double
+        get() = appliances.sumOf { it.simplifiedBaselineCost }
+
+    // Backward compatibility for existing callers
     val monthlyKwh: Float
-        get() = appliances.sumOf { it.monthlyKwh.toDouble() }.toFloat()
+        get() = monthlyEnergyKwh.toFloat()
 
     val monthlyCost: Float
-        get() = appliances.sumOf { it.monthlyCost.toDouble() }.toFloat()
+        get() = simplifiedBaselineCost.toFloat()
 }
 
 enum class CameraMode {
@@ -90,13 +101,47 @@ data class EditableAppliance(
     val powerWatts: Float,
     val usageHoursPerDay: Float,
     val monthlyUsageDays: Int,
-    val quantity: Int
+    val quantity: Int,
+    val activeWatts: Float? = null,
+    val dutyCycle: Float? = null,
+    val usageMode: UsageMode = UsageMode.DAILY_HOURS,
+    val minutesPerUse: Float = 0f,
+    val usesPerMonth: Int = 0
 ) {
+    val ratedWattage: Float get() = powerWatts
+
+    val activeOperatingWattage: Float
+        get() = activeWatts ?: (ApplianceMaster.getDefaults(label)?.activeOperatingWattage ?: powerWatts)
+
+    val resolvedDutyCycle: Float
+        get() = dutyCycle ?: (ApplianceMaster.getDefaults(label)?.dutyCycle ?: 1.0f)
+
+    val resolvedUsageMode: UsageMode
+        get() = if (usageMode != UsageMode.DAILY_HOURS) usageMode else (ApplianceMaster.getDefaults(label)?.usageMode ?: UsageMode.DAILY_HOURS)
+
+    val connectedLoadKw: Double
+        get() = ApplianceMaster.calculateConnectedLoadKw(ratedWattage, quantity.coerceAtLeast(0))
+
+    val monthlyEnergyKwh: Double
+        get() = ApplianceMaster.calculateMonthlyEnergyKwh(
+            activeOperatingWattage = activeOperatingWattage,
+            usageMode = resolvedUsageMode,
+            dailyHours = usageHoursPerDay.toDouble(),
+            minutesPerUse = if (minutesPerUse > 0f) minutesPerUse.toDouble() else (ApplianceMaster.getDefaults(label)?.minutesPerUse?.toDouble() ?: 0.0),
+            usesPerMonth = if (usesPerMonth > 0) usesPerMonth else (ApplianceMaster.getDefaults(label)?.usesPerMonth ?: 0),
+            monthlyDays = monthlyUsageDays,
+            quantity = quantity.coerceAtLeast(0),
+            dutyCycle = resolvedDutyCycle
+        )
+
+    val simplifiedBaselineCost: Double
+        get() = monthlyEnergyKwh * ApplianceMaster.authoritativeTariffRate
+
     val monthlyKwh: Float
-        get() = (powerWatts * usageHoursPerDay * monthlyUsageDays * quantity.coerceAtLeast(1)) / 1000f
+        get() = monthlyEnergyKwh.toFloat()
 
     val monthlyCost: Float
-        get() = ApplianceMaster.calculateMonthlyCost(monthlyKwh)
+        get() = simplifiedBaselineCost.toFloat()
 }
 
 data class ScannedAppliance(
@@ -340,14 +385,27 @@ class LensViewModel(
         val editableAppliances = grouped.map { (label, list) ->
             val defaults = ApplianceMaster.getDefaults(label)
             val totalQty = list.sumOf { it.quantity }.coerceAtLeast(1)
-            val resolvedPower = list.firstOrNull()?.powerWatts?.takeIf { it > 0f } ?: (defaults?.defaultWattage ?: 100f)
+            val resolvedPower = list.firstOrNull()?.powerWatts?.takeIf { it > 0f } ?: (defaults?.ratedWattage ?: 100f)
+            val activeWatts = defaults?.activeOperatingWattage ?: resolvedPower
+            val duty = defaults?.dutyCycle ?: 1.0f
+            val mode = defaults?.usageMode ?: UsageMode.DAILY_HOURS
+            val dailyHours = defaults?.typicalDailyHours ?: defaults?.typicalUsageHoursPerDay ?: 4f
+            val minutes = defaults?.minutesPerUse ?: 0f
+            val usesPerMo = defaults?.usesPerMonth ?: 0
+            val days = defaults?.monthlyDays ?: 30
+
             EditableAppliance(
                 id = java.util.UUID.randomUUID().toString(),
                 label = defaults?.name ?: label,
                 powerWatts = resolvedPower,
-                usageHoursPerDay = defaults?.typicalUsageHoursPerDay ?: 4f,
-                monthlyUsageDays = defaults?.monthlyUsageDays ?: 30,
-                quantity = totalQty
+                usageHoursPerDay = dailyHours,
+                monthlyUsageDays = days,
+                quantity = totalQty,
+                activeWatts = activeWatts,
+                dutyCycle = duty,
+                usageMode = mode,
+                minutesPerUse = minutes,
+                usesPerMonth = usesPerMo
             )
         }
         
@@ -370,18 +428,46 @@ class LensViewModel(
     }
 
     fun updateReviewAppliance(
-        id: String, label: String, powerWatts: Float,
-        usageHoursPerDay: Float, monthlyUsageDays: Int, quantity: Int
+        id: String,
+        label: String,
+        powerWatts: Float,
+        usageHoursPerDay: Float,
+        monthlyUsageDays: Int,
+        quantity: Int,
+        activeWatts: Float? = null,
+        dutyCycle: Float? = null
     ) {
         val currentState = _uiState.value
         if (currentState is LensUiState.Review) {
-            val updated = currentState.newAppliances.map {
-                if (it.id == id) it.copy(
-                    label = label, powerWatts = powerWatts,
-                    usageHoursPerDay = usageHoursPerDay,
-                    monthlyUsageDays = monthlyUsageDays,
-                    quantity = quantity
-                ) else it
+            val defaults = ApplianceMaster.getDefaults(label)
+            val updated = currentState.newAppliances.map { item ->
+                if (item.id == id) {
+                    val isLabelChanged = !item.label.equals(label, ignoreCase = true)
+                    val resolvedActiveWatts = activeWatts ?: if (isLabelChanged) {
+                        defaults?.activeOperatingWattage ?: powerWatts
+                    } else {
+                        if (item.powerWatts > 0f && item.activeOperatingWattage != item.powerWatts) {
+                            (powerWatts * (item.activeOperatingWattage / item.powerWatts))
+                        } else powerWatts
+                    }
+                    val resolvedDuty = dutyCycle ?: if (isLabelChanged) (defaults?.dutyCycle ?: 1.0f) else item.dutyCycle
+                    val resolvedMode = if (isLabelChanged) (defaults?.usageMode ?: UsageMode.DAILY_HOURS) else item.usageMode
+                    val resolvedMinutes = if (isLabelChanged) (defaults?.minutesPerUse ?: 0f) else item.minutesPerUse
+                    val resolvedUsesPerMonth = if (isLabelChanged) (defaults?.usesPerMonth ?: 0) else item.usesPerMonth
+
+                    item.copy(
+                        label = label,
+                        powerWatts = powerWatts,
+                        usageHoursPerDay = usageHoursPerDay,
+                        monthlyUsageDays = monthlyUsageDays,
+                        quantity = quantity,
+                        activeWatts = resolvedActiveWatts,
+                        dutyCycle = resolvedDuty,
+                        usageMode = resolvedMode,
+                        minutesPerUse = resolvedMinutes,
+                        usesPerMonth = resolvedUsesPerMonth
+                    )
+                } else item
             }
             _uiState.value = currentState.copy(newAppliances = updated)
         }
@@ -398,14 +484,18 @@ class LensViewModel(
     fun addReviewAppliance() {
         val currentState = _uiState.value
         if (currentState is LensUiState.Review) {
-            val defaults = ApplianceMaster.getDefaults("Other / Custom Appliance")
             val newAppliance = EditableAppliance(
                 id = java.util.UUID.randomUUID().toString(),
                 label = "Other / Custom Appliance",
-                powerWatts = defaults?.defaultWattage ?: 0f,
-                usageHoursPerDay = defaults?.typicalUsageHoursPerDay ?: 0f,
-                monthlyUsageDays = defaults?.monthlyUsageDays ?: 30,
-                quantity = 1
+                powerWatts = 0f,
+                usageHoursPerDay = 0f,
+                monthlyUsageDays = 30,
+                quantity = 1,
+                activeWatts = 0f,
+                dutyCycle = 1.0f,
+                usageMode = UsageMode.DAILY_HOURS,
+                minutesPerUse = 0f,
+                usesPerMonth = 0
             )
             val updated = currentState.newAppliances + newAppliance
             _uiState.value = currentState.copy(newAppliances = updated)
