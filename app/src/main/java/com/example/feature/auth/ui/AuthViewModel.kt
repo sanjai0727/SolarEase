@@ -169,7 +169,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                             username = body.user.username ?: "User",
                                             email = body.user.email,
                                             mobileNumber = body.user.mobileNumber,
-                                            houseAddress = body.user.houseAddress
+                                            houseAddress = body.user.houseAddress,
+                                            ebServiceNumber = com.example.core.session.UserSession.getSavedEbServiceNumber(getApplication()),
+                                            tnebRegisteredMobile = com.example.core.session.UserSession.getSavedTnebMobile(getApplication())
                                         )
                                         com.example.core.session.UserSession.saveUser(getApplication(), sessionUser)
                                         Log.d("AuthFlowDiagnose", "AUTH STEP 10: Session saved")

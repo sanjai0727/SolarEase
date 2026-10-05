@@ -104,5 +104,6 @@ object BillCalculatorHistoryStorage {
     fun resetForTesting() {
         _historyFlow.value = emptyList()
         sharedPreferences?.edit()?.clear()?.apply()
+        sharedPreferences = null
     }
 }

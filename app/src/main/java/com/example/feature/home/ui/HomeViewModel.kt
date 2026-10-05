@@ -30,6 +30,7 @@ import com.example.feature.home.ui.modules.MeterGraphPoint
 import com.example.feature.home.ui.modules.MeterReadingCache
 import com.example.feature.home.ui.modules.MeterReadingRecord
 import com.example.feature.home.ui.modules.MeterValidationResult
+import com.example.feature.home.ui.modules.TariffResolver
 import kotlinx.coroutines.flow.combine
 import java.util.Locale
 
@@ -93,6 +94,30 @@ data class HomeActivityEvent(
 )
 
 /**
+ * State models for Meter Reading correction flows.
+ */
+data class LowerThanPreviousDialogData(
+    val enteredReading: Double,
+    val previousReading: MeterReadingRecord
+)
+
+data class HistoricalEditConfirmData(
+    val reading: MeterReadingRecord,
+    val selectedReason: String = "Entered by mistake"
+)
+
+data class HistoricalCorrectionInputData(
+    val reading: MeterReadingRecord,
+    val reason: String,
+    val inputText: String = "",
+    val lowerBound: Double,
+    val lowerBoundDate: String,
+    val upperBound: Double?,
+    val upperBoundDate: String?,
+    val validationError: String? = null
+)
+
+/**
  * Complete, immutable Home Screen state containing real aggregated data.
  */
 data class HomeUiState(
@@ -108,7 +133,9 @@ data class HomeUiState(
     val dueDate: String? = null,
     val isPaid: Boolean = false,
     val billingPeriod: String? = null,
-    val tariffCategory: String = "TANGEDCO LT-1A · DOMESTIC",
+    val tariffCategory: String = "LT-IA · Domestic",
+    val tariffCode: String = "LT-IA",
+    val tariffName: String = "Domestic",
     val reapTier: ReapTier = ReapTier.PENDING,
     val activeJourneyStage: Int = 1,
     val appliances: List<Appliance> = emptyList(),
@@ -128,7 +155,12 @@ data class HomeUiState(
     val meterInputText: String = "",
     val meterValidationError: String? = null,
     val isSavingReading: Boolean = false,
-    val isEditingReading: Boolean = false
+    val isEditingReading: Boolean = false,
+
+    // Dialogs for Meter Reading Correction
+    val lowerThanPreviousDialog: LowerThanPreviousDialogData? = null,
+    val historicalEditConfirmDialog: HistoricalEditConfirmData? = null,
+    val historicalCorrectionInputDialog: HistoricalCorrectionInputData? = null
 ) {
     val totalConnectedLoadWatts: Float
         get() = appliances.sumOf { (it.powerRatingWatts * it.quantity).toDouble() }.toFloat()
@@ -212,10 +244,11 @@ class HomeViewModel(
             ?: latest?.assessmentDate?.takeIf { it.isNotBlank() }
             ?: baseline?.baselineDate
 
-        val tariff = billData?.tariffCode?.takeIf { it.isNotBlank() }
+        val tariffRaw = billData?.tariffCode?.takeIf { it.isNotBlank() }
             ?: billData?.serviceCategory?.takeIf { it.isNotBlank() }
             ?: baseline?.tariffCode
-            ?: "TANGEDCO LT-1A · DOMESTIC"
+            ?: "LT-IA · Domestic"
+        val resolvedTariff = TariffResolver.resolve(tariffRaw)
 
         val dailyPts = MeterReadingCache.getDailyConsumptionPoints()
         val activeUnits = if (hasReading && metrics != null) metrics.unitsConsumed else parsedUnits
@@ -248,7 +281,9 @@ class HomeViewModel(
             dueDate = latest?.dueDate?.takeIf { it.isNotBlank() },
             isPaid = isPaid,
             billingPeriod = period,
-            tariffCategory = tariff,
+            tariffCategory = resolvedTariff.displayLabel,
+            tariffCode = resolvedTariff.tariffCode,
+            tariffName = resolvedTariff.tariffName,
             reapTier = tier,
             activeJourneyStage = if (hasBill) 2 else 1,
             recommendedSolarCapacityKw = recommendedSolarKw,
@@ -333,6 +368,13 @@ class HomeViewModel(
                         (activeUnits * 0.8 * 4.5).coerceAtLeast(0.0)
                     } else null
 
+                    val resolvedTariff = TariffResolver.resolve(
+                        metrics?.tariffCategory
+                            ?: baseline?.tariffCode
+                            ?: current.billData?.tariffCode
+                            ?: current.tariffCategory
+                    )
+
                     current.copy(
                         meterBaseline = baseline,
                         currentEnergyMetrics = metrics,
@@ -341,6 +383,9 @@ class HomeViewModel(
                         hasCurrentReading = hasReading,
                         isTodayReadingEntered = metrics?.isTodayLogged ?: false,
                         todayEnteredReading = metrics?.todayReading,
+                        tariffCategory = resolvedTariff.displayLabel,
+                        tariffCode = resolvedTariff.tariffCode,
+                        tariffName = resolvedTariff.tariffName,
                         unitsConsumed = activeUnits,
                         reapTier = tier,
                         recommendedSolarCapacityKw = recKw,
@@ -405,9 +450,7 @@ class HomeViewModel(
         val period = latest?.period?.takeIf { it.isNotBlank() }
             ?: latest?.assessmentDate?.takeIf { it.isNotBlank() }
 
-        val tariff = billData.tariffCode.takeIf { it.isNotBlank() }
-            ?: billData.serviceCategory.takeIf { it.isNotBlank() }
-            ?: "TANGEDCO LT-1A · DOMESTIC"
+        val resolvedTariff = billData.normalizedTariff
 
         // REAP Classification
         val tier = when {
@@ -447,7 +490,9 @@ class HomeViewModel(
                 dueDate = latest?.dueDate?.takeIf { it.isNotBlank() },
                 isPaid = isPaid,
                 billingPeriod = period,
-                tariffCategory = tariff,
+                tariffCategory = resolvedTariff.displayLabel,
+                tariffCode = resolvedTariff.tariffCode,
+                tariffName = resolvedTariff.tariffName,
                 reapTier = tier,
                 activeJourneyStage = journeyStage,
                 recommendedSolarCapacityKw = recommendedSolarKw,
@@ -560,7 +605,8 @@ class HomeViewModel(
                         meterInputText = "",
                         meterValidationError = null,
                         isSavingReading = false,
-                        isEditingReading = false
+                        isEditingReading = false,
+                        lowerThanPreviousDialog = null
                     )
                 }
 
@@ -579,6 +625,17 @@ class HomeViewModel(
                     } catch (e: Exception) {
                         Log.w("HomeViewModel", "Could not sync meter reading to backend (offline mode)", e)
                     }
+                }
+            }
+            is MeterValidationResult.LowerThanPrevious -> {
+                _uiState.update {
+                    it.copy(
+                        lowerThanPreviousDialog = LowerThanPreviousDialogData(
+                            enteredReading = result.enteredReading,
+                            previousReading = result.previousReading
+                        ),
+                        isSavingReading = false
+                    )
                 }
             }
             is MeterValidationResult.DuplicateToday -> {
@@ -659,6 +716,151 @@ class HomeViewModel(
                 meterInputText = "",
                 meterValidationError = null
             )
+        }
+    }
+
+    fun dismissLowerThanPreviousDialog() {
+        _uiState.update { it.copy(lowerThanPreviousDialog = null) }
+    }
+
+    fun onConfirmCorrectPreviousReading() {
+        val lowerDialog = _uiState.value.lowerThanPreviousDialog ?: return
+        val targetReading = lowerDialog.previousReading
+        _uiState.update { it.copy(lowerThanPreviousDialog = null) }
+        onInitiateEditReading(targetReading.readingDate)
+    }
+
+    fun onInitiateEditReading(readingDateIso: String) {
+        val record = MeterReadingCache.getReadingForDate(readingDateIso) ?: return
+        val todayIso = MeterReadingCache.getTodayIsoDate()
+        if (record.readingDate == todayIso) {
+            startEditingReading()
+        } else {
+            _uiState.update {
+                it.copy(
+                    historicalEditConfirmDialog = HistoricalEditConfirmData(
+                        reading = record,
+                        selectedReason = "Entered by mistake"
+                    )
+                )
+            }
+        }
+    }
+
+    fun initiateEditCurrentReading() {
+        val last = MeterReadingCache.getLastReading() ?: return
+        onInitiateEditReading(last.readingDate)
+    }
+
+    fun dismissHistoricalEditConfirmDialog() {
+        _uiState.update { it.copy(historicalEditConfirmDialog = null) }
+    }
+
+    fun onHistoricalReasonSelected(reason: String) {
+        _uiState.update { current ->
+            current.copy(
+                historicalEditConfirmDialog = current.historicalEditConfirmDialog?.copy(selectedReason = reason)
+            )
+        }
+    }
+
+    fun onContinueHistoricalEdit() {
+        val confirmData = _uiState.value.historicalEditConfirmDialog ?: return
+        val bounds = MeterReadingCache.getSurroundingBounds(confirmData.reading.readingDate)
+        val defaultText = if (confirmData.reading.readingValue % 1.0 == 0.0) {
+            confirmData.reading.readingValue.toInt().toString()
+        } else {
+            confirmData.reading.readingValue.toString()
+        }
+
+        _uiState.update {
+            it.copy(
+                historicalEditConfirmDialog = null,
+                historicalCorrectionInputDialog = HistoricalCorrectionInputData(
+                    reading = confirmData.reading,
+                    reason = confirmData.selectedReason,
+                    inputText = defaultText,
+                    lowerBound = bounds.lowerBound,
+                    lowerBoundDate = bounds.lowerBoundDate,
+                    upperBound = bounds.upperBound,
+                    upperBoundDate = bounds.upperBoundDate,
+                    validationError = null
+                )
+            )
+        }
+    }
+
+    fun dismissHistoricalCorrectionInputDialog() {
+        _uiState.update { it.copy(historicalCorrectionInputDialog = null) }
+    }
+
+    fun onHistoricalCorrectionInputChanged(text: String) {
+        val sanitized = text.filter { it.isDigit() || it == '.' }
+        if (sanitized.count { it == '.' } <= 1) {
+            _uiState.update { current ->
+                current.copy(
+                    historicalCorrectionInputDialog = current.historicalCorrectionInputDialog?.copy(
+                        inputText = sanitized,
+                        validationError = null
+                    )
+                )
+            }
+        }
+    }
+
+    fun saveHistoricalCorrection() {
+        val inputData = _uiState.value.historicalCorrectionInputDialog ?: return
+        val readingVal = inputData.inputText.trim().toDoubleOrNull()
+        if (readingVal == null) {
+            _uiState.update { current ->
+                current.copy(
+                    historicalCorrectionInputDialog = current.historicalCorrectionInputDialog?.copy(
+                        validationError = "Please enter a valid numeric reading."
+                    )
+                )
+            }
+            return
+        }
+
+        val result = MeterReadingCache.correctHistoricalReading(
+            readingDateIso = inputData.reading.readingDate,
+            newReadingValue = readingVal,
+            reason = inputData.reason
+        )
+
+        when (result) {
+            is MeterValidationResult.Success -> {
+                _uiState.update {
+                    it.copy(
+                        historicalCorrectionInputDialog = null,
+                        meterValidationError = null
+                    )
+                }
+
+                // If user authenticated, async sync update
+                viewModelScope.launch(ioDispatcher) {
+                    try {
+                        val token = UserSession.accessToken
+                        if (!token.isNullOrBlank()) {
+                            meterApi.updateTodayReading(
+                                MeterReadingUpdateDto(readingValue = readingVal)
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.w("HomeViewModel", "Could not sync corrected reading to backend", e)
+                    }
+                }
+            }
+            is MeterValidationResult.Error -> {
+                _uiState.update { current ->
+                    current.copy(
+                        historicalCorrectionInputDialog = current.historicalCorrectionInputDialog?.copy(
+                            validationError = result.message
+                        )
+                    )
+                }
+            }
+            is MeterValidationResult.DuplicateToday -> {}
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.feature.home.ui.modules
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -59,30 +60,44 @@ fun TnebBillStatusRoute(
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             submitState == SubmitState.SUCCESS -> {
+                BackHandler(enabled = true) {
+                    viewModel.resetValidationState()
+                }
                 TnebBillDashboard(
                     onNavigateBack = {
                         viewModel.resetValidationState()
-                        onNavigateBack()
                     },
                     viewModel = viewModel,
-                    onNavigateToSolarLens = onNavigateToSolarLens
+                    onNavigateToSolarLens = onNavigateToSolarLens,
+                    onCheckBillAgain = {
+                        viewModel.resetValidationState()
+                    }
                 )
             }
             submitState == SubmitState.SUBMITTING -> {
+                BackHandler(enabled = true) {
+                    viewModel.resetValidationState()
+                }
                 TnebBillLoadingScreen(
                     viewModel = viewModel,
                     onCancel = { viewModel.resetValidationState() }
                 )
             }
             submitState == SubmitState.ERROR || submitState == SubmitState.PARSING_ERROR || submitState == SubmitState.INVALID_DETAILS || pageLoadError -> {
+                BackHandler(enabled = true) {
+                    viewModel.resetValidationState()
+                }
                 TnebBillErrorScreen(
                     viewModel = viewModel,
                     onRetry = { viewModel.checkBillStatus() },
                     onEditDetails = { viewModel.resetValidationState() },
-                    onNavigateBack = onNavigateBack
+                    onNavigateBack = { viewModel.resetValidationState() }
                 )
             }
             captchaImageBase64 != null -> {
+                BackHandler(enabled = true) {
+                    viewModel.resetValidationState()
+                }
                 // Screen 2: CAPTCHA Verification
                 TnebCaptchaVerificationScreen(
                     viewModel = viewModel,

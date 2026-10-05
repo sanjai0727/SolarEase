@@ -1,5 +1,6 @@
 package com.example.feature.home.ui.modules
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -51,9 +52,15 @@ private enum class BillDashboardScreen {
 fun TnebBillDashboard(
     onNavigateBack: () -> Unit,
     viewModel: TnebBillStatusViewModel,
-    onNavigateToSolarLens: () -> Unit = {}
+    onNavigateToSolarLens: () -> Unit = {},
+    onCheckBillAgain: () -> Unit = { viewModel.resetValidationState() }
 ) {
     var activeSubScreen by remember { mutableStateOf(BillDashboardScreen.CURRENT_BILL) }
+
+    // Intercept back press when inspecting sub-screens to return to the current bill result
+    BackHandler(enabled = activeSubScreen != BillDashboardScreen.CURRENT_BILL) {
+        activeSubScreen = BillDashboardScreen.CURRENT_BILL
+    }
     val serviceConnectionNumber by viewModel.serviceConnectionNumber.collectAsState()
     val rawBillData by viewModel.billData.collectAsState()
 
@@ -89,7 +96,8 @@ fun TnebBillDashboard(
                 onViewHistory = {
                     activeSubScreen = BillDashboardScreen.BILL_HISTORY
                 },
-                onNavigateToSolarLens = onNavigateToSolarLens
+                onNavigateToSolarLens = onNavigateToSolarLens,
+                onCheckBillAgain = onCheckBillAgain
             )
         }
         BillDashboardScreen.BILL_HISTORY -> {
@@ -129,7 +137,8 @@ private fun CurrentBillView(
     onNavigateBack: () -> Unit,
     onViewDetails: () -> Unit,
     onViewHistory: () -> Unit,
-    onNavigateToSolarLens: () -> Unit
+    onNavigateToSolarLens: () -> Unit,
+    onCheckBillAgain: () -> Unit
 ) {
     var technicalExpanded by remember { mutableStateOf(false) }
     val isPaid = consumerData.isDuesNil || currentBill.isPaid
@@ -339,6 +348,34 @@ private fun CurrentBillView(
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Secondary Action: Re-trigger fresh bill check flow
+                    OutlinedButton(
+                        onClick = onCheckBillAgain,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, SolarEaseEmerald),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = SolarEaseEmerald
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = SolarEaseEmerald
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Check Bill Status Again",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
 
@@ -478,7 +515,7 @@ private fun CurrentBillView(
                         Column {
                             Text("SERVICE CONNECTION DETAILS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SolarEaseEmerald, letterSpacing = 0.5.sp)
                             val displayConsumer = consumerData.consumerName.ifBlank { "TNEB Consumer" }
-                            val displayTariff = consumerData.tariffCode.ifBlank { "LT Domestic" }
+                            val displayTariff = consumerData.normalizedTariff.displayLabel
                             Text("Consumer: $displayConsumer • $displayTariff", fontSize = 13.sp, color = TextDark, fontWeight = FontWeight.Medium)
                         }
                         Icon(
@@ -494,7 +531,7 @@ private fun CurrentBillView(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             TechnicalRow("Service Connection No.", consumerData.consumerNumber.ifBlank { serviceNo.ifBlank { "Not available" } })
-                            TechnicalRow("Tariff & Phase", "${consumerData.tariffCode.ifBlank { "Not available" }} • Phase ${consumerData.phase.ifBlank { "Not available" }}")
+                            TechnicalRow("Tariff & Phase", "${consumerData.normalizedTariff.displayLabel} • Phase ${consumerData.phase.ifBlank { "Not available" }}")
                             TechnicalRow("Sanctioned Load", consumerData.sanctionedLoad.ifBlank { "Not available" })
                             val circleInfo = if (consumerData.region.isNotBlank() || consumerData.circle.isNotBlank()) {
                                 "${consumerData.region} / ${consumerData.circle}".trim('/', ' ')
@@ -584,7 +621,7 @@ internal fun BillHistoryView(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         val name = consumerData.consumerName.ifBlank { "TNEB Consumer" }
-                        val tariff = consumerData.tariffCode.ifBlank { "LT Domestic" }
+                        val tariff = consumerData.normalizedTariff.displayLabel
                         Text("$name • $tariff", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.SemiBold)
                         val circle = consumerData.region.ifBlank { consumerData.circle.ifBlank { "Tamil Nadu" } }
                         Text("$serviceNo • $circle", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
@@ -898,7 +935,7 @@ internal fun BillDetailsView(
                         }
                     }
                     Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFFF1F5F9)) {
-                        Text(consumerData.tariffCode.ifBlank { "LT Domestic" }, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        Text(consumerData.normalizedTariff.displayLabel, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }
             }

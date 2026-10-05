@@ -66,6 +66,8 @@ import com.example.feature.home.ui.modules.DailyConsumptionGraph
 import com.example.feature.home.ui.modules.MeterReadingGraph
 import com.example.feature.home.ui.modules.MeterReadingProgressionGraph
 import androidx.compose.material.icons.filled.History
+import com.example.ui.components.SolarEaseBottomNavigation
+import com.example.ui.components.SolarEaseNavTab
 import com.example.ui.theme.*
 import java.util.Locale
 
@@ -80,6 +82,8 @@ fun HomeRoute(
     onNavigateToBillHistory: () -> Unit = {},
     onNavigateToSolarPanel: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToAnalytics: () -> Unit = {},
+    onNavigateToRecommends: () -> Unit = {},
     onNavigateToActivity: () -> Unit = {},
     onNavigateToSolar: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
@@ -164,11 +168,11 @@ fun HomeRoute(
     Scaffold(
         containerColor = StitchSurface,
         bottomBar = {
-            StitchBottomNavigation(
-                onHome = {},
-                onSolarLens = onNavigateToSolarEaseLens,
-                onCalculator = onNavigateToBillCalculator,
-                onProfile = onNavigateToProfile
+            SolarEaseBottomNavigation(
+                currentTab = SolarEaseNavTab.HOME,
+                onNavigateToHome = {},
+                onNavigateToRecommends = onNavigateToRecommends,
+                onNavigateToProfile = onNavigateToProfile
             )
         }
     ) { padding ->
@@ -208,13 +212,15 @@ fun HomeRoute(
                     onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
                     onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
                     onStartEditingReading = { viewModel.startEditingReading() },
-                    onCancelEditingReading = { viewModel.cancelEditingReading() }
+                    onCancelEditingReading = { viewModel.cancelEditingReading() },
+                    onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
                 )
 
                 // ── 3. Meter Reading Progression Graph ────────────────
                 MeterReadingProgressionGraph(
                     points = uiState.meterGraphPoints,
-                    billData = uiState.billData
+                    billData = uiState.billData,
+                    onEditReading = { viewModel.onInitiateEditReading(it) }
                 )
 
                 // ── 4. REAP Energy Profile / Household Classification ───
@@ -241,7 +247,8 @@ fun HomeRoute(
                     onChatbot = onNavigateToElectricityChatbot,
                     onSolarLens = onNavigateToSolarEaseLens,
                     onCalculator = onNavigateToBillCalculator,
-                    hasConnectedBill = uiState.hasConnectedBill
+                    hasConnectedBill = uiState.hasConnectedBill,
+                    tariffCode = uiState.tariffCode
                 )
 
                 // ── 8. Recent Household Activity / Event Log ────────────
@@ -251,6 +258,215 @@ fun HomeRoute(
 
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+
+        // ── Dialog 1: Reading Lower Than Previous ──────────────────────
+        val lowerDialog = uiState.lowerThanPreviousDialog
+        if (lowerDialog != null) {
+            val prevFormatted = String.format(Locale.getDefault(), "%,.0f", lowerDialog.previousReading.readingValue)
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissLowerThanPreviousDialog() },
+                title = {
+                    Text(
+                        text = "Reading Lower Than Previous",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchOnSurface
+                    )
+                },
+                text = {
+                    Text(
+                        text = "The reading you entered is lower than your last recorded reading ($prevFormatted kWh). If the previous reading was entered incorrectly, you can correct it.",
+                        fontSize = 13.sp,
+                        color = StitchOnSurfaceVariant,
+                        lineHeight = 18.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.onConfirmCorrectPreviousReading() },
+                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Correct Previous Reading", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissLowerThanPreviousDialog() }
+                    ) {
+                        Text("Cancel", fontSize = 13.sp, color = StitchOnSurfaceVariant)
+                    }
+                },
+                containerColor = StitchSurfaceContainerLowest,
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
+
+        // ── Dialog 2: Edit Previous Reading Confirmation ───────────────
+        val confirmData = uiState.historicalEditConfirmDialog
+        if (confirmData != null) {
+            val dateLabel = confirmData.reading.displayDate.ifBlank { confirmData.reading.readingDate }
+            val reasons = listOf("Entered by mistake", "Reading was recorded incorrectly", "Other")
+
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissHistoricalEditConfirmDialog() },
+                title = {
+                    Text(
+                        text = "Edit Previous Reading?",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchOnSurface
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "You're changing the meter reading recorded on $dateLabel. This may affect your consumption, estimated bill, and analytics.",
+                            fontSize = 13.sp,
+                            color = StitchOnSurfaceVariant,
+                            lineHeight = 18.sp
+                        )
+
+                        Text(
+                            text = "Reason for correction",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = StitchOnSurface
+                        )
+
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            reasons.forEach { reason ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { viewModel.onHistoricalReasonSelected(reason) }
+                                        .padding(vertical = 2.dp, horizontal = 4.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = confirmData.selectedReason == reason,
+                                        onClick = { viewModel.onHistoricalReasonSelected(reason) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = StitchPrimaryContainer)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = reason,
+                                        fontSize = 13.sp,
+                                        color = StitchOnSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.onContinueHistoricalEdit() },
+                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Continue", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissHistoricalEditConfirmDialog() }
+                    ) {
+                        Text("Cancel", fontSize = 13.sp, color = StitchOnSurfaceVariant)
+                    }
+                },
+                containerColor = StitchSurfaceContainerLowest,
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
+
+        // ── Dialog 3: Correct Meter Reading Entry ──────────────────────
+        val inputData = uiState.historicalCorrectionInputDialog
+        if (inputData != null) {
+            val dateLabel = inputData.reading.displayDate.ifBlank { inputData.reading.readingDate }
+            val lowerFmt = String.format(Locale.getDefault(), "%,.0f", inputData.lowerBound)
+            val upperFmt = if (inputData.upperBound != null) String.format(Locale.getDefault(), "%,.0f", inputData.upperBound) else null
+
+            val rangeHint = if (upperFmt != null) {
+                "Allowed range: $lowerFmt – $upperFmt kWh"
+            } else {
+                "Allowed range: ≥ $lowerFmt kWh"
+            }
+
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissHistoricalCorrectionInputDialog() },
+                title = {
+                    Text(
+                        text = "Correct Meter Reading",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchOnSurface
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "$dateLabel · Recorded: ${String.format(Locale.getDefault(), "%,.0f", inputData.reading.readingValue)} kWh",
+                            fontSize = 12.sp,
+                            color = StitchOnSurfaceVariant
+                        )
+
+                        Text(
+                            text = rangeHint,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = StitchPrimaryContainer
+                        )
+
+                        OutlinedTextField(
+                            value = inputData.inputText,
+                            onValueChange = { viewModel.onHistoricalCorrectionInputChanged(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                Text(
+                                    text = "kWh",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = StitchOnSurfaceVariant,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            isError = inputData.validationError != null,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        if (inputData.validationError != null) {
+                            Text(
+                                text = inputData.validationError,
+                                fontSize = 11.sp,
+                                color = StitchError
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.saveHistoricalCorrection() },
+                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Save", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissHistoricalCorrectionInputDialog() }
+                    ) {
+                        Text("Cancel", fontSize = 13.sp, color = StitchOnSurfaceVariant)
+                    }
+                },
+                containerColor = StitchSurfaceContainerLowest,
+                shape = RoundedCornerShape(16.dp)
+            )
         }
     }
 }
@@ -494,7 +710,8 @@ private fun PrimaryEnergyCard(
     onSaveMeterReading: () -> Unit,
     onUpdateTodayReading: () -> Unit,
     onStartEditingReading: () -> Unit,
-    onCancelEditingReading: () -> Unit
+    onCancelEditingReading: () -> Unit,
+    onEditCurrentReading: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -970,7 +1187,23 @@ private fun PrimaryEnergyCard(
                         border = BorderStroke(1.dp, StitchOutline)
                     ) {
                         Column(modifier = Modifier.padding(8.dp)) {
-                            Text("CURRENT READING", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StitchOnSurfaceVariant)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("CURRENT READING", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StitchOnSurfaceVariant)
+                                if (!uiState.isTodayReadingEntered) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit previous reading",
+                                        modifier = Modifier
+                                            .size(13.dp)
+                                            .clickable { onEditCurrentReading() },
+                                        tint = StitchPrimaryContainer
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "${String.format(Locale.getDefault(), "%,.0f", currentReadingVal)} kWh",
@@ -1883,7 +2116,8 @@ private fun QuickToolsSection(
     onChatbot: () -> Unit,
     onSolarLens: () -> Unit,
     onCalculator: () -> Unit,
-    hasConnectedBill: Boolean
+    hasConnectedBill: Boolean,
+    tariffCode: String = "LT-IA"
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1916,7 +2150,7 @@ private fun QuickToolsSection(
             QuickToolCard(
                 modifier = Modifier.weight(1f),
                 title = "Bill Status",
-                subtitle = if (hasConnectedBill) "TNEB LT-1A" else "Check dues & units",
+                subtitle = if (hasConnectedBill) "TNEB $tariffCode" else "Check dues & units",
                 icon = Icons.Default.ReceiptLong,
                 iconTint = Color(0xFF0284C7), // Light blue accent
                 onClick = onBillStatus
@@ -2147,56 +2381,8 @@ private fun RecentActivitySection(
     }
 }
 
-// ─── 10. Stitch Bottom Navigation ─────────────────────────────────────────────
+// ─── 10. Stitch Bottom Navigation (Replaced with SolarEaseBottomNavigation) ───────
 
-@Composable
-private fun StitchBottomNavigation(
-    onHome: () -> Unit,
-    onSolarLens: () -> Unit,
-    onCalculator: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = StitchSurface.copy(alpha = 0.95f),
-        border = BorderStroke(1.dp, StitchOutline)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(64.dp)
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            StitchNavItem(
-                icon = Icons.Default.Home,
-                label = "Home",
-                isSelected = true,
-                onClick = onHome
-            )
-            StitchNavItem(
-                icon = Icons.Default.CameraOutdoor,
-                label = "Solar Lens",
-                isSelected = false,
-                onClick = onSolarLens
-            )
-            StitchNavItem(
-                icon = Icons.Default.Calculate,
-                label = "Calculator",
-                isSelected = false,
-                onClick = onCalculator
-            )
-            StitchNavItem(
-                icon = Icons.Default.Person,
-                label = "Profile",
-                isSelected = false,
-                onClick = onProfile
-            )
-        }
-    }
-}
 
 @Composable
 private fun StitchNavItem(

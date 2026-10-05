@@ -36,6 +36,9 @@ data class TnebConsumerBillData(
     val latestBill: TnebBillRecord?
         get() = bills.firstOrNull()
 
+    val normalizedTariff: NormalizedTariff
+        get() = TariffResolver.resolve(tariffCode.ifBlank { serviceCategory })
+
     val totalDuesFormatted: String
         get() = when {
             isDuesNil -> "₹0.00"

@@ -100,7 +100,51 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 onNavigateToTnebBillStatus = { navController.navigate(Screen.TnebBillStatus) },
                 onNavigateToBillHistory = { navController.navigate(Screen.BillHistory) },
                 onNavigateToSolarPanel = { navController.navigate(Screen.SolarPanel) },
-                onNavigateToProfile = { navController.navigate(Screen.Profile) }
+                onNavigateToProfile = { navController.navigate(Screen.Profile) { launchSingleTop = true } },
+                onNavigateToRecommends = { navController.navigate(Screen.Recommends) { launchSingleTop = true } }
+            )
+        }
+
+        composable<Screen.Analytics> {
+            com.example.feature.analytics.ui.AnalyticsRoute(
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToRecommends = {
+                    navController.navigate(Screen.Recommends) { launchSingleTop = true }
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Screen.Profile) { launchSingleTop = true }
+                },
+                onNavigateToTnebBillStatus = {
+                    navController.navigate(Screen.TnebBillStatus)
+                },
+                onNavigateToLogMeterReading = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable<Screen.Recommends> {
+            com.example.feature.recommends.ui.RecommendsRoute(
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Screen.Profile) { launchSingleTop = true }
+                },
+                onNavigateToSolarLens = {
+                    navController.navigate(Screen.SolarEaseLens)
+                }
             )
         }
         
@@ -253,6 +297,15 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
         composable<Screen.Profile> {
             com.example.feature.profile.ui.ProfileRoute(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToRecommends = {
+                    navController.navigate(Screen.Recommends) { launchSingleTop = true }
+                },
                 onSignOut = {
                     navController.navigate(Screen.AuthGraph) {
                         popUpTo(navController.graph.id) { inclusive = true }

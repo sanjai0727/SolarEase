@@ -44,4 +44,13 @@ object RetrofitClient {
             .build()
             .create(com.example.feature.lens.data.LensApi::class.java)
     }
+
+    val meterApi: MeterApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(MeterApi::class.java)
+    }
 }

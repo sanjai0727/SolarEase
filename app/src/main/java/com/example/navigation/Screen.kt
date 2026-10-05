@@ -20,6 +20,12 @@ sealed class Screen {
     // New Routes
     @Serializable
     data object Home : Screen()
+
+    @Serializable
+    data object Analytics : Screen()
+
+    @Serializable
+    data object Recommends : Screen()
     
     @Serializable
     data object BillCalculator : Screen()

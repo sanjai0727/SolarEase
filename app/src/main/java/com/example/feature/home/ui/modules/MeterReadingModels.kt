@@ -9,7 +9,7 @@ data class MeterCycleBaseline(
     val baselineDate: String, // e.g. "01 Sep 2026" or "01/09/2026"
     val baselineReading: Double, // e.g. 12450.0
     val previousBilledUnits: Double? = null, // Historical baseline only (e.g. 302.0)
-    val tariffCode: String = "TANGEDCO LT-1A · DOMESTIC",
+    val tariffCode: String = "LT-IA · Domestic",
     val serviceConnectionNumber: String? = null
 )
 
@@ -23,7 +23,10 @@ data class MeterReadingRecord(
     val timestamp: Long = System.currentTimeMillis(),
     val dailyConsumption: Double? = null, // Today - previous reading
     val unitsSinceBaseline: Double = 0.0, // Today - baseline reading
-    val notes: String? = null
+    val notes: String? = null,
+    val isCorrected: Boolean = false,
+    val correctionReason: String? = null,
+    val correctedAt: Long? = null
 )
 
 @Serializable
@@ -39,7 +42,7 @@ data class CurrentCycleEnergyMetrics(
     val estimatedBill: Double, // Calculated from TNEBBillCalculator
     val isTodayLogged: Boolean,
     val todayReading: Double? = null,
-    val tariffCategory: String = "TANGEDCO LT-1A · DOMESTIC",
+    val tariffCategory: String = "LT-IA · Domestic",
     val billingPeriodDisplay: String = ""
 )
 
@@ -59,7 +62,8 @@ data class MeterGraphPoint(
     val isBaseline: Boolean = false,
     val fullDate: String = "",
     val subLabel: String = "", // e.g. "Last Bill", "Today", "Start", "End"
-    val hasReading: Boolean = true // false if monthly timeline guide without recorded reading
+    val hasReading: Boolean = true, // false if monthly timeline guide without recorded reading
+    val readingDateIso: String = ""
 )
 
 data class MeterProgressionWindow(
@@ -82,8 +86,27 @@ data class DailyConsumptionPoint(
     val cumulativeReading: Double // e.g. 12455.0
 )
 
+data class SurroundingBounds(
+    val lowerBound: Double,
+    val lowerBoundDate: String,
+    val upperBound: Double?,
+    val upperBoundDate: String?
+)
+
 sealed class MeterValidationResult {
     data class Success(val reading: MeterReadingRecord) : MeterValidationResult()
-    data class Error(val message: String) : MeterValidationResult()
+    open class Error(open val message: String) : MeterValidationResult() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Error) return false
+            return message == other.message
+        }
+        override fun hashCode(): Int = message.hashCode()
+    }
+    data class LowerThanPrevious(
+        val enteredReading: Double,
+        val previousReading: MeterReadingRecord,
+        override val message: String = "Meter reading cannot be lower than the previous recorded reading (${String.format(java.util.Locale.getDefault(), "%,.0f", previousReading.readingValue)} kWh)."
+    ) : Error(message)
     data class DuplicateToday(val existingReading: MeterReadingRecord) : MeterValidationResult()
 }

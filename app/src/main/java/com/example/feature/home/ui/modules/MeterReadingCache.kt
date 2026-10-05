@@ -99,7 +99,8 @@ object MeterReadingCache {
         val billDateRaw = latest.assessmentDate.ifBlank { latest.entryDate.ifBlank { latest.dueDate } }
         val formattedDate = normalizeDateString(billDateRaw)
         val cycleId = "BILL-${latest.id.ifBlank { billDateRaw.replace("/", "").replace("-", "") }}"
-        val tariff = billData.tariffCode.ifBlank { billData.serviceCategory.ifBlank { "TANGEDCO LT-1A · DOMESTIC" } }
+        val resolvedTariff = TariffResolver.resolve(billData.tariffCode.ifBlank { billData.serviceCategory })
+        val tariff = resolvedTariff.displayLabel
 
         if (billKwh == null || billKwh <= 0.0) {
             logW("Connected bill has no valid cumulative kWh meter reading. kwh='${latest.kwh}'")
@@ -201,7 +202,15 @@ object MeterReadingCache {
         val prevReadingVal = lastReading?.readingValue ?: base.baselineReading
         if (readingValue < prevReadingVal) {
             val prevFormatted = String.format(Locale.getDefault(), "%,.0f", prevReadingVal)
-            return MeterValidationResult.Error("Meter reading cannot be lower than the previous recorded reading ($prevFormatted kWh).")
+            return if (lastReading != null) {
+                MeterValidationResult.LowerThanPrevious(
+                    enteredReading = readingValue,
+                    previousReading = lastReading,
+                    message = "Meter reading cannot be lower than the previous recorded reading ($prevFormatted kWh)."
+                )
+            } else {
+                MeterValidationResult.Error("Meter reading cannot be lower than your last bill reading ($prevFormatted kWh).")
+            }
         }
 
         val unitsSinceBase = max(0.0, readingValue - base.baselineReading)
@@ -216,13 +225,13 @@ object MeterReadingCache {
             unitsSinceBaseline = unitsSinceBase
         )
 
-        val updatedList = (currentList + newRecord).sortedBy { it.readingDate }
+        val updatedList = recomputeSequence(currentList + newRecord, base.baselineReading)
         _readings.value = updatedList
         recalculateMetrics()
         saveToPrefs()
 
         logD("Saved reading: $readingValue kWh on $dateKey (Daily: $dailyUnits, Cycle: $unitsSinceBase)")
-        return MeterValidationResult.Success(newRecord)
+        return MeterValidationResult.Success(updatedList.first { it.id == newRecord.id })
     }
 
     /**
@@ -266,25 +275,149 @@ object MeterReadingCache {
             return MeterValidationResult.Error("Updated reading cannot be lower than prior reading ($prevFormatted kWh).")
         }
 
-        val unitsSinceBase = max(0.0, readingValue - base.baselineReading)
-        val dailyUnits = max(0.0, readingValue - prevVal)
+        // Subsequent readings (after target date, if any)
+        val subsequentReadings = currentList.filter { it.readingDate > targetKey }
+        val nextVal = subsequentReadings.minByOrNull { it.readingDate }?.readingValue
+        if (nextVal != null && readingValue > nextVal) {
+            val nextFormatted = String.format(Locale.getDefault(), "%,.0f", nextVal)
+            return MeterValidationResult.Error("Updated reading cannot be higher than subsequent reading ($nextFormatted kWh).")
+        }
 
         val existing = currentList[existingIndex]
         val updated = existing.copy(
             readingValue = readingValue,
-            dailyConsumption = dailyUnits,
-            unitsSinceBaseline = unitsSinceBase,
             timestamp = System.currentTimeMillis()
         )
 
         val mutableList = currentList.toMutableList()
         mutableList[existingIndex] = updated
-        _readings.value = mutableList.sortedBy { it.readingDate }
+        val recomputed = recomputeSequence(mutableList, base.baselineReading)
+        _readings.value = recomputed
         recalculateMetrics()
         saveToPrefs()
 
         logD("Updated today's reading to $readingValue kWh")
-        return MeterValidationResult.Success(updated)
+        return MeterValidationResult.Success(recomputed.first { it.id == existing.id })
+    }
+
+    /**
+     * Corrects a historical reading recorded on a previous date.
+     * Validates that:
+     * 1. readingValue >= 0.0
+     * 2. readingValue >= lowerBound (previous reading or baseline)
+     * 3. readingValue <= upperBound (subsequent reading, if one exists)
+     * Recomputes all sequential consumption values and energy metrics.
+     * Preserves audit metadata (isCorrected, correctionReason, correctedAt).
+     */
+    fun correctHistoricalReading(
+        readingDateIso: String,
+        newReadingValue: Double,
+        reason: String? = null
+    ): MeterValidationResult {
+        val base = _baseline.value
+            ?: return MeterValidationResult.Error("No active billing cycle found.")
+
+        if (newReadingValue < 0.0) {
+            return MeterValidationResult.Error("Meter reading cannot be negative.")
+        }
+
+        if (base.baselineReading > 0.0 && newReadingValue < base.baselineReading) {
+            val baseFormatted = String.format(Locale.getDefault(), "%,.0f", base.baselineReading)
+            return MeterValidationResult.Error("Corrected reading cannot be lower than your last bill reading ($baseFormatted kWh).")
+        }
+
+        val currentList = _readings.value
+        val existingIndex = currentList.indexOfFirst { it.readingDate == readingDateIso }
+        if (existingIndex == -1) {
+            return MeterValidationResult.Error("No reading found for date $readingDateIso to correct.")
+        }
+
+        val priorReadings = currentList.filter { it.readingDate < readingDateIso }
+        val lowerBound = priorReadings.maxByOrNull { it.readingDate }?.readingValue ?: base.baselineReading
+        val lowerBoundDate = priorReadings.maxByOrNull { it.readingDate }?.displayDate?.ifBlank { priorReadings.maxByOrNull { it.readingDate }?.readingDate } ?: base.baselineDate
+
+        if (newReadingValue < lowerBound) {
+            val lowerFormatted = String.format(Locale.getDefault(), "%,.0f", lowerBound)
+            return MeterValidationResult.Error("Corrected reading cannot be lower than the previous recorded reading on $lowerBoundDate ($lowerFormatted kWh).")
+        }
+
+        val subsequentReadings = currentList.filter { it.readingDate > readingDateIso }
+        val upperBoundRecord = subsequentReadings.minByOrNull { it.readingDate }
+        if (upperBoundRecord != null && newReadingValue > upperBoundRecord.readingValue) {
+            val upperFormatted = String.format(Locale.getDefault(), "%,.0f", upperBoundRecord.readingValue)
+            val upperDate = upperBoundRecord.displayDate.ifBlank { upperBoundRecord.readingDate }
+            return MeterValidationResult.Error("Corrected reading cannot be higher than the next recorded reading on $upperDate ($upperFormatted kWh).")
+        }
+
+        val existing = currentList[existingIndex]
+        val updated = existing.copy(
+            readingValue = newReadingValue,
+            isCorrected = true,
+            correctionReason = reason,
+            correctedAt = System.currentTimeMillis(),
+            timestamp = System.currentTimeMillis()
+        )
+
+        val mutableList = currentList.toMutableList()
+        mutableList[existingIndex] = updated
+        val recomputed = recomputeSequence(mutableList, base.baselineReading)
+        _readings.value = recomputed
+        recalculateMetrics()
+        saveToPrefs()
+
+        logD("Corrected historical reading on $readingDateIso from ${existing.readingValue} to $newReadingValue kWh (Reason: $reason)")
+        return MeterValidationResult.Success(recomputed.first { it.id == existing.id })
+    }
+
+    /**
+     * Resolves the surrounding valid bounds for a reading on a given date.
+     */
+    fun getSurroundingBounds(readingDateIso: String): SurroundingBounds {
+        val base = _baseline.value
+        val fallbackBase = base?.baselineReading ?: 0.0
+        val fallbackDate = base?.baselineDate ?: "Last Bill"
+
+        val currentList = _readings.value.sortedBy { it.readingDate }
+        val priorReadings = currentList.filter { it.readingDate < readingDateIso }
+        val lowerBound = priorReadings.maxByOrNull { it.readingDate }?.readingValue ?: fallbackBase
+        val lowerBoundDate = priorReadings.maxByOrNull { it.readingDate }?.displayDate?.ifBlank { priorReadings.maxByOrNull { it.readingDate }?.readingDate } ?: fallbackDate
+
+        val subsequentReadings = currentList.filter { it.readingDate > readingDateIso }
+        val upperBoundRecord = subsequentReadings.minByOrNull { it.readingDate }
+        val upperBound = upperBoundRecord?.readingValue
+        val upperBoundDate = upperBoundRecord?.displayDate?.ifBlank { upperBoundRecord.readingDate }
+
+        return SurroundingBounds(
+            lowerBound = lowerBound,
+            lowerBoundDate = lowerBoundDate,
+            upperBound = upperBound,
+            upperBoundDate = upperBoundDate
+        )
+    }
+
+    fun getReadingForDate(readingDateIso: String): MeterReadingRecord? {
+        return _readings.value.firstOrNull { it.readingDate == readingDateIso }
+    }
+
+    fun getLastReading(): MeterReadingRecord? {
+        return _readings.value.maxByOrNull { it.readingDate }
+    }
+
+    /**
+     * Recomputes daily consumption deltas and cumulative units since baseline
+     * sequentially for all recorded readings in the active cycle.
+     */
+    private fun recomputeSequence(list: List<MeterReadingRecord>, baseReading: Double): List<MeterReadingRecord> {
+        val sorted = list.sortedBy { it.readingDate }
+        return sorted.mapIndexed { index, record ->
+            val prevVal = if (index == 0) baseReading else sorted[index - 1].readingValue
+            val daily = max(0.0, record.readingValue - prevVal)
+            val unitsSinceBase = max(0.0, record.readingValue - baseReading)
+            record.copy(
+                dailyConsumption = daily,
+                unitsSinceBaseline = unitsSinceBase
+            )
+        }
     }
 
     /**
@@ -319,7 +452,7 @@ object MeterReadingCache {
                 estimatedBill = 0.0,
                 isTodayLogged = false,
                 todayReading = null,
-                tariffCategory = base.tariffCode,
+                tariffCategory = TariffResolver.resolve(base.tariffCode).displayLabel,
                 billingPeriodDisplay = "${base.baselineDate} – Present"
             )
             return
@@ -345,7 +478,7 @@ object MeterReadingCache {
             estimatedBill = estimatedBill,
             isTodayLogged = isTodayLogged,
             todayReading = todayRecord?.readingValue,
-            tariffCategory = base.tariffCode,
+            tariffCategory = TariffResolver.resolve(base.tariffCode).displayLabel,
             billingPeriodDisplay = "${base.baselineDate} – ${latestRecord.displayDate.ifBlank { "Present" }}"
         )
     }
@@ -368,7 +501,8 @@ object MeterReadingCache {
                 dailyUnits = 0.0,
                 isBaseline = true,
                 fullDate = base.baselineDate,
-                subLabel = "Last Bill"
+                subLabel = "Last Bill",
+                readingDateIso = formatDateToIso(base.baselineDate)
             )
         )
 
@@ -386,7 +520,8 @@ object MeterReadingCache {
                     dailyUnits = record.dailyConsumption,
                     isBaseline = false,
                     fullDate = record.displayDate.ifBlank { record.readingDate },
-                    subLabel = if (isLast) "Today" else ""
+                    subLabel = if (isLast) "Today" else "",
+                    readingDateIso = record.readingDate
                 )
             )
         }
@@ -582,7 +717,8 @@ object MeterReadingCache {
                         isBaseline = (matchingBill == startBill),
                         fullDate = matchingBill.fullDate.ifBlank { formatToMonthDayYear(matchingBill.date) },
                         subLabel = if (calItem == monthsInWindow.first()) "Start" else if (calItem == monthsInWindow.last()) "End" else "",
-                        hasReading = true
+                        hasReading = true,
+                        readingDateIso = formatDateToIso(matchingBill.fullDate)
                     )
                 )
             } else if (matchingReading != null) {
@@ -596,7 +732,8 @@ object MeterReadingCache {
                         isBaseline = false,
                         fullDate = matchingReading.displayDate.ifBlank { formatToMonthDayYear(recDate) },
                         subLabel = "",
-                        hasReading = true
+                        hasReading = true,
+                        readingDateIso = matchingReading.readingDate
                     )
                 )
             } else {

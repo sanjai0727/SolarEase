@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.ShowChart
@@ -31,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -552,7 +555,8 @@ private fun parseIsoDate(iso: String): Date? {
 fun MeterReadingProgressionGraph(
     points: List<MeterGraphPoint>,
     modifier: Modifier = Modifier,
-    billData: TnebConsumerBillData? = null
+    billData: TnebConsumerBillData? = null,
+    onEditReading: (String) -> Unit = {}
 ) {
     var selectedRange by remember { mutableStateOf(MeterGraphRange.CURRENT) }
     var windowOffset by remember(selectedRange) { mutableStateOf(0) }
@@ -779,28 +783,50 @@ fun MeterReadingProgressionGraph(
                 ) {
                     if (selectedPointIndex != null && selectedPointIndex!! in activePoints.indices) {
                         val pt = activePoints[selectedPointIndex!!]
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(BlueContainer)
-                                .border(1.dp, BlueBorder, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (pt.hasReading) {
-                                val label = pt.fullDate.ifBlank { pt.dateLabel }
-                                Text(
-                                    text = "$label · ${String.format(Locale.getDefault(), "%,.0f", pt.readingValue)} kWh",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BluePrimary
-                                )
-                            } else {
-                                Text(
-                                    text = "${pt.fullDate.ifBlank { pt.dateLabel }} · No reading recorded",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = TextMuted
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(BlueContainer)
+                                    .border(1.dp, BlueBorder, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                if (pt.hasReading) {
+                                    val label = pt.fullDate.ifBlank { pt.dateLabel }
+                                    Text(
+                                        text = "$label · ${String.format(Locale.getDefault(), "%,.0f", pt.readingValue)} kWh",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BluePrimary
+                                    )
+                                } else {
+                                    Text(
+                                        text = "${pt.fullDate.ifBlank { pt.dateLabel }} · No reading recorded",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextMuted
+                                    )
+                                }
+                            }
+
+                            if (pt.hasReading && !pt.isBaseline && pt.readingDateIso.isNotBlank()) {
+                                TextButton(
+                                    onClick = { onEditReading(pt.readingDateIso) },
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(26.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit reading",
+                                        modifier = Modifier.size(12.dp),
+                                        tint = BluePrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Edit", fontSize = 11.sp, color = BluePrimary, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     } else {
