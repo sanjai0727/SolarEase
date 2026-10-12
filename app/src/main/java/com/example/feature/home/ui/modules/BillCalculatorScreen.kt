@@ -1055,7 +1055,8 @@ private fun BillCalculatorResultView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
-            ) {
+            )
+            {
                 Text(
                     text = "TANGEDCO UTILITY ESTIMATE",
                     fontSize = 11.sp,

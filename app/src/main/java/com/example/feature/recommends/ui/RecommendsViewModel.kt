@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.session.UserSession
 import com.example.feature.home.ui.modules.*
+import com.example.feature.recommends.data.BillVerificationEngine
 import com.example.feature.recommends.data.MantraPreferences
+import com.example.feature.recommends.data.RewardStorage
 import com.example.feature.recommends.model.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,12 +21,21 @@ class RecommendsViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(RecommendsUiState())
     val uiState: StateFlow<RecommendsUiState> = _uiState.asStateFlow()
 
+    private fun getUserId(): String {
+        val user = UserSession.currentUser
+        return user?.id?.takeIf { it.isNotBlank() }
+            ?: user?.username?.takeIf { it.isNotBlank() }
+            ?: "default_user"
+    }
+
     init {
         observeData()
     }
 
     fun initPreferences(context: Context) {
         MantraPreferences.init(context)
+        MantraPreferences.checkDateAndResetIfNewDay(context)
+        RewardStorage.init(context)
     }
 
     fun selectPreviousCycle() {
@@ -50,26 +61,36 @@ class RecommendsViewModel : ViewModel() {
     }
 
     private fun observeData() {
+        val userId = getUserId()
+
         val cyclesFlow = combine(
             TnebBillCache.billData,
             MeterReadingCache.baseline,
             MeterReadingCache.readings,
             MeterReadingCache.metrics
         ) { billData, baseline, readings, metrics ->
+            // Trigger automatic bill consumption verification when bill data is available
+            if (billData != null && billData.bills.isNotEmpty()) {
+                BillVerificationEngine.evaluateBills(userId, billData, RewardStorage)
+            }
             BillingCycleManager.buildChronologicalCycles(billData, baseline, readings, metrics)
         }
+
+        val rewardFlow = RewardStorage.getRewardFlow(userId)
 
         viewModelScope.launch {
             combine(
                 cyclesFlow,
                 MantraPreferences.mantrasState,
-                MantraPreferences.streakState,
+                MantraPreferences.mantrasExpandedState,
+                rewardFlow,
                 _selectedCycleIndex
-            ) { cycles, mantras, streak, selectedIndex ->
+            ) { cycles, mantras, isMantrasExpanded, rewardData, selectedIndex ->
                 buildUiState(
                     cycles = cycles,
                     mantras = mantras,
-                    streak = streak,
+                    isMantrasExpanded = isMantrasExpanded,
+                    rewardData = rewardData,
                     explicitIndex = selectedIndex
                 )
             }.collect { state ->
@@ -79,21 +100,30 @@ class RecommendsViewModel : ViewModel() {
     }
 
     fun toggleMantraCheckIn(context: Context? = null, mantraId: Int) {
-        MantraPreferences.toggleCheckIn(context, mantraId)
+        val isChecked = MantraPreferences.toggleCheckIn(context, mantraId)
+        if (isChecked) {
+            // First daily energy-saving activity awards streak and daily coin idempotently
+            RewardStorage.recordDailyActivity(
+                userId = getUserId(),
+                activityId = "mantra_$mantraId"
+            )
+        }
+    }
+
+    fun toggleMantrasExpanded(context: Context? = null) {
+        MantraPreferences.toggleMantrasExpanded(context)
     }
 
     private fun buildUiState(
         cycles: List<BillingCycleItem>,
         mantras: List<MantraItem>,
-        streak: Int,
+        isMantrasExpanded: Boolean,
+        rewardData: UserRewardData,
         explicitIndex: Int?
     ): RecommendsUiState {
         val user = UserSession.currentUser
         val userAddress = user?.houseAddress?.takeIf { it.isNotBlank() } ?: "Valmiki Nagar, Chennai"
 
-        // Determine default selection if not explicitly selected:
-        // If active cycle has meter readings or it's demo, default to active cycle (cycles.lastIndex).
-        // If active cycle has no readings yet but completed bills exist, default to the latest completed bill.
         val defaultIndex = if (cycles.isNotEmpty()) {
             val lastCycle = cycles.last()
             if (lastCycle.status == BillingCycleStatus.CURRENT && !lastCycle.hasMeterReadings && cycles.size >= 2) {
@@ -113,26 +143,20 @@ class RecommendsViewModel : ViewModel() {
             BillingCycleManager.compareCycles(selectedCycle, previousCycle)
         } else null
 
-        // Bill-verified Energy Credits: ONLY awarded from verified post-onboarding savings.
-        // Historical billing data is NEVER backfilled into credit balances.
-        val storedCredits = MantraPreferences.getEarnedCredits()
-        val verifiedCredits = BillingCycleManager.calculateVerifiedBillCredits(cycles)
-        val earnedCredits = storedCredits + verifiedCredits
-
+        val streakState = rewardData.streakState
+        val coinsBalance = rewardData.balance
         val nextTarget = 200
-        val progressCredits = earnedCredits
-        val toUnlock = max(0, nextTarget - progressCredits)
+        val toUnlock = max(0, nextTarget - coinsBalance)
 
         val energyCredits = EnergyCreditsData(
-            totalCredits = earnedCredits,
+            totalCredits = coinsBalance,
             nextRewardTarget = nextTarget,
-            progressCredits = progressCredits,
+            progressCredits = coinsBalance,
             creditsToUnlock = toUnlock
         )
 
         val checkedCount = mantras.count { it.isCheckedIn }
 
-        // Backwards-compatible BillingCycleSavings projection
         val legacySavings = BillingCycleSavings(
             previousUnits = previousCycle?.consumptionKwh ?: 0.0,
             previousPeriod = previousCycle?.periodLabel.orEmpty(),
@@ -154,9 +178,14 @@ class RecommendsViewModel : ViewModel() {
             energyCredits = energyCredits,
             todayProgressChecked = checkedCount,
             todayProgressTotal = 9,
-            streakDays = streak,
+            streakDays = streakState.currentStreak,
+            streakState = streakState,
+            coinBalance = coinsBalance,
+            coinTransactions = rewardData.transactions,
+            billVerificationResult = rewardData.latestVerificationResult,
             billingCycleSavings = legacySavings,
             mantras = mantras,
+            isMantrasExpanded = isMantrasExpanded,
             availableCycles = cycles,
             selectedCycleIndex = effectiveIndex,
             cycleComparison = comparison

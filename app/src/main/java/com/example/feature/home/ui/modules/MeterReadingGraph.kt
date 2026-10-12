@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -25,10 +27,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -36,11 +41,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -537,49 +545,89 @@ private fun parseIsoDate(iso: String): Date? {
         null
     }
 }
+// SolarEase Energy Blue Palette for Weekly Meter Consumption Graph
+private val GraphBluePrimary = Color(0xFF2563EB)
+private val GraphBluePrimaryDark = Color(0xFF1D4ED8)
+private val GraphBlueContainer = Color(0xFFEFF6FF)
+private val GraphBlueBorder = Color(0xFFDBEAFE)
+private val AmberWarning = Color(0xFFD97706)
+private val AmberContainer = Color(0xFFFFFBEB)
+private val BorderColor = Color(0xFFE2E8F0)
 
 /**
- * METER READING PROGRESSION Graph (Blue Analytics Module)
- * - Represents actual meter reading progression on Y-axis (e.g. 42,000 kWh -> 42,440 kWh).
- * - NOT a "consumption from zero" graph.
- * - Authoritative starting point for CURRENT: Last paid bill date + last paid bill meter reading.
- * - Ending point: Latest available current meter reading.
- * - Range selectors: CURRENT, 2M, 4M, 6M (default CURRENT).
- * - Every month in historical range is represented with a monthly label, vertical dotted guide line, and actual data point.
- * - Subtle vertical dotted guides for all represented months in #DBEAFE.
- * - Blue analytics theme: #2563EB primary, #EFF6FF light surface, #DBEAFE guide/accent.
- * - Interactive tap tooltip for Date and Meter Reading.
- * - Clean empty state when insufficient data exists without fabricating data.
+ * Compact Modern Sunday–Saturday Weekly Meter Reading Bar Chart for the Home screen.
+ * - Energy Blue accent theme matching SolarEase design system.
+ * - Displays 7 days (Sunday through Saturday) with horizontal swipe navigation and < > arrows.
+ * - Disables navigation into future weeks (defaults to current week).
+ * - Y-Axis displays actual cumulative meter reading labels.
+ * - Bar heights are scaled relative to the weekly baseline.
+ * - Floating labels above bars show interval consumption (+X kWh), "Base", or amber warning.
+ * - Decreased readings: Displays amber warning badge "Review required" without computing negative consumption.
+ * - Missing days: Kept empty without fabricating readings.
+ * - Compact selection detail card with only the 3 agreed rows and "View Reading Details →" link.
+ * - Integrates ReadingDetailsBottomSheet for complete history with 7D, 30D, All reading-count filters.
  */
 @Composable
 fun MeterReadingProgressionGraph(
-    points: List<MeterGraphPoint>,
+    points: List<MeterGraphPoint> = emptyList(),
     modifier: Modifier = Modifier,
     billData: TnebConsumerBillData? = null,
-    onEditReading: (String) -> Unit = {}
+    onEditReading: (String) -> Unit = {},
+    onViewReadingDetails: (() -> Unit)? = null,
+    anchorDate: Date? = null
 ) {
-    var selectedRange by remember { mutableStateOf(MeterGraphRange.CURRENT) }
-    var windowOffset by remember(selectedRange) { mutableStateOf(0) }
+    var weekOffset by remember { mutableIntStateOf(0) }
+    var selectedDayIndex by remember { mutableStateOf<Int?>(null) }
+    var showInternalBottomSheet by remember { mutableStateOf(false) }
 
-    val windowData = remember(selectedRange, windowOffset, points, billData) {
-        MeterReadingCache.getProgressionWindow(selectedRange, windowOffset, billData)
+    val weeklyData = remember(weekOffset, points, billData, anchorDate) {
+        MeterReadingCache.getWeeklyGraphData(weekOffset, anchorDate)
     }
 
-    val activePoints = windowData.points
-    var selectedPointIndex by remember(activePoints) { mutableStateOf<Int?>(null) }
+    val days = weeklyData.days
+    val selectedDay = if (selectedDayIndex != null && selectedDayIndex!! in days.indices) {
+        days[selectedDayIndex!!]
+    } else null
+
+    // Swipe gestures: Drag right -> older week (weekOffset + 1), Drag left -> newer week (weekOffset - 1)
+    var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .pointerInput(weeklyData.hasNewer, weeklyData.hasOlder) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragAccumulator = 0f },
+                    onDragEnd = {
+                        if (dragAccumulator > 50f) {
+                            if (weeklyData.hasOlder) {
+                                weekOffset += 1
+                                selectedDayIndex = null
+                            }
+                        } else if (dragAccumulator < -50f) {
+                            if (weeklyData.hasNewer) {
+                                weekOffset = max(0, weekOffset - 1)
+                                selectedDayIndex = null
+                            }
+                        }
+                        dragAccumulator = 0f
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        dragAccumulator += dragAmount
+                    }
+                )
+            },
         shape = RoundedCornerShape(16.dp),
         color = Color(0xFFF8FAFC),
-        border = BorderStroke(1.dp, BlueBorder)
+        border = BorderStroke(1.dp, GraphBlueBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(12.dp)
+                .animateContentSize()
         ) {
-            // ── 1. Top Header: Title and Prominently Displayed Latest Reading (Blue Accent) ──
+            // ── 1. Top Header: Title and Prominently Displayed Latest Reading ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -593,485 +641,595 @@ fun MeterReadingProgressionGraph(
                         modifier = Modifier
                             .size(24.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(BlueContainer),
+                            .background(GraphBlueContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ShowChart,
+                            imageVector = Icons.Default.BarChart,
                             contentDescription = null,
-                            tint = BluePrimary,
+                            tint = GraphBluePrimary,
                             modifier = Modifier.size(15.dp)
                         )
                     }
                     Text(
-                        text = "METER READING PROGRESSION",
+                        text = "WEEKLY METER CONSUMPTION",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BluePrimary,
-                        letterSpacing = 0.6.sp
+                        color = GraphBluePrimary,
+                        letterSpacing = 0.5.sp
                     )
                 }
 
-                if (windowData.latestReading > 0.0) {
+                if (weeklyData.latestReading != null && weeklyData.latestReading > 0.0) {
                     Text(
-                        text = "${String.format(Locale.getDefault(), "%,.0f", windowData.latestReading)} kWh",
+                        text = "${String.format(Locale.getDefault(), "%,.0f", weeklyData.latestReading)} kWh",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BluePrimary
+                        color = GraphBluePrimary
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // ── 2. Range Category Selectors & Left/Right Navigation ──
+            // ── 2. Navigation Header & View Reading Details Link ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Range Category Selectors: CURRENT | 2M | 4M | 6M
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFE2E8F0).copy(alpha = 0.6f))
-                        .padding(2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    MeterGraphRange.values().forEach { range ->
-                        val isSelected = range == selectedRange
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) BluePrimary else Color.Transparent)
-                                .clickable {
-                                    selectedRange = range
-                                    windowOffset = 0
-                                    selectedPointIndex = null
-                                }
-                                .padding(horizontal = 8.dp, vertical = 3.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = range.label,
-                                fontSize = 10.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) Color.White else TextMuted
-                            )
-                        }
-                    }
-                }
-
-                // Left and Right Navigation Controls: [ ← ]  periodTitle  [ → ]
+                // Navigation Controls: [ < ]  periodTitle  [ > ]
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     IconButton(
                         onClick = {
-                            if (windowData.hasOlder) {
-                                windowOffset += 1
-                                selectedPointIndex = null
+                            if (weeklyData.hasOlder) {
+                                weekOffset += 1
+                                selectedDayIndex = null
                             }
                         },
-                        enabled = windowData.hasOlder,
-                        modifier = Modifier.size(24.dp)
+                        enabled = weeklyData.hasOlder,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .testTag("prev_week_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Older Period",
-                            tint = if (windowData.hasOlder) BluePrimary else TextMuted.copy(alpha = 0.3f),
-                            modifier = Modifier.size(15.dp)
+                            contentDescription = "Previous Week",
+                            tint = if (weeklyData.hasOlder) GraphBluePrimary else TextMuted.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
                         )
                     }
 
                     Text(
-                        text = windowData.periodTitle,
+                        text = weeklyData.periodTitle,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextDark
+                        color = TextDark,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 2.dp)
                     )
 
                     IconButton(
                         onClick = {
-                            if (windowData.hasNewer) {
-                                windowOffset = max(0, windowOffset - 1)
-                                selectedPointIndex = null
+                            if (weeklyData.hasNewer) {
+                                weekOffset = max(0, weekOffset - 1)
+                                selectedDayIndex = null
                             }
                         },
-                        enabled = windowData.hasNewer,
-                        modifier = Modifier.size(24.dp)
+                        enabled = weeklyData.hasNewer,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .testTag("next_week_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Newer Period",
-                            tint = if (windowData.hasNewer) BluePrimary else TextMuted.copy(alpha = 0.3f),
-                            modifier = Modifier.size(15.dp)
+                            contentDescription = "Next Week",
+                            tint = if (weeklyData.hasNewer) GraphBluePrimary else TextMuted.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
+
+                // View Reading Details Action Link
+                TextButton(
+                    onClick = {
+                        if (onViewReadingDetails != null) onViewReadingDetails()
+                        else showInternalBottomSheet = true
+                    },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .height(24.dp)
+                        .testTag("view_reading_details_header_button")
+                ) {
+                    Text(
+                        text = "View Details",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GraphBluePrimary
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // ── 3. Graph Curve / Points / Empty State ──
-            if (windowData.isInsufficientData || activePoints.isEmpty()) {
+            // ── 3. Weekly Bar Chart or Empty State ──
+            if (!weeklyData.hasAnyReadingsInWeek && weeklyData.weeklyBaselineReading == null) {
+                // Empty state: No readings recorded
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(110.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(BlueContainer.copy(alpha = 0.5f))
-                        .padding(14.dp),
+                        .background(GraphBlueContainer.copy(alpha = 0.4f))
+                        .padding(12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = BluePrimaryLight,
-                            modifier = Modifier.size(22.dp)
+                            tint = GraphBluePrimary,
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "More meter or bill history is needed to show this period.",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextDark,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else if (activePoints.size < 2) {
-                // Baseline only logged in CURRENT, waiting for first current reading
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(BlueContainer.copy(alpha = 0.5f))
-                        .padding(14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Baseline logged (${String.format(Locale.getDefault(), "%,.0f", activePoints.first().readingValue)} kWh)",
+                            text = "No meter readings recorded for this week.",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextDark,
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "Record today's meter reading to visualize your cycle progression.",
-                            fontSize = 11.sp,
+                            text = "Log your daily meter reading to track your weekly consumption.",
+                            fontSize = 10.sp,
                             color = TextMuted,
                             textAlign = TextAlign.Center
                         )
                     }
                 }
             } else {
-                // ── Interactive Status / Tooltip Bar ──
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (selectedPointIndex != null && selectedPointIndex!! in activePoints.indices) {
-                        val pt = activePoints[selectedPointIndex!!]
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(BlueContainer)
-                                    .border(1.dp, BlueBorder, RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                if (pt.hasReading) {
-                                    val label = pt.fullDate.ifBlank { pt.dateLabel }
-                                    Text(
-                                        text = "$label · ${String.format(Locale.getDefault(), "%,.0f", pt.readingValue)} kWh",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = BluePrimary
-                                    )
-                                } else {
-                                    Text(
-                                        text = "${pt.fullDate.ifBlank { pt.dateLabel }} · No reading recorded",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = TextMuted
-                                    )
-                                }
-                            }
+                // Determine cumulative Y-axis scale and weekly baseline
+                val recordedValues = days.mapNotNull { it.cumulativeKwh }
+                val baselineVal = weeklyData.weeklyBaselineReading ?: (recordedValues.minOrNull() ?: 0.0)
+                val peakVal = recordedValues.maxOrNull() ?: (baselineVal + 5.0)
+                val span = max(5.0, peakVal - baselineVal)
+                val maxVal = baselineVal + span
+                val midVal = baselineVal + (span / 2.0)
 
-                            if (pt.hasReading && !pt.isBaseline && pt.readingDateIso.isNotBlank()) {
-                                TextButton(
-                                    onClick = { onEditReading(pt.readingDateIso) },
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                                    modifier = Modifier.height(26.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit reading",
-                                        modifier = Modifier.size(12.dp),
-                                        tint = BluePrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text("Edit", fontSize = 11.sp, color = BluePrimary, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = "Tap month or point for details",
-                            fontSize = 10.sp,
-                            color = TextMuted
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Canvas Graph
-                val validPoints = activePoints.filter { it.hasReading }
-                val minVal = if (validPoints.isNotEmpty()) validPoints.minOf { it.readingValue } else 0.0
-                val maxVal = if (validPoints.isNotEmpty()) validPoints.maxOf { it.readingValue } else 100.0
-                val valueRange = if (maxVal - minVal <= 0.0) 10.0 else maxVal - minVal
-
-                val n = activePoints.size
-
+                // Weekly Bar Chart Container
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp)
+                        .height(116.dp)
                 ) {
                     Canvas(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(activePoints) {
+                            .pointerInput(days) {
                                 detectTapGestures { tapOffset ->
-                                    val leftPadding = 52.dp.toPx()
-                                    val rightPadding = 16.dp.toPx()
-                                    val chartWidth = size.width - leftPadding - rightPadding
-                                    val stepX = if (n > 1) chartWidth / (n - 1) else chartWidth
+                                    val leftPad = 44.dp.toPx()
+                                    val rightPad = 10.dp.toPx()
+                                    val chartW = size.width - leftPad - rightPad
+                                    val colW = chartW / 7f
 
-                                    if (n > 0) {
-                                        val closest = (0 until n).minByOrNull { i ->
-                                            val x = leftPadding + (i * stepX)
-                                            kotlin.math.abs(x - tapOffset.x)
-                                        }
-                                        selectedPointIndex = if (selectedPointIndex == closest) null else closest
+                                    if (tapOffset.x >= leftPad && tapOffset.x <= size.width - rightPad) {
+                                        val colIdx = ((tapOffset.x - leftPad) / colW).toInt().coerceIn(0, 6)
+                                        selectedDayIndex = if (selectedDayIndex == colIdx) null else colIdx
                                     }
                                 }
                             }
                     ) {
-                        val canvasWidth = size.width
-                        val canvasHeight = size.height
-                        val leftPadding = 52.dp.toPx() // Room for readable meter values
-                        val rightPadding = 16.dp.toPx()
-                        val topPadding = 12.dp.toPx()
-                        val bottomPadding = 26.dp.toPx() // Room for date & subLabel
+                        val canvasW = size.width
+                        val canvasH = size.height
+                        val leftPad = 44.dp.toPx()
+                        val rightPad = 10.dp.toPx()
+                        val topPad = 18.dp.toPx()
+                        val bottomPad = 24.dp.toPx()
 
-                        val chartWidth = canvasWidth - leftPadding - rightPadding
-                        val chartHeight = canvasHeight - topPadding - bottomPadding
+                        val chartW = canvasW - leftPad - rightPad
+                        val chartH = canvasH - topPad - bottomPad
 
-                        // 1. Subtle horizontal grid lines (0%, 50%, 100%)
+                        // 1. Horizontal dashed grid lines (Top: maxVal, Mid: midVal, Bottom: baselineVal)
                         val gridSteps = 2
                         for (i in 0..gridSteps) {
-                            val y = topPadding + (chartHeight / gridSteps) * i
+                            val y = topPad + (chartH / gridSteps) * i
                             drawLine(
-                                color = GridLineColor.copy(alpha = 0.5f),
-                                start = Offset(leftPadding, y),
-                                end = Offset(canvasWidth - rightPadding, y),
-                                strokeWidth = 1.dp.toPx()
-                            )
-                        }
-
-                        val stepX = if (n > 1) chartWidth / (n - 1) else chartWidth
-
-                        // 2. Subtle vertical dotted guides for EVERY represented month
-                        for (i in 0 until n) {
-                            val x = leftPadding + (i * stepX)
-                            drawLine(
-                                color = BlueBorder,
-                                start = Offset(x, topPadding),
-                                end = Offset(x, topPadding + chartHeight),
+                                color = GridLineColor.copy(alpha = 0.7f),
+                                start = Offset(leftPad, y),
+                                end = Offset(canvasW - rightPad, y),
                                 strokeWidth = 1.dp.toPx(),
                                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()), 0f)
                             )
                         }
 
-                        // 3. Connect actual readings with smooth blue curve
-                        val actualCoords = mutableListOf<Pair<Int, Offset>>()
-                        val path = Path()
-                        val fillPath = Path()
+                        // 2. Bars for Sunday through Saturday
+                        val colW = chartW / 7f
+                        val barW = (colW * 0.44f).coerceAtLeast(13.dp.toPx())
 
-                        val actualIndices = activePoints.indices.filter { activePoints[it].hasReading }
-
-                        for (k in actualIndices.indices) {
-                            val idx = actualIndices[k]
-                            val pt = activePoints[idx]
-                            val x = leftPadding + (idx * stepX)
-                            val normalizedY = ((pt.readingValue - minVal) / valueRange).toFloat().coerceIn(0f, 1f)
-                            val y = topPadding + chartHeight - (normalizedY * chartHeight)
-                            actualCoords.add(Pair(idx, Offset(x, y)))
-
-                            if (k == 0) {
-                                path.moveTo(x, y)
-                                fillPath.moveTo(x, topPadding + chartHeight)
-                                fillPath.lineTo(x, y)
-                            } else {
-                                val prev = actualCoords[k - 1].second
-                                val cx = (prev.x + x) / 2f
-                                path.cubicTo(cx, prev.y, cx, y, x, y)
-                                fillPath.cubicTo(cx, prev.y, cx, y, x, y)
-                            }
-                        }
-
-                        if (actualCoords.isNotEmpty()) {
-                            val lastCoord = actualCoords.last().second
-                            fillPath.lineTo(lastCoord.x, topPadding + chartHeight)
-                            fillPath.close()
-
-                            // Subtle vertical gradient fill under line
-                            drawPath(
-                                path = fillPath,
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        BluePrimaryLight.copy(alpha = 0.20f),
-                                        BluePrimaryLight.copy(alpha = 0.01f)
-                                    ),
-                                    startY = topPadding,
-                                    endY = topPadding + chartHeight
-                                )
-                            )
-
-                            // Smooth curve
-                            drawPath(
-                                path = path,
-                                color = BluePrimary,
-                                style = Stroke(
-                                    width = 2.5.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
-                            )
-                        }
-
-                        // 4. Draw actual data points
-                        for ((idx, coord) in actualCoords) {
-                            val isSelected = (selectedPointIndex == idx)
+                        for (i in 0..6) {
+                            val day = days[i]
+                            val centerX = leftPad + (i * colW) + (colW / 2f)
+                            val isSelected = (selectedDayIndex == i)
 
                             if (isSelected) {
-                                // Vertical active guideline
-                                drawLine(
-                                    color = BluePrimary.copy(alpha = 0.6f),
-                                    start = Offset(coord.x, topPadding),
-                                    end = Offset(coord.x, topPadding + chartHeight),
-                                    strokeWidth = 1.5.dp.toPx(),
-                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()), 0f)
-                                )
-                                // Halo circle
-                                drawCircle(
-                                    color = BluePrimary.copy(alpha = 0.2f),
-                                    radius = 8.dp.toPx(),
-                                    center = coord
+                                drawRoundRect(
+                                    color = GraphBlueContainer.copy(alpha = 0.6f),
+                                    topLeft = Offset(centerX - (colW / 2f) + 1.dp.toPx(), topPad - 2.dp.toPx()),
+                                    size = androidx.compose.ui.geometry.Size(colW - 2.dp.toPx(), chartH + 4.dp.toPx()),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
                                 )
                             }
 
-                            // Outer point border
-                            drawCircle(
-                                color = BluePrimary,
-                                radius = if (isSelected) 5.dp.toPx() else 4.dp.toPx(),
-                                center = coord
-                            )
-                            // Inner white core
-                            drawCircle(
-                                color = Color.White,
-                                radius = 2.dp.toPx(),
-                                center = coord
-                            )
-                        }
+                            if (day.reading != null) {
+                                if (day.isDecreasedReading) {
+                                    val barH = (chartH * 0.22f).coerceAtLeast(8.dp.toPx())
+                                    val barTop = topPad + chartH - barH
+                                    drawRoundRect(
+                                        color = AmberWarning,
+                                        topLeft = Offset(centerX - (barW / 2f), barTop),
+                                        size = androidx.compose.ui.geometry.Size(barW, barH),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                    )
+                                } else if (day.isBaselinePoint) {
+                                    val anchorH = 6.dp.toPx()
+                                    val barTop = topPad + chartH - anchorH
+                                    drawRoundRect(
+                                        color = GraphBluePrimary,
+                                        topLeft = Offset(centerX - (barW / 2f), barTop),
+                                        size = androidx.compose.ui.geometry.Size(barW, anchorH),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                                    )
+                                } else if (day.cumulativeKwh != null) {
+                                    val rel = (day.cumulativeKwh - baselineVal).coerceAtLeast(0.0)
+                                    val fraction = if (span > 0) (rel / span).toFloat().coerceIn(0.04f, 1f) else 0.04f
+                                    val barH = (chartH * fraction).coerceAtLeast(5.dp.toPx())
+                                    val barTop = topPad + chartH - barH
 
-                        // If user tapped a month that has no reading, highlight its dotted guide line
-                        if (selectedPointIndex != null && selectedPointIndex!! in 0 until n && !activePoints[selectedPointIndex!!].hasReading) {
-                            val x = leftPadding + (selectedPointIndex!! * stepX)
-                            drawLine(
-                                color = BluePrimary.copy(alpha = 0.4f),
-                                start = Offset(x, topPadding),
-                                end = Offset(x, topPadding + chartHeight),
-                                strokeWidth = 1.5.dp.toPx(),
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()), 0f)
-                            )
+                                    drawRoundRect(
+                                        color = if (isSelected) GraphBluePrimaryDark else GraphBluePrimary,
+                                        topLeft = Offset(centerX - (barW / 2f), barTop),
+                                        size = androidx.compose.ui.geometry.Size(barW, barH),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    // Y-Axis labels (readable meter values along the left)
+                    // Y-Axis Labels (Actual Cumulative Meter Readings)
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 2.dp, bottom = 24.dp, start = 2.dp),
+                            .padding(top = 11.dp, bottom = 24.dp, start = 1.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             text = String.format(Locale.getDefault(), "%,.0f", maxVal),
                             fontSize = 9.sp,
                             color = TextMuted,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
                         Text(
-                            text = String.format(Locale.getDefault(), "%,.0f", (minVal + maxVal) / 2),
+                            text = String.format(Locale.getDefault(), "%,.0f", midVal),
                             fontSize = 9.sp,
                             color = TextMuted,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
                         Text(
-                            text = String.format(Locale.getDefault(), "%,.0f", minVal),
+                            text = String.format(Locale.getDefault(), "%,.0f", baselineVal),
                             fontSize = 9.sp,
                             color = TextMuted,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
                     }
 
-                    // X-Axis month/date labels aligned under each represented month
+                    // Floating Labels Above Bars (Interval consumption +X kWh, Base, or ⚠)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .padding(start = 52.dp, end = 16.dp),
+                            .padding(start = 44.dp, end = 10.dp)
+                            .align(Alignment.TopCenter),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        for (i in 0 until n) {
-                            val pt = activePoints[i]
-                            val isSel = (selectedPointIndex == i)
-
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = pt.dateLabel,
-                                    fontSize = 9.sp,
-                                    color = if (isSel) BluePrimary else TextDark,
-                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
-                                )
-                                if (pt.subLabel.isNotEmpty()) {
+                        for (i in 0..6) {
+                            val day = days[i]
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (day.isDecreasedReading) {
                                     Text(
-                                        text = pt.subLabel,
+                                        text = "⚠",
+                                        fontSize = 10.sp,
+                                        color = AmberWarning,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                } else if (day.isBaselinePoint) {
+                                    Text(
+                                        text = "Base",
                                         fontSize = 8.sp,
-                                        color = if (isSel) BluePrimary else TextMuted
+                                        color = GraphBluePrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                } else if (day.intervalConsumption != null) {
+                                    val kwhVal = day.intervalConsumption.toInt()
+                                    Text(
+                                        text = "+$kwhVal",
+                                        fontSize = 8.sp,
+                                        color = GraphBluePrimaryDark,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
                                     )
                                 }
                             }
                         }
                     }
+
+                    // X-Axis Day of Week & Date Labels (Sun .. Sat)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 44.dp, end = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        for (i in 0..6) {
+                            val day = days[i]
+                            val isSel = (selectedDayIndex == i)
+                            val hasReading = day.reading != null
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedDayIndex = if (isSel) null else i }
+                            ) {
+                                Text(
+                                    text = day.dayLabel,
+                                    fontSize = 10.sp,
+                                    color = if (isSel) GraphBluePrimary else if (hasReading) TextDark else TextMuted.copy(alpha = 0.5f),
+                                    fontWeight = if (isSel || hasReading) FontWeight.Bold else FontWeight.Normal
+                                )
+                                Text(
+                                    text = day.displayDate.split(" ").firstOrNull() ?: "",
+                                    fontSize = 9.sp,
+                                    color = if (isSel) GraphBluePrimary else TextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // ── 4. Compact Selection Detail Card (When Day is Selected) ──
+                if (selectedDay != null && selectedDay.reading != null) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .animateContentSize()
+                            .testTag("selected_day_tooltip"),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selectedDay.isDecreasedReading) AmberContainer else GraphBlueContainer.copy(alpha = 0.7f),
+                        border = BorderStroke(1.dp, if (selectedDay.isDecreasedReading) AmberWarning.copy(alpha = 0.5f) else GraphBlueBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Header: Day, date, and time
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${selectedDay.fullDate}${if (selectedDay.formattedTime != null) " · " + selectedDay.formattedTime else ""}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark
+                                )
+
+                                TextButton(
+                                    onClick = { onEditReading(selectedDay.dateIso) },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(22.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit reading",
+                                        tint = GraphBluePrimary,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text("Edit", fontSize = 10.sp, color = GraphBluePrimary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            HorizontalDivider(color = (if (selectedDay.isDecreasedReading) AmberWarning else GraphBluePrimary).copy(alpha = 0.15f))
+
+                            // Row 1: Actual meter reading
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Actual meter reading:",
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
+                                Text(
+                                    text = "${String.format(Locale.getDefault(), "%,.0f", selectedDay.cumulativeKwh)} kWh",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark
+                                )
+                            }
+
+                            // Row 2: Consumption since previous reading
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Consumption since previous reading:",
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
+                                if (selectedDay.isDecreasedReading) {
+                                    Text(
+                                        text = "Review required (lower than previous)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AmberWarning
+                                    )
+                                } else if (selectedDay.isBaselinePoint) {
+                                    Text(
+                                        text = "Baseline anchor reading",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = GraphBluePrimary
+                                    )
+                                } else if (selectedDay.intervalConsumption != null) {
+                                    Text(
+                                        text = "+${String.format(Locale.getDefault(), "%,.0f", selectedDay.intervalConsumption)} kWh",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = GraphBluePrimary
+                                    )
+                                } else {
+                                    Text(
+                                        text = "0 kWh",
+                                        fontSize = 11.sp,
+                                        color = TextMuted
+                                    )
+                                }
+                            }
+
+                            // Row 3: Weekly baseline
+                            if (weeklyData.weeklyBaselineReading != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Weekly baseline:",
+                                        fontSize = 11.sp,
+                                        color = TextMuted
+                                    )
+                                    Text(
+                                        text = "${String.format(Locale.getDefault(), "%,.0f", weeklyData.weeklyBaselineReading)} kWh (${weeklyData.weeklyBaselineDate ?: "start of week"})",
+                                        fontSize = 11.sp,
+                                        color = TextDark
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            // Bottom Link: View Reading Details →
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        if (onViewReadingDetails != null) onViewReadingDetails()
+                                        else showInternalBottomSheet = true
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                    modifier = Modifier
+                                        .height(24.dp)
+                                        .testTag("view_reading_details_tooltip_button")
+                                ) {
+                                    Text(
+                                        text = "View Reading Details →",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = GraphBluePrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (selectedDay != null && selectedDay.reading == null) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp)),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFF1F5F9),
+                        border = BorderStroke(1.dp, BorderColor)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${selectedDay.fullDate} · No meter reading recorded",
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                            TextButton(
+                                onClick = { onEditReading(selectedDay.dateIso) },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                modifier = Modifier.height(24.dp)
+                            ) {
+                                Text(
+                                    text = "Log Reading",
+                                    fontSize = 11.sp,
+                                    color = GraphBluePrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Tap day for details",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                        Text(
+                            text = "Swipe ← / → to change week",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                    }
                 }
             }
         }
+    }
+
+    if (showInternalBottomSheet) {
+        ReadingDetailsBottomSheet(
+            onDismiss = { showInternalBottomSheet = false },
+            onEditReading = onEditReading,
+            initialSelectedReadingId = selectedDay?.reading?.id,
+            anchorDate = anchorDate
+        )
     }
 }
 
@@ -1090,3 +1248,4 @@ fun MeterReadingGraph(
         billData = billData
     )
 }
+

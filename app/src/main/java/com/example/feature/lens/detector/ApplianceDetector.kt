@@ -35,11 +35,6 @@ interface ApplianceDetector {
     suspend fun processFrame(imageProxy: ImageProxy): List<DetectedCandidate>
 
     /**
-     * Process a static bitmap image and return detected candidates.
-     */
-    suspend fun processBitmap(bitmap: android.graphics.Bitmap): List<DetectedCandidate> = emptyList()
-
-    /**
      * Release detector resources, threads, and models.
      */
     fun close()

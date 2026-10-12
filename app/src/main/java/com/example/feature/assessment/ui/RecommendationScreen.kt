@@ -1,191 +1,373 @@
 package com.example.feature.assessment.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Recommend
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ui.components.StepProgress
+import androidx.compose.ui.unit.sp
+import com.example.ui.theme.*
 
 @Composable
 fun RecommendationRoute(
-    result: RecommendationResult,
+    vendorViewModel: SolarVendorViewModel,
     onNavigateNext: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        StepProgress(currentStep = 8, totalSteps = 11)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Recommend,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-        }
+    val state by vendorViewModel.state.collectAsState()
 
-        Spacer(modifier = Modifier.height(24.dp))
+    RecommendationScreen(
+        recommendedCapacityKw = state.recommendedCapacityKw,
+        monthlyConsumption = state.monthlyConsumptionKwh,
+        mountType = state.mountType,
+        systemType = state.systemType,
+        onNavigateNext = onNavigateNext,
+        onNavigateBack = onNavigateBack
+    )
+}
 
-        Text(
-            text = "Recommended System",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
+@Composable
+fun RecommendationScreen(
+    recommendedCapacityKw: Double,
+    monthlyConsumption: Double,
+    mountType: String,
+    systemType: String,
+    onNavigateNext: () -> Unit,
+    onNavigateBack: () -> Unit
+) {
+    Scaffold(
+        containerColor = StitchSurface,
+        topBar = {
+            Column {
+                StitchVendorTopBar(
+                    title = "Solar Recommendation",
+                    onNavigateBack = onNavigateBack
+                )
+                StitchStepProgressBar(
+                    currentStep = 7,
+                    totalSteps = 8,
+                    stepTitle = "Your Solar Recommendation"
+                )
+            }
+        },
+        bottomBar = {
             Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "Plant Capacity",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                StitchPrimaryButton(
+                    text = "Continue to Panel Selection",
+                    onClick = onNavigateNext
                 )
+
                 Text(
-                    text = "${result.recommendedSystemSizeKw} kW",
-                    style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                Text(
-                    text = "Based on ${result.monthlyConsumption.toInt()} kWh/month",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    text = "ZERO COMMITMENT • VENDOR DISCOVERY STAGE",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = StitchSecondary,
+                    letterSpacing = 0.8.sp
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
+            // Header block
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Your solar recommendation",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StitchOnSurface,
+                    letterSpacing = (-0.3).sp
                 )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(text = "Area Required: ~${result.requiredAreaSqM} sq.m", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (result.isFeasible) {
-                        Text(text = "Status: Suitable for installation", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    } else {
-                        Text(text = "Status: Insufficient area (Available: ${result.availableArea} sq.m)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-                        Text(text = "Suggestion: Increase area or reduce size.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = "Based on your electricity usage and available installation space.",
+                    fontSize = 15.sp,
+                    color = StitchSecondary,
+                    lineHeight = 22.sp
+                )
+            }
+
+            // Card 1: Recommended Plant Capacity
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = StitchSurfaceContainerLowest,
+                border = BorderStroke(1.dp, StitchOutline.copy(alpha = 0.5f)),
+                shadowElevation = 0.5.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "RECOMMENDED PLANT CAPACITY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchSecondary,
+                        letterSpacing = 0.8.sp
+                    )
+
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = String.format("%.1f", recommendedCapacityKw),
+                            fontSize = 38.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = StitchPrimaryContainer,
+                            letterSpacing = (-1).sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "kW",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StitchPrimaryContainer,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = StitchSurfaceContainerLow
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription = null,
+                                tint = StitchPrimaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Optimal $systemType System",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
-        }
 
-                Spacer(modifier = Modifier.height(24.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.Top
+            // Card 2: How It Works Flowchart
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = StitchSurfaceContainerLowest,
+                border = BorderStroke(1.dp, StitchOutline.copy(alpha = 0.5f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Info",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     Text(
-                        text = "Review Your Recommendation",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "HOW IT WORKS",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        color = StitchSecondary,
+                        letterSpacing = 0.8.sp
                     )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FlowStepItem(icon = Icons.Default.WbSunny, label = "Sunlight")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = StitchSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        FlowStepItem(icon = Icons.Default.SolarPower, label = "Solar Panels")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = StitchSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        FlowStepItem(icon = Icons.Default.Home, label = "Home Inverter")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = StitchSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        FlowStepItem(icon = Icons.Default.Bolt, label = "Clean Power")
+                    }
+                }
+            }
+
+            // Card 3: Summary of Inputs
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = StitchSurfaceContainerLowest,
+                border = BorderStroke(1.dp, StitchOutline.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
-                        text = "Please review your recommended solar system.\n\nIf you would like to change your monthly consumption, available area, or other site details, tap Back.\n\nIf everything looks correct, tap Continue to proceed to Panel Selection.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        text = "SUMMARY OF INPUTS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchSecondary,
+                        letterSpacing = 0.8.sp
+                    )
+
+                    SummaryInputRow(
+                        icon = Icons.Default.ElectricMeter,
+                        title = "Monthly usage",
+                        value = "${monthlyConsumption.toInt()} kWh"
+                    )
+                    SummaryInputRow(
+                        icon = Icons.Default.Roofing,
+                        title = "Installation",
+                        value = mountType
+                    )
+                    SummaryInputRow(
+                        icon = Icons.Default.Bolt,
+                        title = "Recommended system",
+                        value = "${String.format("%.1f", recommendedCapacityKw)} kW",
+                        isHighlight = true
                     )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(
-                onClick = onNavigateBack,
-                modifier = Modifier
-                    .weight(0.35f)
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.extraLarge,
+            // Card 4: Disclaimer Info Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = StitchSurfaceContainer
             ) {
-                Text("Back", style = MaterialTheme.typography.titleMedium)
-            }
-            
-            Button(
-                onClick = onNavigateNext,
-                modifier = Modifier
-                    .weight(0.65f)
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                enabled = result.isFeasible,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-            ) {
-                Text("Continue", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = StitchPrimaryContainer,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "This is an estimated recommendation based on the information you provided. The final proposal will be verified by your chosen installer.",
+                        fontSize = 12.sp,
+                        color = StitchOnSurfaceVariant,
+                        lineHeight = 17.sp
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+private fun FlowStepItem(
+    icon: ImageVector,
+    label: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(StitchSurfaceContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = StitchPrimaryContainer,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = StitchOnSurface,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun SummaryInputRow(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    isHighlight: Boolean = false
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = StitchSurfaceContainerLow
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = StitchSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    color = StitchSecondary
+                )
+            }
+            Text(
+                text = value,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isHighlight) StitchPrimaryContainer else StitchOnSurface
+            )
+        }
+    }
+}
+

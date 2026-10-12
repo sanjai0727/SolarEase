@@ -47,6 +47,10 @@ data class RecommendsUiState(
     val todayProgressChecked: Int = 0,
     val todayProgressTotal: Int = 9,
     val streakDays: Int = 0,
+    val streakState: StreakState = StreakState(),
+    val coinBalance: Int = 0,
+    val coinTransactions: List<CoinTransaction> = emptyList(),
+    val billVerificationResult: BillVerificationResult? = null,
     val billingCycleSavings: BillingCycleSavings = BillingCycleSavings(
         previousUnits = 55.0,
         previousPeriod = "Jun–Aug",
@@ -58,6 +62,7 @@ data class RecommendsUiState(
         differenceUnits = 13.0
     ),
     val mantras: List<MantraItem> = emptyList(),
+    val isMantrasExpanded: Boolean = true,
     val availableCycles: List<BillingCycleItem> = emptyList(),
     val selectedCycleIndex: Int = 0,
     val cycleComparison: BillingCycleComparison? = null

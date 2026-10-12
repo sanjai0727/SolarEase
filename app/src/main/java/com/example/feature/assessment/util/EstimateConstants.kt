@@ -4,6 +4,14 @@ object EstimateConstants {
     const val DIVISOR = 120.0
     const val AREA_PER_KW = 10.0
     
+    // Authoritative Solar Sizing Constants (MNRE Benchmark & IEC 61724 Standard)
+    /** National average daily solar irradiance benchmark for residential rooftop systems in India (h/day). */
+    const val PEAK_SUN_HOURS = 4.5
+    /** System performance ratio accounting for inverter, thermal, wiring, and soiling derate losses (~79%). */
+    const val SYSTEM_PERFORMANCE_RATIO = 0.79
+    /** Standard billing cycle month basis for monthly solar generation calculations. */
+    const val DAYS_PER_MONTH = 30.0
+    
     const val BASE_RATE_ON_GRID = 55000.0
     const val BASE_RATE_OFF_GRID = 70000.0
     const val BASE_RATE_HYBRID = 85000.0

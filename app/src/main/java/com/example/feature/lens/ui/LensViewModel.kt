@@ -8,7 +8,6 @@ import com.example.feature.lens.data.LensRepository
 import com.example.feature.lens.detector.DetectedCandidate
 import com.example.feature.lens.utils.ApplianceMaster
 import com.example.feature.lens.utils.DetectedAppliance
-import com.example.feature.lens.utils.UsageMode
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -44,26 +43,16 @@ data class Room(
     val appliances: List<EditableAppliance> = emptyList()
 ) {
     val connectedLoadWatts: Float
-        get() = appliances.sumOf { (it.ratedWattage * it.quantity).toDouble() }.toFloat()
+        get() = appliances.sumOf { (it.powerWatts * it.quantity).toDouble() }.toFloat()
 
     val connectedLoadKw: Float
-        get() = appliances.sumOf { it.connectedLoadKw }.toFloat()
+        get() = connectedLoadWatts / 1000f
 
-    val connectedLoadKwPrecise: Double
-        get() = appliances.sumOf { it.connectedLoadKw }
-
-    val monthlyEnergyKwh: Double
-        get() = appliances.sumOf { it.monthlyEnergyKwh }
-
-    val simplifiedBaselineCost: Double
-        get() = appliances.sumOf { it.simplifiedBaselineCost }
-
-    // Backward compatibility for existing callers
     val monthlyKwh: Float
-        get() = monthlyEnergyKwh.toFloat()
+        get() = appliances.sumOf { it.monthlyKwh.toDouble() }.toFloat()
 
     val monthlyCost: Float
-        get() = simplifiedBaselineCost.toFloat()
+        get() = appliances.sumOf { it.monthlyCost.toDouble() }.toFloat()
 }
 
 enum class CameraMode {
@@ -101,47 +90,13 @@ data class EditableAppliance(
     val powerWatts: Float,
     val usageHoursPerDay: Float,
     val monthlyUsageDays: Int,
-    val quantity: Int,
-    val activeWatts: Float? = null,
-    val dutyCycle: Float? = null,
-    val usageMode: UsageMode = UsageMode.DAILY_HOURS,
-    val minutesPerUse: Float = 0f,
-    val usesPerMonth: Int = 0
+    val quantity: Int
 ) {
-    val ratedWattage: Float get() = powerWatts
-
-    val activeOperatingWattage: Float
-        get() = activeWatts ?: (ApplianceMaster.getDefaults(label)?.activeOperatingWattage ?: powerWatts)
-
-    val resolvedDutyCycle: Float
-        get() = dutyCycle ?: (ApplianceMaster.getDefaults(label)?.dutyCycle ?: 1.0f)
-
-    val resolvedUsageMode: UsageMode
-        get() = if (usageMode != UsageMode.DAILY_HOURS) usageMode else (ApplianceMaster.getDefaults(label)?.usageMode ?: UsageMode.DAILY_HOURS)
-
-    val connectedLoadKw: Double
-        get() = ApplianceMaster.calculateConnectedLoadKw(ratedWattage, quantity.coerceAtLeast(0))
-
-    val monthlyEnergyKwh: Double
-        get() = ApplianceMaster.calculateMonthlyEnergyKwh(
-            activeOperatingWattage = activeOperatingWattage,
-            usageMode = resolvedUsageMode,
-            dailyHours = usageHoursPerDay.toDouble(),
-            minutesPerUse = if (minutesPerUse > 0f) minutesPerUse.toDouble() else (ApplianceMaster.getDefaults(label)?.minutesPerUse?.toDouble() ?: 0.0),
-            usesPerMonth = if (usesPerMonth > 0) usesPerMonth else (ApplianceMaster.getDefaults(label)?.usesPerMonth ?: 0),
-            monthlyDays = monthlyUsageDays,
-            quantity = quantity.coerceAtLeast(0),
-            dutyCycle = resolvedDutyCycle
-        )
-
-    val simplifiedBaselineCost: Double
-        get() = monthlyEnergyKwh * ApplianceMaster.authoritativeTariffRate
-
     val monthlyKwh: Float
-        get() = monthlyEnergyKwh.toFloat()
+        get() = (powerWatts * usageHoursPerDay * monthlyUsageDays * quantity.coerceAtLeast(1)) / 1000f
 
     val monthlyCost: Float
-        get() = simplifiedBaselineCost.toFloat()
+        get() = ApplianceMaster.calculateMonthlyCost(monthlyKwh)
 }
 
 data class ScannedAppliance(
@@ -269,8 +224,6 @@ class LensViewModel(
         
         if (currentIndex != -1 && currentIndex + 1 < sortedRooms.size) {
             val nextRoom = sortedRooms[currentIndex + 1]
-            _scanSession.value = emptyList()
-            _currentFrameDetections.value = emptyList()
             _activeRoomId.value = nextRoom.id
             if (nextRoom.status == RoomStatus.PENDING) {
                 updateRoomStatus(nextRoom.id, RoomStatus.IN_PROGRESS)
@@ -283,8 +236,6 @@ class LensViewModel(
     }
 
     fun navigateToPreviousWorkspace() {
-        _scanSession.value = emptyList()
-        _currentFrameDetections.value = emptyList()
         val currentActiveId = _activeRoomId.value
         if (currentActiveId == null) {
             _uiState.value = LensUiState.RoomSetup
@@ -324,8 +275,9 @@ class LensViewModel(
 
         for (candidate in candidates) {
             val label = candidate.label
-            val powerWatts = 0f
-            val powerEstimateStr = "Review Required"
+            val defaults = ApplianceMaster.getDefaults(label)
+            val powerWatts = defaults?.defaultWattage ?: 100f
+            val powerEstimateStr = "Est. ~${powerWatts.toInt()} W"
 
             frameDetections.add(
                 DetectedAppliance(
@@ -335,7 +287,7 @@ class LensViewModel(
                     label = label,
                     powerEstimateStr = powerEstimateStr,
                     powerWatts = powerWatts,
-                    isVerified = false,
+                    isVerified = true,
                     isVerifying = false
                 )
             )
@@ -385,40 +337,23 @@ class LensViewModel(
         val editableAppliances = grouped.map { (label, list) ->
             val defaults = ApplianceMaster.getDefaults(label)
             val totalQty = list.sumOf { it.quantity }.coerceAtLeast(1)
-            val resolvedPower = list.firstOrNull()?.powerWatts?.takeIf { it > 0f } ?: (defaults?.ratedWattage ?: 100f)
-            val activeWatts = defaults?.activeOperatingWattage ?: resolvedPower
-            val duty = defaults?.dutyCycle ?: 1.0f
-            val mode = defaults?.usageMode ?: UsageMode.DAILY_HOURS
-            val dailyHours = defaults?.typicalDailyHours ?: defaults?.typicalUsageHoursPerDay ?: 4f
-            val minutes = defaults?.minutesPerUse ?: 0f
-            val usesPerMo = defaults?.usesPerMonth ?: 0
-            val days = defaults?.monthlyDays ?: 30
-
             EditableAppliance(
                 id = java.util.UUID.randomUUID().toString(),
                 label = defaults?.name ?: label,
-                powerWatts = resolvedPower,
-                usageHoursPerDay = dailyHours,
-                monthlyUsageDays = days,
-                quantity = totalQty,
-                activeWatts = activeWatts,
-                dutyCycle = duty,
-                usageMode = mode,
-                minutesPerUse = minutes,
-                usesPerMonth = usesPerMo
+                powerWatts = list.firstOrNull()?.powerWatts ?: (defaults?.defaultWattage ?: 100f),
+                usageHoursPerDay = defaults?.typicalUsageHoursPerDay ?: 4f,
+                monthlyUsageDays = defaults?.monthlyUsageDays ?: 30,
+                quantity = totalQty
             )
         }
         
         _currentFrameDetections.value = emptyList()
-        _scanSession.value = emptyList()
         _uiState.value = LensUiState.Review(room, editableAppliances)
     }
 
     fun cancelAnalysis() {
         activeAnalysisJob?.cancel()
         activeAnalysisJob = null
-        _scanSession.value = emptyList()
-        _currentFrameDetections.value = emptyList()
         
         val currentState = _uiState.value
         if (currentState is LensUiState.Processing) {
@@ -428,46 +363,18 @@ class LensViewModel(
     }
 
     fun updateReviewAppliance(
-        id: String,
-        label: String,
-        powerWatts: Float,
-        usageHoursPerDay: Float,
-        monthlyUsageDays: Int,
-        quantity: Int,
-        activeWatts: Float? = null,
-        dutyCycle: Float? = null
+        id: String, label: String, powerWatts: Float,
+        usageHoursPerDay: Float, monthlyUsageDays: Int, quantity: Int
     ) {
         val currentState = _uiState.value
         if (currentState is LensUiState.Review) {
-            val defaults = ApplianceMaster.getDefaults(label)
-            val updated = currentState.newAppliances.map { item ->
-                if (item.id == id) {
-                    val isLabelChanged = !item.label.equals(label, ignoreCase = true)
-                    val resolvedActiveWatts = activeWatts ?: if (isLabelChanged) {
-                        defaults?.activeOperatingWattage ?: powerWatts
-                    } else {
-                        if (item.powerWatts > 0f && item.activeOperatingWattage != item.powerWatts) {
-                            (powerWatts * (item.activeOperatingWattage / item.powerWatts))
-                        } else powerWatts
-                    }
-                    val resolvedDuty = dutyCycle ?: if (isLabelChanged) (defaults?.dutyCycle ?: 1.0f) else item.dutyCycle
-                    val resolvedMode = if (isLabelChanged) (defaults?.usageMode ?: UsageMode.DAILY_HOURS) else item.usageMode
-                    val resolvedMinutes = if (isLabelChanged) (defaults?.minutesPerUse ?: 0f) else item.minutesPerUse
-                    val resolvedUsesPerMonth = if (isLabelChanged) (defaults?.usesPerMonth ?: 0) else item.usesPerMonth
-
-                    item.copy(
-                        label = label,
-                        powerWatts = powerWatts,
-                        usageHoursPerDay = usageHoursPerDay,
-                        monthlyUsageDays = monthlyUsageDays,
-                        quantity = quantity,
-                        activeWatts = resolvedActiveWatts,
-                        dutyCycle = resolvedDuty,
-                        usageMode = resolvedMode,
-                        minutesPerUse = resolvedMinutes,
-                        usesPerMonth = resolvedUsesPerMonth
-                    )
-                } else item
+            val updated = currentState.newAppliances.map {
+                if (it.id == id) it.copy(
+                    label = label, powerWatts = powerWatts,
+                    usageHoursPerDay = usageHoursPerDay,
+                    monthlyUsageDays = monthlyUsageDays,
+                    quantity = quantity
+                ) else it
             }
             _uiState.value = currentState.copy(newAppliances = updated)
         }
@@ -484,18 +391,14 @@ class LensViewModel(
     fun addReviewAppliance() {
         val currentState = _uiState.value
         if (currentState is LensUiState.Review) {
+            val defaults = ApplianceMaster.getDefaults("Other / Custom Appliance")
             val newAppliance = EditableAppliance(
                 id = java.util.UUID.randomUUID().toString(),
                 label = "Other / Custom Appliance",
-                powerWatts = 0f,
-                usageHoursPerDay = 0f,
-                monthlyUsageDays = 30,
-                quantity = 1,
-                activeWatts = 0f,
-                dutyCycle = 1.0f,
-                usageMode = UsageMode.DAILY_HOURS,
-                minutesPerUse = 0f,
-                usesPerMonth = 0
+                powerWatts = defaults?.defaultWattage ?: 0f,
+                usageHoursPerDay = defaults?.typicalUsageHoursPerDay ?: 0f,
+                monthlyUsageDays = defaults?.monthlyUsageDays ?: 30,
+                quantity = 1
             )
             val updated = currentState.newAppliances + newAppliance
             _uiState.value = currentState.copy(newAppliances = updated)
@@ -507,7 +410,7 @@ class LensViewModel(
         if (currentState is LensUiState.Review) {
             val room = currentState.room
             val updatedRoom = room.copy(
-                appliances = currentState.newAppliances,
+                appliances = (room.appliances + currentState.newAppliances).toList(),
                 status = RoomStatus.COMPLETED
             )
             _rooms.value = _rooms.value.map { r ->
@@ -521,8 +424,6 @@ class LensViewModel(
                 sortedRooms[currentIndex + 1]
             } else null
 
-            _scanSession.value = emptyList()
-            _currentFrameDetections.value = emptyList()
             _uiState.value = LensUiState.RoomCompleted(updatedRoom, nextRoom)
         }
     }
@@ -532,8 +433,6 @@ class LensViewModel(
         if (currentState is LensUiState.RoomCompleted) {
             val nextRoom = currentState.nextRoom
             if (nextRoom != null) {
-                _scanSession.value = emptyList()
-                _currentFrameDetections.value = emptyList()
                 _activeRoomId.value = nextRoom.id
                 if (nextRoom.status == RoomStatus.PENDING) {
                     updateRoomStatus(nextRoom.id, RoomStatus.IN_PROGRESS)
@@ -550,9 +449,7 @@ class LensViewModel(
         val targetRoom = _rooms.value.find { it.id == roomId }
         if (targetRoom != null) {
             _activeRoomId.value = targetRoom.id
-            _scanSession.value = emptyList()
-            _currentFrameDetections.value = emptyList()
-            _uiState.value = LensUiState.Review(targetRoom, targetRoom.appliances)
+            _uiState.value = LensUiState.Review(targetRoom, emptyList())
         }
     }
 
@@ -604,8 +501,6 @@ class LensViewModel(
     }
 
     fun processImagesAsync(images: List<ByteArray>, source: String, contextRoom: Room) {
-        _scanSession.value = emptyList()
-        _currentFrameDetections.value = emptyList()
         _uiState.value = LensUiState.Processing(contextRoom, "Analyzing ${images.size} image(s) with Gemini 3.8 Flash...")
 
         activeAnalysisJob?.cancel()
@@ -620,7 +515,6 @@ class LensViewModel(
                     for (det in detectionResult.detections) {
                         val label = det.applianceType ?: det.label
                         val defaults = ApplianceMaster.getDefaults(label)
-                        val canonicalName = defaults?.name ?: label
                         val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
                         val powerEstimateStr = if (det.powerRatingWatts != null) {
                             "${powerWatts.toInt()} W"
@@ -636,11 +530,11 @@ class LensViewModel(
                         )
 
                         val qty = det.quantity ?: 1
-                        val existingIndex = currentSession.indexOfFirst { it.label.equals(canonicalName, ignoreCase = true) }
+                        val existingIndex = currentSession.indexOfFirst { it.label.equals(label, ignoreCase = true) }
                         if (existingIndex == -1) {
                             currentSession.add(
                                 ScannedAppliance(
-                                    label = canonicalName,
+                                    label = defaults?.name ?: label,
                                     powerWatts = powerWatts,
                                     powerEstimateStr = powerEstimateStr,
                                     boundingBox = rectF,
@@ -674,8 +568,6 @@ class LensViewModel(
     }
 
     fun processVideoUploadAsync(context: android.content.Context, uri: android.net.Uri, contextRoom: Room) {
-        _scanSession.value = emptyList()
-        _currentFrameDetections.value = emptyList()
         _uiState.value = LensUiState.Processing(contextRoom, "Analyzing video with Gemini 3.8 Flash...")
 
         activeAnalysisJob?.cancel()
@@ -832,50 +724,24 @@ class LensViewModel(
 
     /**
      * Dedicated Scan Flow handler for Instant Photo captures.
-     * Operates purely on-device via ML Kit. Does NOT call Gemini.
+     * Operates purely on-device via YOLO. Does NOT call Gemini.
      */
     fun processPhotoScan(
         imageBytes: ByteArray,
         scanDetector: com.example.feature.lens.detector.LensScanDetector,
         contextRoom: Room
     ) {
-        if (imageBytes.size > 10 * 1024 * 1024) {
-            _uiState.value = LensUiState.Error("Photo exceeds maximum allowed size of 10MB.", LensUiState.RoomOverview(contextRoom))
-            return
-        }
-        _scanSession.value = emptyList()
-        _currentFrameDetections.value = emptyList()
-        android.util.Log.i("LENS_SCAN", "[LENS_SCAN] provider=mlkit mode=instant_photo size=${imageBytes.size}")
-        _uiState.value = LensUiState.Processing(contextRoom, "Processing photo with on-device detector...")
+        android.util.Log.i("LENS_SCAN", "[LENS_SCAN] provider=yolo mode=instant_photo size=${imageBytes.size}")
+        _uiState.value = LensUiState.Processing(contextRoom, "Processing photo scan with YOLO...")
 
         activeAnalysisJob?.cancel()
         activeAnalysisJob = viewModelScope.launch(Dispatchers.IO) {
             val bitmap = android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            val currentSession = mutableListOf<ScannedAppliance>()
             if (bitmap != null) {
-                val candidates = scanDetector.processInstantPhoto(bitmap)
+                scanDetector.processInstantPhoto(bitmap)
                 bitmap.recycle()
-                val now = System.currentTimeMillis()
-                for (candidate in candidates) {
-                    val label = candidate.label
-                    val defaults = ApplianceMaster.getDefaults(label)
-                    val powerWatts = defaults?.defaultWattage ?: 100f
-                    val powerEstimateStr = "Est. ~${powerWatts.toInt()} W"
-                    currentSession.add(
-                        ScannedAppliance(
-                            label = defaults?.name ?: label,
-                            powerWatts = powerWatts,
-                            powerEstimateStr = powerEstimateStr,
-                            boundingBox = candidate.boundingBoxRelative,
-                            lastTrackingId = candidate.trackingId,
-                            lastSeenTimestamp = now,
-                            quantity = 1
-                        )
-                    )
-                }
             }
             withContext(Dispatchers.Main) {
-                _scanSession.value = currentSession
                 if (_uiState.value is LensUiState.Processing) {
                     finishScan()
                 }
@@ -884,13 +750,6 @@ class LensViewModel(
     }
 
     fun processVideoAsync(videoFile: java.io.File, contextRoom: Room) {
-        val maxVideoBytes = 25 * 1024 * 1024L
-        if (videoFile.length() > maxVideoBytes) {
-            _uiState.value = LensUiState.Error("Video exceeds maximum allowed size of 25MB.", LensUiState.RoomOverview(contextRoom))
-            return
-        }
-        _scanSession.value = emptyList()
-        _currentFrameDetections.value = emptyList()
         _uiState.value = LensUiState.Processing(contextRoom, "Analyzing video with Gemini 3.8 Flash...")
 
         activeAnalysisJob?.cancel()

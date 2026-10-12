@@ -16,7 +16,7 @@ data class MeterCycleBaseline(
 @Serializable
 data class MeterReadingRecord(
     val id: String = UUID.randomUUID().toString(),
-    val billingCycleId: String,
+    val billingCycleId: String = "CYCLE-1",
     val readingValue: Double,
     val readingDate: String, // e.g. "2026-09-30" (YYYY-MM-DD for deterministic daily deduplication)
     val displayDate: String = "", // e.g. "30 Sep 2026"
@@ -110,3 +110,61 @@ sealed class MeterValidationResult {
     ) : Error(message)
     data class DuplicateToday(val existingReading: MeterReadingRecord) : MeterValidationResult()
 }
+
+/**
+ * Day slot on the Sunday–Saturday weekly bar chart.
+ */
+@Serializable
+data class WeeklyDayBarData(
+    val dayOfWeekIndex: Int, // Calendar.SUNDAY (1) .. Calendar.SATURDAY (7)
+    val dayLabel: String, // "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+    val dateIso: String, // "YYYY-MM-DD"
+    val displayDate: String, // e.g. "11 Oct"
+    val fullDate: String = "", // e.g. "Sunday, 11 Oct 2026"
+    val reading: MeterReadingRecord? = null,
+    val cumulativeKwh: Double? = null,
+    val relativeKwh: Double? = null, // Consumption above weekly baseline
+    val intervalConsumption: Double? = null, // Consumption since previous valid reading
+    val intervalDays: Int? = null, // Days since previous valid reading
+    val previousReadingDate: String? = null,
+    val previousReadingValue: Double? = null,
+    val isBaselinePoint: Boolean = false, // True if this reading acts as baseline anchor
+    val isDecreasedReading: Boolean = false, // Lower than previous reading (flagged for review)
+    val formattedTime: String? = null // e.g. "8:30 AM"
+)
+
+/**
+ * Weekly window data for the Sunday–Saturday weekly graph.
+ */
+@Serializable
+data class WeeklyMeterGraphData(
+    val weekOffset: Int = 0, // 0 = current week, 1 = 1 week ago, etc.
+    val startDateIso: String = "", // Sunday ISO
+    val endDateIso: String = "", // Saturday ISO
+    val periodTitle: String = "", // e.g. "5 Oct – 11 Oct"
+    val weeklyBaselineReading: Double? = null,
+    val weeklyBaselineDate: String? = null,
+    val baselineDescription: String = "",
+    val days: List<WeeklyDayBarData> = emptyList(),
+    val latestReading: Double? = null,
+    val hasOlder: Boolean = false,
+    val hasNewer: Boolean = false, // False if weekOffset == 0
+    val hasAnyReadingsInWeek: Boolean = false
+)
+
+enum class ReadingDetailsFilter(val label: String, val description: String) {
+    D7("7D", "Latest 7 saved readings"),
+    D30("30D", "Latest 30 saved readings"),
+    ALL("All", "Complete reading history")
+}
+
+data class ReadingHistoryItem(
+    val reading: MeterReadingRecord,
+    val previousReading: MeterReadingRecord? = null,
+    val consumptionSincePrevious: Double? = null,
+    val intervalDays: Int? = null,
+    val isBaseline: Boolean = false,
+    val isDecreased: Boolean = false,
+    val formattedTime: String = "",
+    val dateDisplay: String = ""
+)

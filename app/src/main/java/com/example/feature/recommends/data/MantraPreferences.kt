@@ -16,6 +16,9 @@ object MantraPreferences {
     private const val KEY_CHECK_IN_TIMES_PREFIX = "mantra_time_"
     private const val KEY_STREAK_DAYS = "streak_days"
     private const val KEY_EARNED_CREDITS = "earned_energy_credits"
+    private const val KEY_MANTRAS_EXPANDED_DATE = "mantras_expanded_date"
+    private const val KEY_MANTRAS_IS_EXPANDED = "mantras_is_expanded"
+    private const val KEY_MANTRAS_CHECKED_DATE = "mantras_checked_date"
 
     val defaultDefinitions = listOf(
         MantraItem(
@@ -134,8 +137,15 @@ object MantraPreferences {
     private val _streakState = MutableStateFlow(0)
     val streakState: StateFlow<Int> = _streakState.asStateFlow()
 
+    private val _mantrasExpandedState = MutableStateFlow(true)
+    val mantrasExpandedState: StateFlow<Boolean> = _mantrasExpandedState.asStateFlow()
+
     private var appContext: Context? = null
     private var initialized = false
+
+    fun getTodayDateString(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    }
 
     fun init(context: Context? = null) {
         if (context != null) {
@@ -151,15 +161,20 @@ object MantraPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    private fun loadFromPrefs(context: Context) {
+    private fun loadFromPrefs(context: Context, overrideToday: String? = null) {
         try {
             val prefs = getPrefs(context)
-            if (!prefs.contains(KEY_CHECKED_IDS)) {
-                _mantrasState.value = defaultDefinitions
-                _streakState.value = 0
-                return
-            }
+            loadExpansionState(prefs, overrideToday)
+            loadCheckInState(prefs, overrideToday)
+        } catch (_: Exception) {
+            _mantrasState.value = defaultDefinitions
+        }
+    }
 
+    private fun loadCheckInState(prefs: SharedPreferences, overrideToday: String? = null) {
+        val today = overrideToday ?: getTodayDateString()
+        val savedDate = prefs.getString(KEY_MANTRAS_CHECKED_DATE, null)
+        if (savedDate == today) {
             val checkedSet = prefs.getStringSet(KEY_CHECKED_IDS, emptySet()) ?: emptySet()
             val loadedStreak = prefs.getInt(KEY_STREAK_DAYS, 0)
             _streakState.value = loadedStreak
@@ -177,8 +192,73 @@ object MantraPreferences {
                 )
             }
             _mantrasState.value = updatedList
-        } catch (_: Exception) {
+        } else {
+            // New local calendar day: reset check-ins to default
             _mantrasState.value = defaultDefinitions
+            _streakState.value = 0
+            val editor = prefs.edit()
+                .putString(KEY_MANTRAS_CHECKED_DATE, today)
+                .remove(KEY_CHECKED_IDS)
+            for (item in defaultDefinitions) {
+                editor.remove("$KEY_CHECK_IN_TIMES_PREFIX${item.id}")
+            }
+            editor.apply()
+        }
+    }
+
+    private fun loadExpansionState(prefs: SharedPreferences, overrideToday: String? = null) {
+        val today = overrideToday ?: getTodayDateString()
+        val savedDate = prefs.getString(KEY_MANTRAS_EXPANDED_DATE, null)
+        if (savedDate == today) {
+            _mantrasExpandedState.value = prefs.getBoolean(KEY_MANTRAS_IS_EXPANDED, true)
+        } else {
+            // New local calendar day: reset to expanded by default
+            _mantrasExpandedState.value = true
+            prefs.edit()
+                .putString(KEY_MANTRAS_EXPANDED_DATE, today)
+                .putBoolean(KEY_MANTRAS_IS_EXPANDED, true)
+                .apply()
+        }
+    }
+
+    fun checkDateAndResetIfNewDay(context: Context? = null, overrideDate: String? = null) {
+        val ctx = context?.applicationContext ?: appContext ?: return
+        try {
+            val prefs = getPrefs(ctx)
+            loadExpansionState(prefs, overrideDate)
+            loadCheckInState(prefs, overrideDate)
+        } catch (_: Exception) {}
+    }
+
+    fun toggleMantrasExpanded(context: Context? = null): Boolean {
+        val ctx = context?.applicationContext ?: appContext
+        val today = getTodayDateString()
+        val newState = !_mantrasExpandedState.value
+        _mantrasExpandedState.value = newState
+
+        if (ctx != null) {
+            try {
+                getPrefs(ctx).edit()
+                    .putString(KEY_MANTRAS_EXPANDED_DATE, today)
+                    .putBoolean(KEY_MANTRAS_IS_EXPANDED, newState)
+                    .apply()
+            } catch (_: Exception) {}
+        }
+        return newState
+    }
+
+    fun setMantrasExpanded(context: Context? = null, isExpanded: Boolean, date: String? = null) {
+        val ctx = context?.applicationContext ?: appContext
+        val targetDate = date ?: getTodayDateString()
+        _mantrasExpandedState.value = isExpanded
+
+        if (ctx != null) {
+            try {
+                getPrefs(ctx).edit()
+                    .putString(KEY_MANTRAS_EXPANDED_DATE, targetDate)
+                    .putBoolean(KEY_MANTRAS_IS_EXPANDED, isExpanded)
+                    .apply()
+            } catch (_: Exception) {}
         }
     }
 
@@ -200,10 +280,11 @@ object MantraPreferences {
         } catch (_: Exception) {}
     }
 
-    fun toggleCheckIn(context: Context? = null, mantraId: Int) {
+    fun toggleCheckIn(context: Context? = null, mantraId: Int, date: String? = null): Boolean {
         val currentList = _mantrasState.value.ifEmpty { defaultDefinitions }
-        val target = currentList.find { it.id == mantraId } ?: return
+        val target = currentList.find { it.id == mantraId } ?: return false
 
+        val today = date ?: getTodayDateString()
         val newCheckedState = !target.isCheckedIn
         val newTimeDisplay = if (newCheckedState) {
             val timeFmt = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
@@ -225,7 +306,9 @@ object MantraPreferences {
             try {
                 val prefs = getPrefs(ctx)
                 val checkedIds = updatedList.filter { it.isCheckedIn }.map { it.id.toString() }.toSet()
-                val editor = prefs.edit().putStringSet(KEY_CHECKED_IDS, checkedIds)
+                val editor = prefs.edit()
+                    .putString(KEY_MANTRAS_CHECKED_DATE, today)
+                    .putStringSet(KEY_CHECKED_IDS, checkedIds)
                 if (newCheckedState && newTimeDisplay != null) {
                     editor.putString("$KEY_CHECK_IN_TIMES_PREFIX$mantraId", newTimeDisplay)
                 } else {
@@ -234,10 +317,13 @@ object MantraPreferences {
                 editor.apply()
             } catch (_: Exception) {}
         }
+        return newCheckedState
     }
 
     fun resetToDefaults() {
         _mantrasState.value = defaultDefinitions
         _streakState.value = 0
+        _mantrasExpandedState.value = true
+        initialized = false
     }
 }

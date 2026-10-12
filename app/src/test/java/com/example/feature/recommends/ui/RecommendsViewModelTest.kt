@@ -7,6 +7,7 @@ import com.example.feature.home.ui.modules.TnebBillCache
 import com.example.feature.home.ui.modules.TnebBillRecord
 import com.example.feature.home.ui.modules.TnebConsumerBillData
 import com.example.feature.recommends.data.MantraPreferences
+import com.example.feature.recommends.data.RewardStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -33,6 +34,7 @@ class RecommendsViewModelTest {
         TnebBillCache.clear(null)
         MeterReadingCache.clear(null)
         MantraPreferences.resetToDefaults()
+        RewardStorage.clear(null)
     }
 
     @After
@@ -40,6 +42,7 @@ class RecommendsViewModelTest {
         TnebBillCache.clear(null)
         MeterReadingCache.clear(null)
         MantraPreferences.resetToDefaults()
+        RewardStorage.clear(null)
         Dispatchers.resetMain()
     }
 
@@ -76,11 +79,12 @@ class RecommendsViewModelTest {
     }
 
     @Test
-    fun testMantraCheckInIsDecoupledFromCredits() = runTest(testDispatcher) {
+    fun testMantraCheckInAwardsDailyCoinIdempotently() = runTest(testDispatcher) {
         val viewModel = RecommendsViewModel()
         advanceUntilIdle()
 
         val initialCredits = viewModel.uiState.value.energyCredits.totalCredits
+        assertEquals(0, initialCredits)
         val initialCheckedCount = viewModel.uiState.value.todayProgressChecked
 
         // Mantra 2 (Regular cleaning of AC filters) is initially unchecked
@@ -88,7 +92,7 @@ class RecommendsViewModelTest {
         assertNotNull(mantra2Initial)
         assertFalse(mantra2Initial!!.isCheckedIn)
 
-        // Check in Mantra 2
+        // Check in Mantra 2 -> Awards 1 coin for first qualifying activity today
         viewModel.toggleMantraCheckIn(null, 2)
         advanceUntilIdle()
 
@@ -98,12 +102,26 @@ class RecommendsViewModelTest {
         assertTrue("Mantra 2 should now be checked in", mantra2Updated!!.isCheckedIn)
         assertEquals("Checked count should increase by 1", initialCheckedCount + 1, updatedStateAfterCheckIn.todayProgressChecked)
         assertEquals(
-            "Energy credits MUST remain strictly unchanged by mantra check-ins (verified bill-based only)",
-            initialCredits,
+            "First qualifying mantra check-in awards 1 coin",
+            1,
             updatedStateAfterCheckIn.energyCredits.totalCredits
         )
+        assertEquals(1, updatedStateAfterCheckIn.coinBalance)
+        assertEquals(1, updatedStateAfterCheckIn.streakDays)
 
-        // Toggle Mantra 2 back to unchecked
+        // Check in Mantra 3 on the same day -> Must NOT grant additional daily coins
+        viewModel.toggleMantraCheckIn(null, 3)
+        advanceUntilIdle()
+
+        val stateAfterSecondCheckIn = viewModel.uiState.value
+        assertEquals("Checked count should increase to 2", 2, stateAfterSecondCheckIn.todayProgressChecked)
+        assertEquals(
+            "Additional check-in on the same day must not award additional daily coins",
+            1,
+            stateAfterSecondCheckIn.energyCredits.totalCredits
+        )
+
+        // Toggle Mantra 2 back to unchecked -> Must NOT revoke earned daily reward
         viewModel.toggleMantraCheckIn(null, 2)
         advanceUntilIdle()
 
@@ -111,12 +129,13 @@ class RecommendsViewModelTest {
         val mantra2Unchecked = stateAfterUncheck.mantras.find { it.id == 2 }
         assertNotNull(mantra2Unchecked)
         assertFalse("Mantra 2 should be unchecked again", mantra2Unchecked!!.isCheckedIn)
-        assertEquals("Checked count should return to original", initialCheckedCount, stateAfterUncheck.todayProgressChecked)
+        assertEquals("Checked count should now be 1", 1, stateAfterUncheck.todayProgressChecked)
         assertEquals(
-            "Energy credits MUST still remain unchanged",
-            initialCredits,
+            "Unchecking a mantra must not revoke an already-earned daily reward",
+            1,
             stateAfterUncheck.energyCredits.totalCredits
         )
+        assertEquals(1, stateAfterUncheck.streakDays)
     }
 
     @Test

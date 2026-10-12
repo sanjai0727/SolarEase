@@ -7,103 +7,105 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * SolarEase Lens — Minimal & Aesthetic Design System
- * Clean, modern, and approachable for residential homeowners.
+ * Precision Telemetry Energy System Design Tokens
+ * Replicating the exact color palette, typography, and shape specs from the Stitch UX Flow.
  */
 val GeistFontFamily: FontFamily = FontFamily.Default
 val HankenGroteskFontFamily: FontFamily = FontFamily.Default
 
 object LensColors {
-    // Primary — Fresh Green
-    val Primary = Color(0xFF16A34A)
-    val PrimaryHover = Color(0xFF15803D)
-    val PrimaryLive = Color(0xFF22C55E)
-    val PrimaryFixed = Color(0xFFDCFCE7)
-    val PrimaryFixedDim = Color(0xFFBBF7D0)
+    // Primary Emerald Tier
+    val Primary = Color(0xFF047857)
+    val PrimaryHover = Color(0xFF059669)
+    val PrimaryLive = Color(0xFF10B981)
+    val PrimaryFixed = Color(0xFF97F5CC)
+    val PrimaryFixedDim = Color(0xFF7BD8B1)
     val OnPrimary = Color(0xFFFFFFFF)
-    val OnPrimaryFixed = Color(0xFF14532D)
-    val PrimaryContainer = Color(0xFF16A34A)
-    val OnPrimaryContainer = Color(0xFFDCFCE7)
+    val OnPrimaryFixed = Color(0xFF002115)
+    val PrimaryContainer = Color(0xFF047857)
+    val OnPrimaryContainer = Color(0xFF9FFDD3)
 
-    // Text & Neutral
-    val SlateDark = Color(0xFF111827)
-    val SlateText = Color(0xFF1F2937)
-    val SlateMuted = Color(0xFF6B7280)
-    val SlateVariant = Color(0xFF4B5563)
-    val SlateCaption = Color(0xFF9CA3AF)
+    // Secondary & Industrial Slate Tier
+    val SlateDark = Color(0xFF0F172A)
+    val SlateText = Color(0xFF0B1C30)
+    val SlateMuted = Color(0xFF565E74)
+    val SlateVariant = Color(0xFF3E4943)
+    val SlateCaption = Color(0xFF64748B)
 
-    // Standard aliases
+    // Standard Stitch Color Aliases
     val OnSurface = SlateText
     val OnSurfaceVariant = SlateVariant
     val Secondary = SlateMuted
-    val SecondaryFixed = Color(0xFFE5E7EB)
-    val SecondaryFixedDim = Color(0xFFD1D5DB)
-    val SecondaryContainer = Color(0xFFF3F4F6)
+    val SecondaryFixed = Color(0xFFDAE2FD)
+    val SecondaryFixedDim = Color(0xFFBEC6E0)
+    val SecondaryContainer = Color(0xFFDAE2FD)
 
-    // Tertiary — Soft Blue
-    val Tertiary = Color(0xFF2563EB)
-    val TertiaryContainer = Color(0xFF3B82F6)
-    val TertiaryFixed = Color(0xFFDBEAFE)
-    val TertiaryFixedDim = Color(0xFF93C5FD)
+    // Tertiary Cyan Tier
+    val Tertiary = Color(0xFF005683)
+    val TertiaryContainer = Color(0xFF006FA8)
+    val TertiaryFixed = Color(0xFFCCE5FF)
+    val TertiaryFixedDim = Color(0xFF93CCFF)
     val OnTertiary = Color(0xFFFFFFFF)
 
-    // Surfaces — Very light, airy
-    val Background = Color(0xFFFAFAFA)
-    val Surface = Color(0xFFFAFAFA)
+    // Surfaces & Spatial Elevation
+    val Background = Color(0xFFF8F9FF)
+    val Surface = Color(0xFFF8F9FF)
     val SurfaceContainerLowest = Color(0xFFFFFFFF)
-    val SurfaceContainerLow = Color(0xFFF5F7F5)
-    val SurfaceContainer = Color(0xFFEFF1EF)
-    val SurfaceContainerHigh = Color(0xFFE5E8E5)
-    val SurfaceContainerHighest = Color(0xFFDBDEDB)
-    val Outline = Color(0xFFE5E7EB)
-    val OutlineVariant = Color(0xFFD1D5DB)
+    val SurfaceContainerLow = Color(0xFFEFF4FF)
+    val SurfaceContainer = Color(0xFFE5EEFF)
+    val SurfaceContainerHigh = Color(0xFFDCE9FF)
+    val SurfaceContainerHighest = Color(0xFFD3E4FE)
+    val Outline = Color(0xFFE2E8F0)
+    val OutlineVariant = Color(0xFFCBD5E1)
 
-    // Dark HUD & Inverted Surfaces (for camera screen)
-    val InverseSurface = Color(0xFF1F2937)
-    val InverseOnSurface = Color(0xFFF3F4F6)
+    // Dark HUD & Inverted Surfaces
+    val InverseSurface = Color(0xFF213145)
+    val InverseOnSurface = Color(0xFFEAF1FF)
 
-    // Status
-    val Error = Color(0xFFDC2626)
-    val ErrorContainer = Color(0xFFFEE2E2)
+    // Status & Warnings
+    val Error = Color(0xFFBA1A1A)
+    val ErrorContainer = Color(0xFFFFDAD6)
 }
 
 object LensTypography {
     val displayLg = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
+        fontSize = 30.sp,
+        lineHeight = 36.sp,
         letterSpacing = (-0.02).sp
     )
 
     val headlineLg = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = (-0.01).sp
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        letterSpacing = (-0.015).sp
     )
 
     val headlineMd = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        letterSpacing = (-0.01).sp
     )
 
     val headlineSm = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 15.sp,
-        lineHeight = 20.sp
+        fontSize = 16.sp,
+        lineHeight = 22.sp
     )
 
+    // Tabular Numerical Telemetry (Geist inspired)
     val metricValLg = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
-        lineHeight = 30.sp,
-        letterSpacing = (-0.02).sp
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 28.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.03).sp
     )
 
     val metricValMd = TextStyle(
@@ -111,22 +113,22 @@ object LensTypography {
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         lineHeight = 24.sp,
-        letterSpacing = (-0.01).sp
+        letterSpacing = (-0.02).sp
     )
 
     val labelCaps = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 11.sp,
         lineHeight = 14.sp,
-        letterSpacing = 0.4.sp
+        letterSpacing = 0.6.sp // +0.06em uppercase
     )
 
     val labelSm = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
-        fontSize = 13.sp,
-        lineHeight = 18.sp
+        fontSize = 12.sp,
+        lineHeight = 16.sp
     )
 
     val bodyLg = TextStyle(

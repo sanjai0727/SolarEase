@@ -545,7 +545,7 @@ object BillingCycleManager {
         }
     }
 
-    private fun extractCycleUnits(current: TnebBillRecord, prior: TnebBillRecord?): Double {
+    internal fun extractCycleUnits(current: TnebBillRecord, prior: TnebBillRecord?): Double {
         val unitsVal = current.units.filter { it.isDigit() || it == '.' }.toDoubleOrNull()
         if (unitsVal != null && unitsVal > 0.0) {
             return unitsVal
@@ -560,7 +560,7 @@ object BillingCycleManager {
         return unitsVal ?: 0.0
     }
 
-    private fun calculateCycleDays(current: TnebBillRecord, prior: TnebBillRecord?): Int {
+    internal fun calculateCycleDays(current: TnebBillRecord, prior: TnebBillRecord?): Int {
         if (prior != null) {
             val currDate = parseDate(current.assessmentDate.ifBlank { current.entryDate })
             val priorDate = parseDate(prior.assessmentDate.ifBlank { prior.entryDate })

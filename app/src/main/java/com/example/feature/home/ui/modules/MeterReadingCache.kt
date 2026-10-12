@@ -225,7 +225,15 @@ object MeterReadingCache {
         )
         _baseline.value = base
         recalculateMetrics()
-        saveToPrefs()
+    }
+
+    /**
+     * Test or data-import helper to directly set readings and baseline in cache.
+     */
+    fun setReadingsForTesting(readings: List<MeterReadingRecord>, base: MeterCycleBaseline? = null) {
+        _baseline.value = base
+        _readings.value = readings
+        recalculateMetrics()
     }
 
     /**
@@ -294,6 +302,16 @@ object MeterReadingCache {
         saveToPrefs()
 
         logD("Saved reading: $readingValue kWh on $dateKey (Daily: $dailyUnits, Cycle: $unitsSinceBase)")
+        try {
+            val userId = com.example.core.session.UserSession.currentUser?.id?.takeIf { it.isNotBlank() }
+                ?: com.example.core.session.UserSession.currentUser?.username?.takeIf { it.isNotBlank() }
+                ?: "default_user"
+            com.example.feature.recommends.data.RewardStorage.recordDailyActivity(
+                userId = userId,
+                activityId = "meter_reading_${newRecord.id}",
+                date = dateKey
+            )
+        } catch (_: Throwable) {}
         return MeterValidationResult.Success(updatedList.first { it.id == newRecord.id })
     }
 
@@ -1024,6 +1042,231 @@ object MeterReadingCache {
             } catch (_: Exception) {}
         }
         return null
+    }
+
+    /**
+     * Returns all saved meter readings across the current cycle and archived cycles,
+     * deduplicated and sorted chronologically.
+     */
+    fun getAllSavedReadings(): List<MeterReadingRecord> {
+        val current = _readings.value
+        val archived = getArchivedReadings()
+        val combined = (current + archived)
+            .distinctBy { it.id }
+            .distinctBy { it.readingDate }
+            .sortedWith(compareBy({ it.readingDate }, { it.timestamp }))
+        return combined
+    }
+
+    /**
+     * Resolves the Sunday–Saturday weekly meter reading bar chart data.
+     * - weekOffset = 0: current calendar week (Sunday to Saturday)
+     * - weekOffset > 0: past weeks (prevent future weeks)
+     * - Weekly baseline:
+     *     1. Latest valid reading on or before the week's Sunday.
+     *     2. If none, first valid reading in the displayed week (anchored at 0 kWh).
+     * - Plots relative values above baseline (cumulative - baseline).
+     * - Safe handling for decreased readings (no negative consumption, flagged for review).
+     * - No fabricated readings for missing days.
+     */
+    fun getWeeklyGraphData(
+        weekOffset: Int = 0,
+        anchorDate: Date? = null
+    ): WeeklyMeterGraphData {
+        val cal = Calendar.getInstance(Locale.getDefault())
+        if (anchorDate != null) cal.time = anchorDate
+        cal.firstDayOfWeek = Calendar.SUNDAY
+        cal.add(Calendar.WEEK_OF_YEAR, -weekOffset)
+        cal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+
+        val dayCals = (0..6).map { dayIdx ->
+            val c = cal.clone() as Calendar
+            c.add(Calendar.DAY_OF_MONTH, dayIdx)
+            c
+        }
+
+        val sundayIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(dayCals.first().time)
+        val saturdayIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(dayCals.last().time)
+
+        val startLabel = SimpleDateFormat("d MMM", Locale.US).format(dayCals.first().time)
+        val endLabel = SimpleDateFormat("d MMM", Locale.US).format(dayCals.last().time)
+        val periodTitle = if (weekOffset == 0) {
+            "This Week · $startLabel – $endLabel"
+        } else {
+            "$startLabel – $endLabel"
+        }
+
+        val allReadings = getAllSavedReadings()
+        val weekReadings = allReadings.filter { it.readingDate in sundayIso..saturdayIso }
+
+        // Baseline resolution
+        val priorReading = allReadings.filter { it.readingDate < sundayIso }.lastOrNull()
+        val billBase = _baseline.value
+        val billBaseIso = billBase?.baselineDate?.let { formatDateToIso(it) }
+
+        var baselineReading: Double? = null
+        var baselineDate: String? = null
+        var baselineDescription = ""
+        var isMidweekBaseline = false
+        var midweekBaselineRecord: MeterReadingRecord? = null
+
+        if (priorReading != null) {
+            baselineReading = priorReading.readingValue
+            baselineDate = formatToShortDate(priorReading.displayDate.ifBlank { priorReading.readingDate })
+            baselineDescription = "Baseline from previous reading on $baselineDate"
+        } else if (billBase != null && billBase.baselineReading > 0.0 && billBaseIso != null && billBaseIso <= sundayIso) {
+            baselineReading = billBase.baselineReading
+            baselineDate = formatToShortDate(billBase.baselineDate)
+            baselineDescription = "Baseline from bill on $baselineDate"
+        } else if (weekReadings.isNotEmpty()) {
+            midweekBaselineRecord = weekReadings.first()
+            baselineReading = midweekBaselineRecord.readingValue
+            baselineDate = formatToShortDate(midweekBaselineRecord.displayDate.ifBlank { midweekBaselineRecord.readingDate })
+            baselineDescription = "Midweek baseline on $baselineDate"
+            isMidweekBaseline = true
+        }
+
+        val days = dayCals.mapIndexed { _, dayCal ->
+            val dayIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(dayCal.time)
+            val dayLabel = SimpleDateFormat("EEE", Locale.US).format(dayCal.time)
+            val displayDate = SimpleDateFormat("d MMM", Locale.US).format(dayCal.time)
+            val fullDate = SimpleDateFormat("EEEE, d MMM yyyy", Locale.US).format(dayCal.time)
+
+            val readingOnDay = weekReadings.firstOrNull { it.readingDate == dayIso }
+
+            if (readingOnDay != null) {
+                val timeStr = SimpleDateFormat("h:mm a", Locale.US).format(Date(readingOnDay.timestamp))
+                val prevValid = allReadings.filter { it.readingDate < dayIso }.lastOrNull()
+
+                val isDecreasedFromPrev = prevValid != null && readingOnDay.readingValue < prevValid.readingValue
+                val intervalDays = if (prevValid != null) {
+                    calculateDaysBetween(prevValid.readingDate, dayIso)
+                } else null
+
+                val intervalConsumption = if (prevValid != null) {
+                    if (isDecreasedFromPrev) null
+                    else max(0.0, readingOnDay.readingValue - prevValid.readingValue)
+                } else null
+
+                val isAnchor = (isMidweekBaseline && readingOnDay.id == midweekBaselineRecord?.id)
+                val isDecreasedFromBaseline = baselineReading != null && readingOnDay.readingValue < baselineReading
+
+                val relativeKwh = when {
+                    isAnchor -> 0.0
+                    baselineReading != null -> {
+                        if (isDecreasedFromBaseline) null
+                        else max(0.0, readingOnDay.readingValue - baselineReading)
+                    }
+                    else -> null
+                }
+
+                WeeklyDayBarData(
+                    dayOfWeekIndex = dayCal.get(Calendar.DAY_OF_WEEK),
+                    dayLabel = dayLabel,
+                    dateIso = dayIso,
+                    displayDate = displayDate,
+                    fullDate = fullDate,
+                    reading = readingOnDay,
+                    cumulativeKwh = readingOnDay.readingValue,
+                    relativeKwh = relativeKwh,
+                    intervalConsumption = intervalConsumption,
+                    intervalDays = intervalDays,
+                    previousReadingDate = prevValid?.displayDate?.ifBlank { prevValid.readingDate },
+                    previousReadingValue = prevValid?.readingValue,
+                    isBaselinePoint = isAnchor,
+                    isDecreasedReading = isDecreasedFromPrev || isDecreasedFromBaseline,
+                    formattedTime = timeStr
+                )
+            } else {
+                WeeklyDayBarData(
+                    dayOfWeekIndex = dayCal.get(Calendar.DAY_OF_WEEK),
+                    dayLabel = dayLabel,
+                    dateIso = dayIso,
+                    displayDate = displayDate,
+                    fullDate = fullDate,
+                    reading = null,
+                    cumulativeKwh = null,
+                    relativeKwh = null,
+                    intervalConsumption = null,
+                    intervalDays = null,
+                    isBaselinePoint = false,
+                    isDecreasedReading = false
+                )
+            }
+        }
+
+        val hasOlder = allReadings.any { it.readingDate < sundayIso } || (billBase != null && billBase.baselineReading > 0.0 && billBaseIso != null && billBaseIso < sundayIso)
+        val hasNewer = weekOffset > 0
+
+        val latestInWeek = weekReadings.lastOrNull()?.readingValue
+        val latestReading = latestInWeek ?: allReadings.filter { it.readingDate <= saturdayIso }.lastOrNull()?.readingValue ?: baselineReading
+
+        return WeeklyMeterGraphData(
+            weekOffset = weekOffset,
+            startDateIso = sundayIso,
+            endDateIso = saturdayIso,
+            periodTitle = periodTitle,
+            weeklyBaselineReading = baselineReading,
+            weeklyBaselineDate = baselineDate,
+            baselineDescription = baselineDescription,
+            days = days,
+            latestReading = latestReading,
+            hasOlder = hasOlder,
+            hasNewer = hasNewer,
+            hasAnyReadingsInWeek = weekReadings.isNotEmpty()
+        )
+    }
+
+    /**
+     * Precomputes and filters the entire meter reading history for the 7D, 30 Days, and All tabs.
+     * Sorted newest first for the list.
+     */
+    fun getFilteredReadingHistory(
+        filter: ReadingDetailsFilter,
+        anchorDate: Date? = null
+    ): List<ReadingHistoryItem> {
+        val allReadings = getAllSavedReadings()
+        if (allReadings.isEmpty()) return emptyList()
+
+        val sortedDesc = allReadings.sortedWith(
+            compareByDescending<MeterReadingRecord> { it.readingDate }
+                .thenByDescending { it.timestamp }
+        )
+
+        val filtered = when (filter) {
+            ReadingDetailsFilter.D7 -> sortedDesc.take(7)
+            ReadingDetailsFilter.D30 -> sortedDesc.take(30)
+            ReadingDetailsFilter.ALL -> sortedDesc
+        }
+
+        val items = filtered.map { record ->
+            val prevValid = allReadings.filter { it.readingDate < record.readingDate }.lastOrNull()
+            val isDecreased = prevValid != null && record.readingValue < prevValid.readingValue
+            val intervalDays = if (prevValid != null) calculateDaysBetween(prevValid.readingDate, record.readingDate) else null
+            val consumption = if (prevValid != null) {
+                if (isDecreased) null else max(0.0, record.readingValue - prevValid.readingValue)
+            } else null
+
+            val timeStr = SimpleDateFormat("h:mm a", Locale.US).format(Date(record.timestamp))
+            val dateStr = formatIsoToDisplay(record.readingDate)
+
+            ReadingHistoryItem(
+                reading = record,
+                previousReading = prevValid,
+                consumptionSincePrevious = consumption,
+                intervalDays = intervalDays,
+                isBaseline = (prevValid == null),
+                isDecreased = isDecreased,
+                formattedTime = timeStr,
+                dateDisplay = dateStr
+            )
+        }
+
+        return items
     }
 
     /**

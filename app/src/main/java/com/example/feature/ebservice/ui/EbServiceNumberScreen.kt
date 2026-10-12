@@ -1,139 +1,309 @@
 package com.example.feature.ebservice.ui
 
-import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ElectricMeter
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.components.StepProgress
-import com.example.feature.ebservice.util.ConsumerNumberVisualTransformation
+import androidx.compose.ui.unit.sp
+import com.example.R
+import com.example.feature.assessment.ui.*
+import com.example.ui.theme.*
 
 @Composable
 fun EbServiceNumberRoute(
+    vendorViewModel: SolarVendorViewModel,
     onNavigateNext: () -> Unit,
-    viewModel: EbServiceViewModel = viewModel()
+    onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val state by vendorViewModel.state.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        StepProgress(currentStep = 4, totalSteps = 11)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.ElectricMeter,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-        }
+    EbServiceNumberScreen(
+        consumerNumber = state.rawConsumerNumber,
+        formattedNumber = state.formattedConsumerNumber,
+        isValid = state.isConsumerValid,
+        onNumberChange = { vendorViewModel.updateConsumerNumber(it) },
+        onClearNumber = { vendorViewModel.clearConsumerNumber() },
+        onNavigateNext = onNavigateNext,
+        onNavigateBack = onNavigateBack
+    )
+}
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "EB Service Number",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        
-        Text(
-            text = "Enter your 12-digit TANGEDCO consumer number.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-        
-        OutlinedTextField(
-            value = uiState.rawConsumerNumber,
-            onValueChange = { viewModel.updateConsumerNumber(it) },
-            label = { Text("Consumer Number") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            visualTransformation = ConsumerNumberVisualTransformation(),
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth(),
-            isError = uiState.errorMessage != null,
-            supportingText = {
-                if (uiState.errorMessage != null) {
-                    Text(uiState.errorMessage!!, color = MaterialTheme.colorScheme.error)
-                } else {
-                    Text("12 digits exactly (e.g. 04 454 006 2222)")
-                }
+@Composable
+fun EbServiceNumberScreen(
+    consumerNumber: String,
+    formattedNumber: String,
+    isValid: Boolean,
+    onNumberChange: (String) -> Unit,
+    onClearNumber: () -> Unit,
+    onNavigateNext: () -> Unit,
+    onNavigateBack: () -> Unit
+) {
+    Scaffold(
+        containerColor = StitchSurface,
+        topBar = {
+            Column {
+                StitchVendorTopBar(
+                    title = "Location Verification",
+                    onNavigateBack = onNavigateBack
+                )
+                StitchStepProgressBar(
+                    currentStep = 1,
+                    totalSteps = 8,
+                    stepTitle = "Account Verification"
+                )
             }
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        uiState.parsedDetails?.let { details ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        },
+        bottomBar = {
+            Surface(
+                color = StitchSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(text = "Region: ${details.regionName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(text = "Region Code: ${details.regionCode}", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Section Code: ${details.sectionCode}", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Distribution Code: ${details.distributionCode}", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Service Number: ${details.serviceNumber}", style = MaterialTheme.typography.bodyMedium)
-                }
+                StitchPrimaryButton(
+                    text = "Continue",
+                    enabled = isValid,
+                    onClick = onNavigateNext
+                )
             }
         }
-        
-        Spacer(modifier = Modifier.weight(1f))
-        
-        Button(
-            onClick = {
-                viewModel.completeRegistration()
-                Toast.makeText(context, "Registration completed successfully.", Toast.LENGTH_SHORT).show()
-                onNavigateNext()
-            },
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 8.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
-            enabled = uiState.isValid
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Complete Registration", style = MaterialTheme.typography.titleMedium)
+            // Visual Hero Illustration from Stitch
+            StitchHeroIllustration(
+                drawableRes = R.drawable.ic_stitch_consumer_number,
+                contentDescription = "Consumer Number Verification"
+            )
+
+            // Header Text Group
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Consumer Number",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StitchOnSurface
+                )
+                Text(
+                    text = "Enter your electricity consumer number so we can use your electricity details for your solar recommendation.",
+                    fontSize = 15.sp,
+                    color = StitchSecondary,
+                    lineHeight = 22.sp
+                )
+            }
+
+            // Main Consumer Number Input Card (Stitch faithful layout)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = StitchSurfaceContainerLowest,
+                border = BorderStroke(1.dp, StitchOutline.copy(alpha = 0.5f)),
+                shadowElevation = 0.5.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Header row: Bolt + Tamil Nadu (TNEB)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = StitchPrimaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "ELECTRICITY SERVICE CONNECTION",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchPrimaryContainer,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+                        Text(
+                            text = "Tamil Nadu (TNEB)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = StitchSecondary
+                        )
+                    }
+
+                    // Input row
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = StitchSurfaceContainerLow,
+                        border = BorderStroke(1.dp, StitchSecondaryContainer.copy(alpha = 0.6f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = "#",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StitchSecondary
+                                )
+
+                                BasicTextField(
+                                    value = consumerNumber,
+                                    onValueChange = onNumberChange,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = TextStyle(
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StitchOnSurface,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    cursorBrush = SolidColor(StitchPrimaryContainer),
+                                    decorationBox = { innerTextField ->
+                                        if (consumerNumber.isEmpty()) {
+                                            Text(
+                                                text = "e.g. 09440233135",
+                                                fontSize = 18.sp,
+                                                color = StitchSecondary.copy(alpha = 0.5f)
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                            }
+
+                            if (isValid) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Valid",
+                                    tint = StitchPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Helper & Clear row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isValid) StitchPrimaryContainer else StitchSecondary)
+                            )
+                            Text(
+                                text = if (isValid) "Valid 12-digit consumer number" else "You can edit this number if needed.",
+                                fontSize = 12.sp,
+                                color = if (isValid) StitchPrimaryContainer else StitchSecondary
+                            )
+                        }
+
+                        Text(
+                            text = "Clear",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = StitchPrimaryContainer,
+                            modifier = Modifier.clickable { onClearNumber() }
+                        )
+                    }
+                }
+            }
+
+            // Why we ask this?
+            StitchInfoCard(
+                icon = Icons.Default.HelpOutline,
+                title = "Why we ask this?",
+                description = "Your consumer number helps connect your solar journey with your electricity connection and verify baseline demand."
+            )
+
+            // Trust & Verification Badge
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = StitchSurfaceContainerLowest.copy(alpha = 0.8f),
+                border = BorderStroke(1.dp, StitchOutline.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(StitchPrimaryContainer.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VerifiedUser,
+                            contentDescription = null,
+                            tint = StitchPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = "Your data is only shared with verified DISCOM vendors you choose.",
+                        fontSize = 12.sp,
+                        color = StitchSecondary,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
         }
     }
 }
+

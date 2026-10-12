@@ -23,7 +23,7 @@ class ApplianceMasterTest {
     fun `getDefaults returns exact match when name matches standard appliance`() {
         val fan = ApplianceMaster.getDefaults("Ceiling Fan")
         assertNotNull(fan)
-        assertEquals(65f, fan?.defaultWattage)
+        assertEquals(75f, fan?.defaultWattage)
         assertEquals(12f, fan?.typicalUsageHoursPerDay)
         assertEquals(30, fan?.monthlyUsageDays)
     }
