@@ -74,7 +74,17 @@ object LensRoomStorage {
         Room(name = "Kitchen", order = 3, status = RoomStatus.PENDING)
     )
 
+    private const val KEY_AUDIT_COMPLETED = "solar_lens_audit_completed"
+
+    fun isAuditCompleted(): Boolean {
+        return sharedPreferences?.getBoolean(KEY_AUDIT_COMPLETED, false) ?: false
+    }
+
+    fun setAuditCompleted(completed: Boolean) {
+        sharedPreferences?.edit()?.putBoolean(KEY_AUDIT_COMPLETED, completed)?.apply()
+    }
+
     fun clear() {
-        sharedPreferences?.edit()?.remove(KEY_ROOMS)?.apply()
+        sharedPreferences?.edit()?.remove(KEY_ROOMS)?.remove(KEY_AUDIT_COMPLETED)?.apply()
     }
 }

@@ -53,7 +53,8 @@ fun TnebBillDashboard(
     onNavigateBack: () -> Unit,
     viewModel: TnebBillStatusViewModel,
     onNavigateToSolarLens: () -> Unit = {},
-    onCheckBillAgain: () -> Unit = { viewModel.resetValidationState() }
+    onCheckBillAgain: () -> Unit = { viewModel.resetValidationState() },
+    onReturnToHome: () -> Unit = onNavigateBack
 ) {
     var activeSubScreen by remember { mutableStateOf(BillDashboardScreen.CURRENT_BILL) }
 
@@ -97,7 +98,8 @@ fun TnebBillDashboard(
                     activeSubScreen = BillDashboardScreen.BILL_HISTORY
                 },
                 onNavigateToSolarLens = onNavigateToSolarLens,
-                onCheckBillAgain = onCheckBillAgain
+                onCheckBillAgain = onCheckBillAgain,
+                onReturnToHome = onReturnToHome
             )
         }
         BillDashboardScreen.BILL_HISTORY -> {
@@ -138,7 +140,8 @@ private fun CurrentBillView(
     onViewDetails: () -> Unit,
     onViewHistory: () -> Unit,
     onNavigateToSolarLens: () -> Unit,
-    onCheckBillAgain: () -> Unit
+    onCheckBillAgain: () -> Unit,
+    onReturnToHome: () -> Unit = onNavigateBack
 ) {
     var technicalExpanded by remember { mutableStateOf(false) }
     val isPaid = consumerData.isDuesNil || currentBill.isPaid
@@ -149,8 +152,8 @@ private fun CurrentBillView(
             TopAppBar(
                 title = { Text("TNEB Bill Status", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onReturnToHome) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Return to Home")
                     }
                 },
                 actions = {
@@ -382,6 +385,39 @@ private fun CurrentBillView(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Primary Action: Return to Home Screen (Step 2)
+                    Button(
+                        onClick = onReturnToHome,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SolarEaseEmerald,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = Color.White
+                            )
+                            Text(
+                                text = "Return to Home Screen",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }

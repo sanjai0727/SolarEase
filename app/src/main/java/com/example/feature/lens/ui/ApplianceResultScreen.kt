@@ -61,6 +61,10 @@ fun ApplianceResultScreen(
         onNavigateBack()
     }
 
+    LaunchedEffect(Unit) {
+        com.example.feature.lens.data.LensRoomStorage.setAuditCompleted(true)
+    }
+
     // Mathematical Aggregations & Formulas
     val totalConnectedKw: Double = rooms.sumOf { it.connectedLoadKw.toDouble() }
     val simultaneousKw: Double = totalConnectedKw * 0.68
@@ -770,7 +774,10 @@ fun ApplianceResultScreen(
                                 )
                             }
                             OutlinedButton(
-                                onClick = onScanAnother,
+                                onClick = {
+                                    com.example.feature.lens.data.LensRoomStorage.setAuditCompleted(false)
+                                    onScanAnother()
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(44.dp),
@@ -1004,7 +1011,10 @@ fun ApplianceResultScreen(
                 ) {
                     // Primary Action: Explore Solar Options
                     Button(
-                        onClick = onNavigateHome,
+                        onClick = {
+                            com.example.feature.lens.data.LensRoomStorage.setAuditCompleted(true)
+                            onNavigateHome()
+                        },
                         enabled = hasValidInventory,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1036,7 +1046,10 @@ fun ApplianceResultScreen(
 
                     // Secondary Action: Start a New Audit
                     OutlinedButton(
-                        onClick = onScanAnother,
+                        onClick = {
+                            com.example.feature.lens.data.LensRoomStorage.setAuditCompleted(false)
+                            onScanAnother()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(46.dp),
@@ -1110,6 +1123,39 @@ fun ApplianceResultScreen(
                                 text = "Export Energy Report (.md)",
                                 style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
                                 color = LensColors.Primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Final Action: Return to Home Screen
+                    Button(
+                        onClick = {
+                            com.example.feature.lens.data.LensRoomStorage.setAuditCompleted(true)
+                            onNavigateHome()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LensColors.PrimaryContainer,
+                            contentColor = LensColors.OnPrimary
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Return to Home Screen",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             )
                         }
                     }

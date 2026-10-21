@@ -44,6 +44,15 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PriceCheck
+import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -114,6 +124,10 @@ fun HomeRoute(
 
     var showAccountPreview by remember { mutableStateOf(false) }
     var showProfilePrompt by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     LaunchedEffect(currentUser) {
         if (currentUser != null && !UserSession.isProfilePromptDismissed(context, currentUser.id)) {
@@ -216,65 +230,125 @@ fun HomeRoute(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // ── 2. Greeting & Live System Synchronization Status ────
+                val step = uiState.currentOnboardingStep
+
+                // ── Onboarding Progress Stepper Banner ───────────────────
+                OnboardingProgressBanner(
+                    currentStep = step,
+                    isAuditCompleted = uiState.hasCompletedAudit
+                )
+
+                // ── Greeting Header ──────────────────────────────────────
                 GreetingHeader(
                     greeting = uiState.greeting,
                     userName = uiState.userName,
-                    hasConnectedBill = uiState.hasConnectedBill
+                    onboardingStep = step
                 )
 
-                // ── 2. Primary Energy Status Card (Home Energy) ─────────
-                PrimaryEnergyCard(
-                    uiState = uiState,
-                    onConnectBill = onNavigateToTnebBillStatus,
-                    onViewBillHistory = onNavigateToBillHistory,
-                    onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
-                    onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
-                    onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
-                    onStartEditingReading = { viewModel.startEditingReading() },
-                    onCancelEditingReading = { viewModel.cancelEditingReading() },
-                    onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
-                )
+                if (step == 1) {
+                    // ── STEP 1: Connect TNEB Bill ────────────────────────────
+                    PrimaryEnergyCard(
+                        uiState = uiState,
+                        onConnectBill = onNavigateToTnebBillStatus,
+                        onViewBillHistory = onNavigateToBillHistory,
+                        onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
+                        onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
+                        onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
+                        onStartEditingReading = { viewModel.startEditingReading() },
+                        onCancelEditingReading = { viewModel.cancelEditingReading() },
+                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
+                    )
 
-                // ── 3. Meter Reading Progression Graph ────────────────
-                MeterReadingProgressionGraph(
-                    points = uiState.meterGraphPoints,
-                    billData = uiState.billData,
-                    onEditReading = { viewModel.onInitiateEditReading(it) }
-                )
+                    WhyConnectBillSection()
 
-                // ── 4. REAP Energy Profile / Household Classification ───
-                ReapClassificationCard(
-                    uiState = uiState,
-                    onLearnMore = onNavigateToTnebBillStatus
-                )
+                    WhereToFindConsumerNumberCard()
 
-                // ── 5. KNOW YOUR CONSUMPTION (Solar Lens Promotion) ─────
-                KnowYourConsumptionCard(
-                    uiState = uiState,
-                    onOpenSolarLens = onNavigateToSolarEaseLens
-                )
+                    ReapClassificationCard(
+                        uiState = uiState,
+                        onLearnMore = onNavigateToTnebBillStatus
+                    )
+                } else if (step == 2) {
+                    // ── STEP 2: Track Usage / Baseline Calibration ───────────
+                    SyncedBillSummaryStrip(
+                        uiState = uiState,
+                        onViewBillHistory = onNavigateToBillHistory,
+                        onCheckDues = onNavigateToTnebBillStatus
+                    )
 
-                // ── 6. Bill History / Check Dues ────────────────────────
-                BillActionsSection(
-                    onViewBillHistory = onNavigateToBillHistory,
-                    onCheckDues = onNavigateToTnebBillStatus
-                )
+                    PrimaryEnergyCard(
+                        uiState = uiState,
+                        onConnectBill = onNavigateToTnebBillStatus,
+                        onViewBillHistory = onNavigateToBillHistory,
+                        onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
+                        onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
+                        onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
+                        onStartEditingReading = { viewModel.startEditingReading() },
+                        onCancelEditingReading = { viewModel.cancelEditingReading() },
+                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
+                    )
 
-                // ── 7. Explore Tools (Bill Status, Chatbot, Solar Lens, Calculator)
-                QuickToolsSection(
-                    onBillStatus = onNavigateToTnebBillStatus,
-                    onChatbot = onNavigateToElectricityChatbot,
-                    onSolarLens = onNavigateToSolarEaseLens,
-                    onCalculator = onNavigateToBillCalculator,
-                    hasConnectedBill = uiState.hasConnectedBill,
-                    tariffCode = uiState.tariffCode
-                )
+                    MeterCalibrationProgressCard(
+                        recordedCount = uiState.recordedReadingsCount,
+                        todayEnteredReading = uiState.todayEnteredReading,
+                        baselineKwh = uiState.meterBaseline?.baselineReading ?: 0.0
+                    )
 
-                // ── 8. Recent Household Activity / Event Log ────────────
-                RecentActivitySection(
-                    activities = uiState.recentActivities
-                )
+                    LockedStep3PreviewCard()
+                } else {
+                    // ── STEP 3: Audit Loads & Full Dashboard ─────────────────
+                    if (!uiState.hasCompletedAudit) {
+                        SolarLensPriorityHeroCard(
+                            uiState = uiState,
+                            onOpenSolarLens = onNavigateToSolarEaseLens
+                        )
+                    } else {
+                        CompletedAuditSummaryCard(
+                            uiState = uiState,
+                            onOpenSolarLens = onNavigateToSolarEaseLens
+                        )
+                    }
+
+                    PrimaryEnergyCard(
+                        uiState = uiState,
+                        onConnectBill = onNavigateToTnebBillStatus,
+                        onViewBillHistory = onNavigateToBillHistory,
+                        onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
+                        onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
+                        onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
+                        onStartEditingReading = { viewModel.startEditingReading() },
+                        onCancelEditingReading = { viewModel.cancelEditingReading() },
+                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
+                    )
+
+                    MeterReadingProgressionGraph(
+                        points = uiState.meterGraphPoints,
+                        billData = uiState.billData,
+                        onEditReading = { viewModel.onInitiateEditReading(it) }
+                    )
+
+                    ReapClassificationCard(
+                        uiState = uiState,
+                        onLearnMore = onNavigateToTnebBillStatus
+                    )
+
+                    BillActionsSection(
+                        onViewBillHistory = onNavigateToBillHistory,
+                        onCheckDues = onNavigateToTnebBillStatus
+                    )
+
+                    QuickToolsSection(
+                        onBillStatus = onNavigateToTnebBillStatus,
+                        onChatbot = onNavigateToElectricityChatbot,
+                        onSolarLens = onNavigateToSolarEaseLens,
+                        onCalculator = onNavigateToBillCalculator,
+                        hasConnectedBill = true,
+                        tariffCode = uiState.tariffCode
+                    )
+
+                    RecentActivitySection(
+                        activities = uiState.recentActivities
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -644,7 +718,7 @@ private fun StitchTopBar(
 private fun GreetingHeader(
     greeting: String,
     userName: String?,
-    hasConnectedBill: Boolean
+    onboardingStep: Int
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alphaAnim by infiniteTransition.animateFloat(
@@ -674,7 +748,11 @@ private fun GreetingHeader(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (hasConnectedBill) "SITE OVERVIEW" else "REAP HOUSEHOLD ONBOARDING",
+                        text = when (onboardingStep) {
+                            1 -> "ENERGY MONITORING • STEP 1"
+                            2 -> "TNEB SYNCED • STEP 2"
+                            else -> "LIVE MONITORING • STEP 3"
+                        },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = HomeColors.Success,
@@ -683,7 +761,11 @@ private fun GreetingHeader(
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = if (!userName.isNullOrBlank()) "$greeting, $userName" else "$greeting 👋",
+                    text = when (onboardingStep) {
+                        1 -> if (!userName.isNullOrBlank()) "Welcome, $userName!" else "Welcome to SolarEase!"
+                        2 -> "Your electricity connection is ready!"
+                        else -> if (!userName.isNullOrBlank()) "$greeting, $userName! ☀️" else "$greeting! ☀️"
+                    },
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = HomeColors.TextPrimary,
@@ -710,10 +792,10 @@ private fun GreetingHeader(
 
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = if (hasConnectedBill) {
-                "Your rooftop telemetry and electricity baseline are synchronized."
-            } else {
-                "Let's understand your home's energy footprint and build your path to clean independence."
+            text = when (onboardingStep) {
+                1 -> "Let's start by connecting your electricity bill so we can understand your home's energy usage."
+                2 -> "Now enter the reading shown on your physical TNEB electricity meter. We'll use it to track your home's electricity consumption."
+                else -> "Your meter telemetry is tracking smoothly. Next step: find out where your electricity goes."
             },
             fontSize = 13.sp,
             color = HomeColors.TextSecondary,
@@ -793,10 +875,10 @@ private fun PrimaryEnergyCard(
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "Standby",
+                            text = "Not Connected",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = HomeColors.TextSecondary
+                            fontWeight = FontWeight.SemiBold,
+                            color = HomeColors.AccentOrange
                         )
                     }
                 }
@@ -830,15 +912,15 @@ private fun PrimaryEnergyCard(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "No electricity data connected yet",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text = "Connect Your EB Bill",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
                             color = HomeColors.TextPrimary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Connect your consumer service number to reveal your bi-monthly tariff slabs, actual consumption, and peak load profile.",
+                            text = "Connect your 11–12 digit consumer number to establish your baseline tariff schedule (LT-1A Domestic) and billing cycle.",
                             fontSize = 12.sp,
                             color = HomeColors.TextSecondary,
                             textAlign = TextAlign.Center,
@@ -875,9 +957,9 @@ private fun PrimaryEnergyCard(
                     }
                 }
             }
-        } else if (!uiState.hasCurrentReading) {
+        } else if (!uiState.hasSufficientReadings) {
             // ==================================================================
-            // STATE B: BILL CONNECTED, FIRST CURRENT READING NOT ENTERED
+            // STATE B: BILL CONNECTED, BASELINE CALIBRATION (READINGS < 2)
             // ==================================================================
             val baseline = uiState.meterBaseline
             val baselineKwh = baseline?.baselineReading ?: 0.0
@@ -890,44 +972,52 @@ private fun PrimaryEnergyCard(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header with Bill Connected Badge
+                // Header with Live Baseline Capture Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "YOUR HOME ENERGY",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HomeColors.TextSecondary,
-                        letterSpacing = 0.8.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = null,
+                            tint = HomeColors.Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Today's Meter Reading",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HomeColors.TextPrimary
+                        )
+                    }
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(HomeColors.PrimaryContainer)
+                            .background(Color(0xFFFEF3C7))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = HomeColors.Success,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Bill Connected ✓",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = HomeColors.Success,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
+                        Text(
+                            text = "Live Baseline Capture",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFB45309),
+                            letterSpacing = 0.5.sp
+                        )
                     }
                 }
+
+                Text(
+                    text = "Enter the current total reading displayed on your physical digital electricity meter.",
+                    fontSize = 12.sp,
+                    color = HomeColors.TextSecondary,
+                    lineHeight = 17.sp
+                )
 
                 // Baseline Starting Point Info
                 Surface(
@@ -989,74 +1079,157 @@ private fun PrimaryEnergyCard(
                     }
                 }
 
-                // Prompt to enter today's meter reading
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Enter today's meter reading",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = HomeColors.TextPrimary
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.meterInputText,
-                        onValueChange = onMeterInputChanged,
+                // If user entered a reading today and is not currently in edit mode, show recorded state
+                if (uiState.isTodayReadingEntered && !uiState.isEditingReading) {
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                text = if (baselineKwh > 0.0) "e.g. ${String.format(Locale.getDefault(), "%.0f", baselineKwh + 132)}" else "e.g. 12582",
-                                color = HomeColors.TextSecondary.copy(alpha = 0.6f)
-                            )
-                        },
-                        trailingIcon = {
-                            Text(
-                                text = "kWh",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = HomeColors.TextSecondary,
-                                modifier = Modifier.padding(end = 12.dp)
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        isError = uiState.meterValidationError != null,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = HomeColors.Primary,
-                            unfocusedBorderColor = HomeColors.Border
-                        )
-                    )
-
-                    if (uiState.meterValidationError != null) {
-                        Text(
-                            text = uiState.meterValidationError,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
+                        shape = RoundedCornerShape(10.dp),
+                        color = HomeColors.PrimaryContainer.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, HomeColors.Success.copy(alpha = 0.3f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "TODAY'S RECORDED READING",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HomeColors.Success
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "${String.format(Locale.getDefault(), "%,.0f", uiState.todayEnteredReading ?: baselineKwh)} kWh",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HomeColors.TextPrimary
+                                )
+                            }
+                            TextButton(onClick = onStartEditingReading) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = HomeColors.Primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Edit",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HomeColors.Primary
+                                )
+                            }
+                        }
                     }
-
-                    Button(
-                        onClick = onSaveMeterReading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = HomeColors.Primary,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp)
+                } else {
+                    // Prompt to enter today's meter reading
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Save Today's Reading",
+                            text = if (uiState.isEditingReading) "Edit today's meter reading" else "Enter cumulative units from meter display",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = HomeColors.TextPrimary
                         )
+
+                        OutlinedTextField(
+                            value = uiState.meterInputText,
+                            onValueChange = onMeterInputChanged,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    text = if (baselineKwh > 0.0) "e.g. ${String.format(Locale.getDefault(), "%.0f", baselineKwh + 15)}" else "e.g. 42352",
+                                    color = HomeColors.TextSecondary.copy(alpha = 0.6f)
+                                )
+                            },
+                            trailingIcon = {
+                                Text(
+                                    text = "kWh",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HomeColors.TextSecondary,
+                                    modifier = Modifier.padding(end = 12.dp)
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            isError = uiState.meterValidationError != null,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = HomeColors.Primary,
+                                unfocusedBorderColor = HomeColors.Border
+                            )
+                        )
+
+                        if (uiState.meterValidationError != null) {
+                            Text(
+                                text = uiState.meterValidationError,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+
+                        if (uiState.isEditingReading) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = onCancelEditingReading,
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, HomeColors.Border)
+                                ) {
+                                    Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = HomeColors.TextPrimary)
+                                }
+                                Button(
+                                    onClick = onUpdateTodayReading,
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = HomeColors.Primary,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Update", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = onSaveMeterReading,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = HomeColors.Primary,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "Save Reading →",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
+
+                Text(
+                    text = "Tip: Record your meter reading regularly to understand how much electricity your home uses each day.",
+                    fontSize = 11.sp,
+                    color = HomeColors.TextSecondary,
+                    lineHeight = 15.sp
+                )
 
                 // Two Separate Actions: View Bill History & Check Dues
                 Row(
@@ -1574,6 +1747,1023 @@ private fun PrimaryEnergyCard(
     }
 }
 
+// ─── 3B. Progressive Onboarding Components (3-Stage Single-Screen Experience) ─
+
+@Composable
+private fun OnboardingProgressBanner(
+    currentStep: Int,
+    isAuditCompleted: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(HomeColors.PrimaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = null,
+                            tint = HomeColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                    Text(
+                        text = when (currentStep) {
+                            1 -> "STEP 1 OF 3 • GETTING STARTED"
+                            2 -> "STEP 2 OF 3 • BASELINE CALIBRATION"
+                            else -> "STEP 3 OF 3 • AUDIT & REDUCE"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HomeColors.Primary,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = when {
+                        currentStep == 1 -> Color(0xFFFEF3C7)
+                        currentStep == 2 -> Color(0xFFE0F2FE)
+                        isAuditCompleted -> HomeColors.PrimaryContainer
+                        else -> Color(0xFFE8F5E9)
+                    }
+                ) {
+                    Text(
+                        text = when {
+                            currentStep == 1 -> "33% Ready"
+                            currentStep == 2 -> "66% Complete"
+                            isAuditCompleted -> "100% Ready ✨"
+                            else -> "Final Setup Step"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            currentStep == 1 -> Color(0xFFB45309)
+                            currentStep == 2 -> Color(0xFF0369A1)
+                            else -> HomeColors.Primary
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            val targetProgress = when (currentStep) {
+                1 -> 0.33f
+                2 -> 0.66f
+                else -> 1.0f
+            }
+            val animatedProgress by animateFloatAsState(
+                targetValue = targetProgress,
+                animationSpec = tween(500),
+                label = "onboardingProgress"
+            )
+
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = HomeColors.Primary,
+                trackColor = HomeColors.SurfaceSecondary
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OnboardingStepChip(
+                    modifier = Modifier.weight(1f),
+                    stepNumber = "1",
+                    label = "Connect Bill",
+                    isCompleted = currentStep > 1,
+                    isActive = currentStep == 1
+                )
+                OnboardingStepChip(
+                    modifier = Modifier.weight(1f),
+                    stepNumber = "2",
+                    label = "Meter Log",
+                    isCompleted = currentStep > 2,
+                    isActive = currentStep == 2
+                )
+                OnboardingStepChip(
+                    modifier = Modifier.weight(1f),
+                    stepNumber = "3",
+                    label = "Solar Lens",
+                    isCompleted = isAuditCompleted,
+                    isActive = currentStep == 3 && !isAuditCompleted
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingStepChip(
+    stepNumber: String,
+    label: String,
+    isCompleted: Boolean,
+    isActive: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = when {
+            isActive -> HomeColors.PrimaryContainer.copy(alpha = 0.7f)
+            isCompleted -> HomeColors.SurfaceSecondary
+            else -> Color(0xFFF8FAFC)
+        },
+        border = BorderStroke(
+            1.dp,
+            when {
+                isActive -> HomeColors.Primary.copy(alpha = 0.5f)
+                isCompleted -> HomeColors.Success.copy(alpha = 0.3f)
+                else -> HomeColors.Border.copy(alpha = 0.6f)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp, horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = HomeColors.Success,
+                    modifier = Modifier.size(13.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isActive) HomeColors.Primary else Color(0xFF94A3B8)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stepNumber,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                color = when {
+                    isActive -> HomeColors.Primary
+                    isCompleted -> HomeColors.TextPrimary
+                    else -> HomeColors.TextSecondary
+                },
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun WhyConnectBillSection(
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(HomeColors.PrimaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        tint = HomeColors.Primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Why connect your electricity bill?",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HomeColors.TextPrimary
+                    )
+                    Text(
+                        text = "SolarEase is designed around real consumption, not rough guesses",
+                        fontSize = 11.sp,
+                        color = HomeColors.TextSecondary
+                    )
+                }
+            }
+
+            HorizontalDivider(color = HomeColors.Border, thickness = 1.dp)
+
+            BenefitRow(
+                icon = Icons.Default.Speed,
+                iconTint = HomeColors.Primary,
+                iconBg = HomeColors.PrimaryContainer,
+                title = "Accurate Energy Baseline",
+                description = "Links your bi-monthly kWh usage to establish how much electricity your household actually consumes."
+            )
+
+            BenefitRow(
+                icon = Icons.Default.PriceCheck,
+                iconTint = HomeColors.AccentOrange,
+                iconBg = Color(0xFFFFF3E0),
+                title = "TNEB Tariff & Slab Calculation",
+                description = "Calculates your cost using Tamil Nadu domestic slab rates, fixed charges, and the 100 free units subsidy."
+            )
+
+            BenefitRow(
+                icon = Icons.Default.Bolt,
+                iconTint = HomeColors.Success,
+                iconBg = Color(0xFFE8F5E9),
+                title = "Zero-Waste Solar Sizing",
+                description = "Recommends the right rooftop solar kW size to offset your bill without wasting money on unneeded panels."
+            )
+        }
+    }
+}
+
+@Composable
+private fun BenefitRow(
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    title: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = HomeColors.TextPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                fontSize = 11.sp,
+                color = HomeColors.TextSecondary,
+                lineHeight = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun WhereToFindConsumerNumberCard(
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.SurfaceSecondary,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Help,
+                        contentDescription = null,
+                        tint = HomeColors.Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Where to find your 11–12 digit consumer number?",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HomeColors.TextPrimary
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = HomeColors.TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = HomeColors.CardBg,
+                        border = BorderStroke(1.dp, HomeColors.Border)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "Standard Format Example:",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = HomeColors.TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "04-021-008-1422",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = HomeColors.Primary,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Region (2) - Section (3) - Distribution (3) - Service No. (4)",
+                                fontSize = 10.sp,
+                                color = HomeColors.TextSecondary
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "• On your physical EB Card / White Card: Look for the 11 or 12 digit number at the top.\n" +
+                               "• On TNEB SMS or receipt: It is listed as the Consumer No. or Service No.\n" +
+                               "• Preserve leading zeros: If your number starts with 0 (e.g., 04), be sure to include it.",
+                        fontSize = 11.sp,
+                        color = HomeColors.TextSecondary,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncedBillSummaryStrip(
+    uiState: HomeUiState,
+    onViewBillHistory: () -> Unit,
+    onCheckDues: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(HomeColors.Success)
+                )
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "TNEB Bill Linked",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HomeColors.TextPrimary
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = HomeColors.PrimaryContainer
+                        ) {
+                            Text(
+                                text = "Tariff ${uiState.tariffCode}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = HomeColors.Primary,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    val displayNum = uiState.consumerNumberFormatted.ifBlank {
+                        uiState.billData?.consumerNumber ?: "Connected"
+                    }
+                    Text(
+                        text = "Consumer No: $displayNum",
+                        fontSize = 11.sp,
+                        color = HomeColors.TextSecondary
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = onViewBillHistory,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "View Bill Details →",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HomeColors.Primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MeterCalibrationProgressCard(
+    recordedCount: Int,
+    todayEnteredReading: Double?,
+    baselineKwh: Double,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE0F2FE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QueryStats,
+                            contentDescription = null,
+                            tint = Color(0xFF0369A1),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Meter Calibration Progress",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HomeColors.TextPrimary
+                        )
+                        Text(
+                            text = if (recordedCount >= 1 || todayEnteredReading != null) {
+                                "1 of 2 readings recorded"
+                            } else {
+                                "0 of 2 readings recorded"
+                            },
+                            fontSize = 11.sp,
+                            color = HomeColors.TextSecondary
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (recordedCount >= 1 || todayEnteredReading != null) {
+                        Color(0xFFE0F2FE)
+                    } else {
+                        Color(0xFFFEF3C7)
+                    }
+                ) {
+                    Text(
+                        text = if (recordedCount >= 1 || todayEnteredReading != null) "In Calibration" else "Action Needed",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (recordedCount >= 1 || todayEnteredReading != null) Color(0xFF0369A1) else Color(0xFFB45309),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            // Visual calibration timeline steps
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Step 1 dot
+                val step1Done = recordedCount >= 1 || todayEnteredReading != null
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(if (step1Done) HomeColors.Success else Color(0xFFCBD5E1)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (step1Done) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    } else {
+                        Text("1", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (step1Done) "First Reading" else "Enter 1st Reading",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (step1Done) HomeColors.TextPrimary else HomeColors.TextSecondary
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    color = if (step1Done) HomeColors.Success.copy(alpha = 0.5f) else Color(0xFFE2E8F0),
+                    thickness = 2.dp
+                )
+
+                // Step 2 dot
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFCBD5E1)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("2", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Second Reading",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HomeColors.TextSecondary
+                )
+            }
+
+            // Explanation box
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = HomeColors.SurfaceSecondary
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (recordedCount >= 1 || todayEnteredReading != null) {
+                            "Why is a 2nd reading required?"
+                        } else {
+                            "How calibration works:"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HomeColors.TextPrimary
+                    )
+                    Text(
+                        text = if (recordedCount >= 1 || todayEnteredReading != null) {
+                            "A single reading records cumulative kWh. To calculate your daily burn rate and unlock consumption graphs and appliance audit, SolarEase requires a second reading logged on a later date (e.g. tomorrow)."
+                        } else {
+                            "Enter the cumulative reading directly from your physical meter box above. This will serve as your starting point."
+                        },
+                        fontSize = 11.sp,
+                        color = HomeColors.TextSecondary,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LockedStep3PreviewCard(
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFF8FAFC),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE2E8F0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = Color(0xFF64748B),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Step 3: Audit with Solar Lens",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = "Unlocks after 2nd meter reading is saved",
+                            fontSize = 10.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFE2E8F0)
+                ) {
+                    Text(
+                        text = "Locked 🔒",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF64748B),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = "Once your second reading establishes your household burn rate, you'll be able to audit power-hungry appliances using camera-assisted Solar Lens.",
+                fontSize = 11.sp,
+                color = Color(0xFF94A3B8),
+                lineHeight = 15.sp
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf("Air Conditioner", "Water Heater", "Water Pump").forEach { tag ->
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFEDF2F7),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                    ) {
+                        Text(
+                            text = tag,
+                            fontSize = 10.sp,
+                            color = Color(0xFF94A3B8),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SolarLensPriorityHeroCard(
+    uiState: HomeUiState,
+    onOpenSolarLens: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val consumedUnits = uiState.currentEnergyMetrics?.unitsConsumed ?: 0.0
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFF1E3A2F),
+        shadowElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF2E5A44)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            tint = Color(0xFF74D99F),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "PRIORITY ACTION",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF74D99F),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.White.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "Step 3 of 3",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Find Where Your Electricity Goes",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = if (consumedUnits > 0.0) {
+                        "You've consumed ${String.format(Locale.getDefault(), "%.1f", consumedUnits)} kWh since your baseline. Scan your appliances with Solar Lens to audit high-power loads before sizing solar."
+                    } else {
+                        "Audit your high-power appliances with Solar Lens to understand individual device consumption before sizing your rooftop solar system."
+                    },
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.8f),
+                    lineHeight = 17.sp
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                ApplianceTag(label = "Air Conditioner")
+                ApplianceTag(label = "Water Heater")
+                ApplianceTag(label = "Water Pump")
+            }
+
+            Button(
+                onClick = onOpenSolarLens,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF74D99F),
+                    contentColor = Color(0xFF0F291E)
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Start Appliance Audit with Solar Lens",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApplianceTag(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(6.dp),
+        color = Color.White.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.White.copy(alpha = 0.9f),
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+        )
+    }
+}
+
+@Composable
+private fun CompletedAuditSummaryCard(
+    uiState: HomeUiState,
+    onOpenSolarLens: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(HomeColors.PrimaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = HomeColors.Success,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Appliance Audit Completed",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HomeColors.TextPrimary
+                        )
+                        val applianceCount = uiState.appliances.size
+                        val kwText = String.format(Locale.getDefault(), "%.1f", uiState.totalConnectedLoadKw)
+                        Text(
+                            text = "$applianceCount appliances cataloged • $kwText kW connected load",
+                            fontSize = 11.sp,
+                            color = HomeColors.TextSecondary
+                        )
+                    }
+                }
+
+                TextButton(
+                    onClick = onOpenSolarLens,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "Edit Audit →",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HomeColors.Primary
+                    )
+                }
+            }
+
+            Text(
+                text = "Your household appliance load has been analyzed. Sizing recommendations now incorporate your actual daytime vs nighttime load profile.",
+                fontSize = 11.sp,
+                color = HomeColors.TextSecondary,
+                lineHeight = 15.sp
+            )
+        }
+    }
+}
+
 // ─── 4. REAP Classification Card ──────────────────────────────────────────────
 
 @Composable
@@ -1581,6 +2771,8 @@ private fun ReapClassificationCard(
     uiState: HomeUiState,
     onLearnMore: () -> Unit
 ) {
+    val isPendingOrCalibrating = uiState.currentOnboardingStep < 3 || uiState.reapTier == ReapTier.PENDING
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -1610,7 +2802,7 @@ private fun ReapClassificationCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "Your Energy Profile",
+                        text = if (isPendingOrCalibrating) "Your Energy Profile — Pending" else "Your Energy Profile",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = HomeColors.TextPrimary
@@ -1624,7 +2816,7 @@ private fun ReapClassificationCard(
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (uiState.reapTier == ReapTier.PENDING) "Pending" else uiState.reapTier.code,
+                        text = if (isPendingOrCalibrating) "Pending" else uiState.reapTier.code,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = HomeColors.Primary,
@@ -1633,59 +2825,13 @@ private fun ReapClassificationCard(
                 }
             }
 
-            if (uiState.reapTier == ReapTier.PENDING) {
+            if (isPendingOrCalibrating) {
                 Text(
-                    text = "Your home will be classified into one of the 4 REAP benchmark tiers based on your recorded bi-monthly cycle units.",
+                    text = "Your profile will be calculated after we record your electricity consumption.",
                     fontSize = 12.sp,
                     color = HomeColors.TextSecondary,
                     lineHeight = 17.sp
                 )
-
-                // 4-tier category preview chips in 2x2 grid
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ReapTierChip(
-                            modifier = Modifier.weight(1f),
-                            code = "ECH",
-                            range = "≤ 500 u",
-                            title = "Conservation",
-                            subtitle = "Energy Saver Base",
-                            tint = HomeColors.Primary
-                        )
-                        ReapTierChip(
-                            modifier = Modifier.weight(1f),
-                            code = "EEH",
-                            range = "500–800 u",
-                            title = "Efficiency",
-                            subtitle = "Targeted Optimization",
-                            tint = HomeColors.Success
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ReapTierChip(
-                            modifier = Modifier.weight(1f),
-                            code = "EOH",
-                            range = "800–1000 u",
-                            title = "Optimisation",
-                            subtitle = "Load Balancing",
-                            tint = HomeColors.AccentOrange
-                        )
-                        ReapTierChip(
-                            modifier = Modifier.weight(1f),
-                            code = "ETH",
-                            range = ">1000 u",
-                            title = "Transition",
-                            subtitle = "High Solar Yield",
-                            tint = HomeColors.Primary
-                        )
-                    }
-                }
             } else {
                 // Connected Tier Breakdown
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

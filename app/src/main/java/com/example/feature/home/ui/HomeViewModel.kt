@@ -157,6 +157,8 @@ data class HomeUiState(
     val meterValidationError: String? = null,
     val isSavingReading: Boolean = false,
     val isEditingReading: Boolean = false,
+    val recordedReadingsCount: Int = 0,
+    val isAuditCompleted: Boolean = false,
 
     // Dialogs for Meter Reading Correction
     val lowerThanPreviousDialog: LowerThanPreviousDialogData? = null,
@@ -170,13 +172,34 @@ data class HomeUiState(
         get() = totalConnectedLoadWatts / 1000f
 
     val hasCompletedAudit: Boolean
-        get() = appliances.isNotEmpty()
+        get() = isAuditCompleted
 
     val currentBillingCycleKwh: Double
         get() = if (hasCurrentReading && currentEnergyMetrics != null) {
             currentEnergyMetrics.unitsConsumed
         } else {
             unitsConsumed ?: 0.0
+        }
+
+    val consumerNumberFormatted: String
+        get() {
+            val num = billData?.consumerNumber?.trim() ?: return ""
+            val digits = num.filter { it.isDigit() }
+            return when {
+                digits.length == 11 -> "${digits.substring(0, 2)}-${digits.substring(2, 5)}-${digits.substring(5, 8)}-${digits.substring(8)}"
+                digits.length == 12 -> "${digits.substring(0, 2)}-${digits.substring(2, 5)}-${digits.substring(5, 8)}-${digits.substring(8)}"
+                else -> num
+            }
+        }
+
+    val hasSufficientReadings: Boolean
+        get() = hasCurrentReading || isTodayReadingEntered || todayEnteredReading != null || recordedReadingsCount >= 1
+
+    val currentOnboardingStep: Int
+        get() = when {
+            !hasConnectedBill -> 1
+            !hasSufficientReadings -> 2
+            else -> 3
         }
 }
 
@@ -271,6 +294,12 @@ class HomeViewModel(
             (activeUnits * 0.8 * 4.5).coerceAtLeast(0.0)
         } else null
 
+        val isAuditDone = try {
+            com.example.feature.lens.data.LensRoomStorage.isAuditCompleted()
+        } catch (e: Exception) {
+            false
+        }
+
         return HomeUiState(
             userName = firstName,
             userInitial = initial,
@@ -296,13 +325,21 @@ class HomeViewModel(
             dailyConsumptionPoints = dailyPts,
             hasCurrentReading = hasReading,
             isTodayReadingEntered = metrics?.isTodayLogged ?: false,
-            todayEnteredReading = metrics?.todayReading
+            todayEnteredReading = metrics?.todayReading,
+            recordedReadingsCount = readings.size,
+            isAuditCompleted = isAuditDone
         )
     }
 
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
+            val isAuditDone = try {
+                com.example.feature.lens.data.LensRoomStorage.isAuditCompleted()
+            } catch (e: Exception) {
+                false
+            }
+            _uiState.update { it.copy(isAuditCompleted = isAuditDone) }
             loadUserProfile()
             loadAppliances()
             syncMeterDataWithBackend()
@@ -422,6 +459,7 @@ class HomeViewModel(
                         hasCurrentReading = hasReading,
                         isTodayReadingEntered = metrics?.isTodayLogged ?: false,
                         todayEnteredReading = metrics?.todayReading,
+                        recordedReadingsCount = readings.size,
                         tariffCategory = resolvedTariff.displayLabel,
                         tariffCode = resolvedTariff.tariffCode,
                         tariffName = resolvedTariff.tariffName,
@@ -547,23 +585,50 @@ class HomeViewModel(
             val result = withContext(ioDispatcher) {
                 lensRepository.getAppliances()
             }
-            result.onSuccess { applianceList ->
-                _uiState.update { current ->
-                    val journeyStage = when {
-                        applianceList.isNotEmpty() -> 3
-                        current.hasConnectedBill -> 2
-                        else -> 1
-                    }
-                    current.copy(
-                        appliances = applianceList,
-                        isLensLoading = false,
-                        activeJourneyStage = journeyStage,
-                        recentActivities = buildActivityList(current.billData, applianceList)
-                    )
+            val serverList = result.getOrNull()
+            val finalAppliances = if (!serverList.isNullOrEmpty()) {
+                serverList
+            } else {
+                val savedRooms = try {
+                    com.example.feature.lens.data.LensRoomStorage.loadRooms()
+                } catch (e: Exception) {
+                    emptyList()
                 }
-            }.onFailure { e ->
-                Log.w("HomeViewModel", "Could not fetch appliances from server (working offline/graceful)", e)
-                _uiState.update { it.copy(isLensLoading = false) }
+                savedRooms.flatMap { room ->
+                    room.appliances.map { editable ->
+                        Appliance(
+                            id = editable.serverId ?: editable.id,
+                            applianceName = "${room.name} - ${editable.label}",
+                            applianceType = editable.label,
+                            powerRatingWatts = editable.powerWatts,
+                            dailyUsageHours = editable.usageHoursPerDay,
+                            quantity = editable.quantity,
+                            monthlyConsumptionKwh = editable.monthlyKwh,
+                            estimatedMonthlyCost = editable.monthlyCost
+                        )
+                    }
+                }
+            }
+
+            val isAuditDone = try {
+                com.example.feature.lens.data.LensRoomStorage.isAuditCompleted()
+            } catch (e: Exception) {
+                false
+            }
+
+            _uiState.update { current ->
+                val journeyStage = when {
+                    isAuditDone && finalAppliances.isNotEmpty() -> 3
+                    current.hasConnectedBill -> 2
+                    else -> 1
+                }
+                current.copy(
+                    appliances = finalAppliances,
+                    isAuditCompleted = isAuditDone,
+                    isLensLoading = false,
+                    activeJourneyStage = journeyStage,
+                    recentActivities = buildActivityList(current.billData, finalAppliances)
+                )
             }
         }
     }

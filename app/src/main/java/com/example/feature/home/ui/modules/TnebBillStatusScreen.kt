@@ -51,6 +51,7 @@ private val ErrorText = Color(0xFFD32F2F)
 fun TnebBillStatusRoute(
     onNavigateBack: () -> Unit,
     onNavigateToSolarLens: () -> Unit = {},
+    onReturnToHome: () -> Unit = onNavigateBack,
     viewModel: TnebBillStatusViewModel = viewModel()
 ) {
     val submitState by viewModel.submitState.collectAsState()
@@ -63,15 +64,21 @@ fun TnebBillStatusRoute(
             submitState == SubmitState.SUCCESS -> {
                 BackHandler(enabled = true) {
                     viewModel.resetValidationState()
+                    onReturnToHome()
                 }
                 TnebBillDashboard(
                     onNavigateBack = {
                         viewModel.resetValidationState()
+                        onReturnToHome()
                     },
                     viewModel = viewModel,
                     onNavigateToSolarLens = onNavigateToSolarLens,
                     onCheckBillAgain = {
                         viewModel.resetValidationState()
+                    },
+                    onReturnToHome = {
+                        viewModel.resetValidationState()
+                        onReturnToHome()
                     }
                 )
             }

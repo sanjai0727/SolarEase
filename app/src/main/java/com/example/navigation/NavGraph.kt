@@ -341,7 +341,13 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
         composable<Screen.TnebBillStatus> {
             TnebBillStatusRoute(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSolarLens = { navController.navigate(Screen.SolarEaseLens) }
+                onNavigateToSolarLens = { navController.navigate(Screen.SolarEaseLens) },
+                onReturnToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
         

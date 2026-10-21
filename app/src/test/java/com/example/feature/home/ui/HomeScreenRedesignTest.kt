@@ -468,4 +468,120 @@ class HomeScreenRedesignTest {
         assertTrue(aprPoint.hasReading)
         assertEquals(42000.0, aprPoint.readingValue, 0.001)
     }
+
+    @Test
+    fun test10_progressiveOnboardingStageTransitions_Step1ToStep2ToStep3() {
+        // Step 1: No bill connected
+        val stateStep1 = HomeUiState(
+            hasConnectedBill = false,
+            recordedReadingsCount = 0
+        )
+        assertEquals(1, stateStep1.currentOnboardingStep)
+        org.junit.Assert.assertFalse(stateStep1.hasSufficientReadings)
+
+        // Step 2: Bill connected, but no meter reading recorded yet
+        val stateStep2A = HomeUiState(
+            hasConnectedBill = true,
+            billData = TnebConsumerBillData(consumerNumber = "040210081422"),
+            recordedReadingsCount = 0
+        )
+        assertEquals(2, stateStep2A.currentOnboardingStep)
+        org.junit.Assert.assertFalse(stateStep2A.hasSufficientReadings)
+
+        // Step 3: Bill connected and meter reading entered (unlocks Step 3)
+        val stateStep3A = HomeUiState(
+            hasConnectedBill = true,
+            billData = TnebConsumerBillData(consumerNumber = "040210081422"),
+            recordedReadingsCount = 1,
+            todayEnteredReading = 12582.0
+        )
+        assertEquals(3, stateStep3A.currentOnboardingStep)
+        assertTrue(stateStep3A.hasSufficientReadings)
+
+        val stateStep3B = HomeUiState(
+            hasConnectedBill = true,
+            billData = TnebConsumerBillData(consumerNumber = "040210081422"),
+            recordedReadingsCount = 2,
+            hasCurrentReading = true
+        )
+        assertEquals(3, stateStep3B.currentOnboardingStep)
+        assertTrue(stateStep3B.hasSufficientReadings)
+    }
+
+    @Test
+    fun test11_consumerNumberFormatted_preservesLeadingZerosAndFormatsCorrectly() {
+        // 12-digit with leading zero
+        val state12 = HomeUiState(
+            billData = TnebConsumerBillData(consumerNumber = "040210081422")
+        )
+        assertEquals("04-021-008-1422", state12.consumerNumberFormatted)
+
+        // 11-digit with leading zero
+        val state11 = HomeUiState(
+            billData = TnebConsumerBillData(consumerNumber = "04021008142")
+        )
+        assertEquals("04-021-008-142", state11.consumerNumberFormatted)
+
+        // Already hyphenated
+        val stateHyphen = HomeUiState(
+            billData = TnebConsumerBillData(consumerNumber = "04-021-008-1422")
+        )
+        assertEquals("04-021-008-1422", stateHyphen.consumerNumberFormatted)
+
+        // Blank or null
+        val stateEmpty = HomeUiState(billData = null)
+        assertEquals("", stateEmpty.consumerNumberFormatted)
+    }
+
+    @Test
+    fun test12_exploreToolsVisibilityAndAuditCompletionTransitions() {
+        // Step 1: No explore tools
+        val stateStep1 = HomeUiState(hasConnectedBill = false)
+        assertEquals(1, stateStep1.currentOnboardingStep)
+        val showExploreToolsStep1 = stateStep1.currentOnboardingStep == 3
+        org.junit.Assert.assertFalse(showExploreToolsStep1)
+
+        // Step 2: Bill connected, calibration in progress (no readings yet) -> No explore tools
+        val stateStep2 = HomeUiState(
+            hasConnectedBill = true,
+            recordedReadingsCount = 0
+        )
+        assertEquals(2, stateStep2.currentOnboardingStep)
+        val showExploreToolsStep2 = stateStep2.currentOnboardingStep == 3
+        org.junit.Assert.assertFalse(showExploreToolsStep2)
+
+        // Step 3: Readings entered -> Explore tools unlocked, green card visible because audit not completed
+        val stateStep3NoAudit = HomeUiState(
+            hasConnectedBill = true,
+            recordedReadingsCount = 1,
+            isAuditCompleted = false,
+            appliances = emptyList()
+        )
+        assertEquals(3, stateStep3NoAudit.currentOnboardingStep)
+        val showExploreToolsStep3 = stateStep3NoAudit.currentOnboardingStep == 3
+        assertTrue(showExploreToolsStep3)
+        org.junit.Assert.assertFalse(stateStep3NoAudit.hasCompletedAudit)
+
+        // Step 3 with completed Solar Lens audit -> green card removed, hasCompletedAudit is true
+        val stateStep3WithAudit = HomeUiState(
+            hasConnectedBill = true,
+            recordedReadingsCount = 1,
+            isAuditCompleted = true,
+            appliances = listOf(
+                com.example.feature.lens.data.Appliance(
+                    id = "APP-1",
+                    applianceName = "Bedroom AC",
+                    applianceType = "Air Conditioner",
+                    powerRatingWatts = 1500f,
+                    dailyUsageHours = 6f,
+                    quantity = 1,
+                    monthlyConsumptionKwh = 270.0f,
+                    estimatedMonthlyCost = 1620.0f
+                )
+            )
+        )
+        assertEquals(3, stateStep3WithAudit.currentOnboardingStep)
+        assertTrue(stateStep3WithAudit.hasCompletedAudit)
+        assertEquals(1.5f, stateStep3WithAudit.totalConnectedLoadKw, 0.001f)
+    }
 }
