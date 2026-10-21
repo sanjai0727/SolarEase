@@ -1,13 +1,17 @@
 package com.example.feature.lens.data
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class LensRepository(private val api: LensApi) {
-    suspend fun getAppliances(): Result<List<Appliance>> = withContext(Dispatchers.IO) {
+class LensRepository(
+    private val api: LensApi,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
+    suspend fun getAppliances(): Result<List<Appliance>> = withContext(ioDispatcher) {
         try {
             val response = api.getAppliances()
             if (response.isSuccessful) {
@@ -21,7 +25,7 @@ class LensRepository(private val api: LensApi) {
         }
     }
 
-    suspend fun createAppliance(request: ApplianceCreateRequest): Result<Appliance> = withContext(Dispatchers.IO) {
+    suspend fun createAppliance(request: ApplianceCreateRequest): Result<Appliance> = withContext(ioDispatcher) {
         try {
             val response = api.createAppliance(request)
             if (response.isSuccessful && response.body() != null) {
@@ -35,7 +39,7 @@ class LensRepository(private val api: LensApi) {
         }
     }
 
-    suspend fun updateAppliance(id: String, request: ApplianceCreateRequest): Result<Appliance> = withContext(Dispatchers.IO) {
+    suspend fun updateAppliance(id: String, request: ApplianceCreateRequest): Result<Appliance> = withContext(ioDispatcher) {
         try {
             val response = api.updateAppliance(id, request)
             if (response.isSuccessful && response.body() != null) {
@@ -49,7 +53,7 @@ class LensRepository(private val api: LensApi) {
         }
     }
 
-    suspend fun deleteAppliance(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteAppliance(id: String): Result<Unit> = withContext(ioDispatcher) {
         try {
             val response = api.deleteAppliance(id)
             if (response.isSuccessful) {
@@ -67,7 +71,7 @@ class LensRepository(private val api: LensApi) {
         return analyzeMedia(imageBytes, "image/jpeg", source)
     }
 
-    suspend fun analyzeMedia(mediaBytes: ByteArray, mimeType: String, source: String): Result<DetectionResult> = withContext(Dispatchers.IO) {
+    suspend fun analyzeMedia(mediaBytes: ByteArray, mimeType: String, source: String): Result<DetectionResult> = withContext(ioDispatcher) {
         try {
             val extension = if (mimeType.startsWith("video/")) {
                 if (mimeType.contains("mp4")) "mp4" else if (mimeType.contains("webm")) "webm" else "mp4"

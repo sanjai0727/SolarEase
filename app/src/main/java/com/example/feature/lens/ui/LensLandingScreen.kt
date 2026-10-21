@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,7 +25,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -128,6 +136,10 @@ fun LensLandingScreen(
         )
     }
 
+    BackHandler(enabled = uiState !is LensUiState.Introduction && uiState !is LensUiState.Processing) {
+        viewModel.popUiState()
+    }
+
     LaunchedEffect(uiState) {
         if (uiState is LensUiState.CameraActive) {
             onOpenCamera()
@@ -189,16 +201,16 @@ fun LensLandingScreen(
             LensTopAppBar(
                 title = when (uiState) {
                     is LensUiState.Introduction -> "SolarEase Lens"
-                    is LensUiState.RoomSetup -> "Set Up Rooms"
+                    is LensUiState.RoomSetup -> "Configure Rooms"
                     is LensUiState.RoomOverview -> (uiState as LensUiState.RoomOverview).room.name
                     is LensUiState.RoomCompleted -> "Room Certified"
                     is LensUiState.Processing -> "Inference"
                     else -> "SolarEase Lens"
                 },
                 subTitle = when (uiState) {
-                    is LensUiState.Introduction -> "SOLAR LENS"
-                    is LensUiState.RoomSetup -> "PRE-AUDIT"
-                    is LensUiState.RoomOverview -> "ZONE 0${rooms.indexOfFirst { it.id == (uiState as LensUiState.RoomOverview).room.id } + 1}"
+                    is LensUiState.Introduction -> "HOME AUDIT"
+                    is LensUiState.RoomSetup -> "STEP 01 OF 04"
+                    is LensUiState.RoomOverview -> "ROOM ${rooms.indexOfFirst { it.id == (uiState as LensUiState.RoomOverview).room.id } + 1} OF ${rooms.size}"
                     else -> null
                 },
                 onBackClicked = {
@@ -228,6 +240,7 @@ fun LensLandingScreen(
                     RoomSetupContent(
                         rooms = rooms,
                         onAddRoom = { showAddRoomDialog = true },
+                        onAddPresetRoom = { name -> viewModel.addRoom(name) },
                         onRenameRoom = { room -> roomToRename = room },
                         onRemoveRoom = { viewModel.removeRoom(it) },
                         onMoveRoomUp = { index -> viewModel.reorderRooms(index, index - 1) },
@@ -447,7 +460,175 @@ private fun LensTopAppBar(
     }
 }
 
-// ─── Screen 1: Solar Lens Intro (Stitch 13e85ee...) ─────────────────────────────
+// ─── Screen A: Solar Lens Welcome (Stitch Design) ───────────────────────────
+
+@Composable
+fun SolarLensWelcomeIllustration(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val baseWidth = 280f
+        val baseHeight = 210f
+        val scale = minOf(size.width / baseWidth, size.height / baseHeight)
+        val dx = (size.width - baseWidth * scale) / 2f
+        val dy = (size.height - baseHeight * scale) / 2f
+
+        withTransform({
+            translate(left = dx, top = dy)
+            scale(scale, scale, pivot = Offset.Zero)
+        }) {
+            // Soft Ground & Environment
+            drawOval(
+                color = Color(0xFFEFF4FF),
+                topLeft = Offset(20f, 178f),
+                size = Size(240f, 24f)
+            )
+
+            // Soft Left Bush
+            val bush1 = Path().apply {
+                moveTo(40f, 188f)
+                cubicTo(50f, 176f, 70f, 176f, 80f, 188f)
+                close()
+            }
+            drawPath(bush1, color = Color(0xFF7BD8B1).copy(alpha = 0.4f))
+
+            // Soft Right Bush
+            val bush2 = Path().apply {
+                moveTo(200f, 188f)
+                cubicTo(210f, 172f, 230f, 172f, 240f, 188f)
+                close()
+            }
+            drawPath(bush2, color = Color(0xFF7BD8B1).copy(alpha = 0.5f))
+
+            // Subtle Sun Rays in Background
+            drawCircle(color = Color(0xFFE5EEFF), radius = 28f, center = Offset(215f, 55f))
+            drawCircle(color = Color(0xFF9FFDD3).copy(alpha = 0.6f), radius = 18f, center = Offset(215f, 55f))
+
+            val sunDashEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f), 0f)
+            drawLine(
+                color = Color(0xFF047857).copy(alpha = 0.4f),
+                start = Offset(215f, 30f),
+                end = Offset(215f, 22f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+                pathEffect = sunDashEffect
+            )
+            drawLine(
+                color = Color(0xFF047857).copy(alpha = 0.4f),
+                start = Offset(215f, 88f),
+                end = Offset(215f, 80f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+                pathEffect = sunDashEffect
+            )
+            drawLine(
+                color = Color(0xFF047857).copy(alpha = 0.4f),
+                start = Offset(190f, 55f),
+                end = Offset(182f, 55f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+                pathEffect = sunDashEffect
+            )
+            drawLine(
+                color = Color(0xFF047857).copy(alpha = 0.4f),
+                start = Offset(248f, 55f),
+                end = Offset(240f, 55f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+                pathEffect = sunDashEffect
+            )
+
+            // Main House Structure
+            drawRoundRect(
+                color = Color(0xFFF8F9FF),
+                topLeft = Offset(75f, 96f),
+                size = Size(130f, 92f),
+                cornerRadius = CornerRadius(8f, 8f)
+            )
+
+            // Roof with Overhang
+            val roof = Path().apply {
+                moveTo(60f, 98f)
+                lineTo(140f, 38f)
+                lineTo(220f, 98f)
+                close()
+            }
+            drawPath(roof, color = Color(0xFF047857))
+
+            // Solar Panels on Roof
+            val panelLeft = Path().apply {
+                moveTo(100f, 76f)
+                lineTo(136f, 49f)
+                lineTo(136f, 88f)
+                lineTo(100f, 88f)
+                close()
+            }
+            drawPath(panelLeft, color = Color(0xFF005683).copy(alpha = 0.95f))
+
+            val panelRight = Path().apply {
+                moveTo(144f, 49f)
+                lineTo(180f, 76f)
+                lineTo(180f, 88f)
+                lineTo(144f, 88f)
+                close()
+            }
+            drawPath(panelRight, color = Color(0xFF005683).copy(alpha = 0.95f))
+
+            // Solar Grid Lines
+            val gridLineColor = Color(0xFF9FFDD3).copy(alpha = 0.7f)
+            drawLine(gridLineColor, Offset(118f, 62f), Offset(118f, 88f), strokeWidth = 1f)
+            drawLine(gridLineColor, Offset(162f, 62f), Offset(162f, 88f), strokeWidth = 1f)
+            drawLine(gridLineColor, Offset(104f, 80f), Offset(134f, 80f), strokeWidth = 1f)
+            drawLine(gridLineColor, Offset(146f, 80f), Offset(176f, 80f), strokeWidth = 1f)
+
+            // Front Door
+            drawRoundRect(
+                color = Color(0xFF047857),
+                topLeft = Offset(125f, 142f),
+                size = Size(30f, 46f),
+                cornerRadius = CornerRadius(4f, 4f)
+            )
+            // Door Handle
+            drawCircle(Color(0xFF9FFDD3), radius = 2.5f, center = Offset(149f, 165f))
+
+            // Left Room: Cozy Kitchenette (Refrigerator)
+            drawRoundRect(
+                color = Color.White,
+                topLeft = Offset(85f, 132f),
+                size = Size(28f, 42f),
+                cornerRadius = CornerRadius(4f, 4f)
+            )
+            drawLine(Color(0xFFE5EEFF), Offset(85f, 146f), Offset(113f, 146f), strokeWidth = 1.5f)
+            drawRoundRect(Color(0xFF047857), Offset(88f, 137f), Size(2f, 6f), CornerRadius(1f, 1f))
+            drawRoundRect(Color(0xFF047857), Offset(88f, 152f), Size(2f, 10f), CornerRadius(1f, 1f))
+            // Magnet Note
+            drawRoundRect(Color(0xFF9FFDD3), Offset(98f, 136f), Size(6f, 5f), CornerRadius(1f, 1f))
+
+            // Right Room: Warm Living Area (Window & Ceiling Fan)
+            drawRoundRect(Color.White, Offset(167f, 122f), Size(26f, 32f), CornerRadius(4f, 4f))
+            drawRoundRect(Color(0xFFEFF4FF), Offset(170f, 125f), Size(20f, 26f), CornerRadius(2f, 2f))
+            // Ceiling fan
+            drawLine(Color(0xFF565E74), Offset(180f, 125f), Offset(180f, 131f), strokeWidth = 1.5f)
+            drawOval(Color(0xFF565E74), Offset(172f, 130f), Size(16f, 4f))
+            drawCircle(Color(0xFF047857), radius = 2f, center = Offset(180f, 132f))
+            // Warm Ambient Lamp Glow
+            drawCircle(Color(0xFF9FFDD3).copy(alpha = 0.6f), radius = 5f, center = Offset(180f, 144f))
+            drawCircle(Color(0xFF047857), radius = 2f, center = Offset(180f, 144f))
+
+            // Whimsical Clean Energy Sparkle
+            val sparkle = Path().apply {
+                moveTo(68f, 62f)
+                lineTo(70f, 54f)
+                lineTo(72f, 62f)
+                lineTo(80f, 64f)
+                lineTo(72f, 66f)
+                lineTo(70f, 74f)
+                lineTo(68f, 66f)
+                lineTo(60f, 64f)
+                close()
+            }
+            drawPath(sparkle, color = Color(0xFF047857).copy(alpha = 0.35f))
+        }
+    }
+}
 
 @Composable
 fun IntroductionContent(
@@ -457,252 +638,235 @@ fun IntroductionContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Sub-Header Context Banner
+        // Welcoming Card with Delightful Native Vector Illustration
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLow,
-            border = BorderStroke(1.dp, LensColors.Outline)
+            shape = RoundedCornerShape(16.dp),
+            color = LensColors.SurfaceContainerLowest,
+            border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.2f))
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = LensColors.PrimaryFixed,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .background(LensColors.PrimaryLive, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Computer Vision v2.4",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.OnPrimaryFixed
-                            )
-                        }
-                    }
-                    Text(
-                        "NEURAL AUDIT ENGINE",
-                        style = LensTypography.labelCaps,
-                        color = LensColors.SlateCaption
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "SolarEase Lens",
-                    style = LensTypography.headlineLg,
-                    color = LensColors.SlateText
-                )
-                Text(
-                    text = "Intelligent Room-by-Room Electrical Load Audit",
-                    style = LensTypography.bodyMd,
-                    color = LensColors.SlateCaption
-                )
-            }
-        }
-
-        // Compact Feature Card: Target Ingestion & Optical Load Mapping
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.InverseSurface,
-            border = BorderStroke(1.dp, LensColors.OutlineVariant)
-        ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(modifier = Modifier.weight(1f, fill = false)) {
-                    Text(
-                        "TARGET INGESTION",
-                        style = LensTypography.labelCaps,
-                        color = LensColors.PrimaryFixedDim
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        "Multi-Zone Optical Load Mapping",
-                        style = LensTypography.headlineSm,
-                        color = LensColors.InverseOnSurface
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+                // Vector Illustration: House with rooftop solar panels & cozy cutaways
+                SolarLensWelcomeIllustration(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(170.dp)
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "Let's understand your home's electricity use",
+                    style = LensTypography.headlineLg,
+                    color = LensColors.SlateText,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Check which appliances use electricity and explore the right solar setup for your home.",
+                    style = LensTypography.bodyMd,
+                    color = LensColors.SlateCaption,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = LensColors.SurfaceContainerLowest.copy(alpha = 0.15f)
+                    shape = RoundedCornerShape(20.dp),
+                    color = LensColors.SurfaceContainerLow
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            Icons.Default.Sensors,
+                            Icons.Default.Schedule,
                             contentDescription = null,
-                            tint = LensColors.PrimaryFixedDim,
-                            modifier = Modifier.size(14.dp)
+                            tint = LensColors.Primary,
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            "CV-CORE",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.InverseOnSurface
+                            "Usually takes ~3 minutes",
+                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                            color = LensColors.Primary
                         )
                     }
                 }
             }
         }
 
-        // Operational Overview Description
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLowest,
-            border = BorderStroke(1.dp, LensColors.Outline)
+        // Section Title: 3 Simple Steps
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Solar Lens performs an edge-computed visual inventory across your living spaces to determine peak simultaneous demand, aggregated wattage profiles, and baseline energy consumption for precise solar array and inverter sizing.",
-                style = LensTypography.bodyMd,
-                color = LensColors.SlateText,
-                modifier = Modifier.padding(14.dp),
-                lineHeight = 20.sp
+                "3 Simple Steps",
+                style = LensTypography.headlineSm,
+                color = LensColors.SlateText
+            )
+            Text(
+                "QUICK & EASY",
+                style = LensTypography.labelCaps,
+                color = LensColors.Primary,
+                fontWeight = FontWeight.SemiBold
             )
         }
 
-        // 4-Step Structured Workflow Matrix
+        // 3 Simple Friendly Step Cards
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CitizenStepCard(
+                stepNumber = "1",
+                icon = Icons.Default.MeetingRoom,
+                title = "Set up your rooms",
+                description = "Add the rooms you want to check, like living room, kitchen, or bedrooms."
+            )
+            CitizenStepCard(
+                stepNumber = "2",
+                icon = Icons.Default.PhotoCamera,
+                title = "Add photos & appliances",
+                description = "Snap a photo or add appliances quickly from our everyday list."
+            )
+            CitizenStepCard(
+                stepNumber = "3",
+                icon = Icons.Default.SolarPower,
+                title = "Get your energy report",
+                description = "See estimated electricity use and solar sizing recommended just for you."
+            )
+        }
+
+        // Helpful Neighbor Tip Callout
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLowest,
-            border = BorderStroke(1.dp, LensColors.Outline)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "AUDIT WORKFLOW MATRIX",
-                        style = LensTypography.labelCaps,
-                        color = LensColors.SlateMuted
-                    )
-                    Text(
-                        "4 SEQUENTIAL STAGES",
-                        style = LensTypography.labelCaps,
-                        color = LensColors.SlateCaption
-                    )
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-
-                WorkflowStepItem(
-                    number = "01",
-                    icon = Icons.Default.Domain,
-                    title = "Set up your rooms",
-                    desc = "Confirm your floor plan sequence (Bedroom, Hall, Kitchen, Bathroom) to structure the load distribution model."
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                WorkflowStepItem(
-                    number = "02",
-                    icon = Icons.Default.CenterFocusStrong,
-                    title = "Scan or upload each room",
-                    desc = "Use live on-device vision or media upload to detect appliances with spatial bounding boxes."
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                WorkflowStepItem(
-                    number = "03",
-                    icon = Icons.Default.FactCheck,
-                    title = "Review detected appliances",
-                    desc = "Verify quantity, calibrated wattage ratings, and assign customized daily duty cycles (runtime hours)."
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                WorkflowStepItem(
-                    number = "04",
-                    icon = Icons.Default.WbSunny,
-                    title = "Get whole-house energy analysis",
-                    desc = "Receive connected load (kW), monthly kWh projection, and exact PV array and battery system recommendations."
-                )
-            }
-        }
-
-
-        // Primary Execution Action
-        Button(
-            onClick = onGoRoomByRoom,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = LensColors.PrimaryHover),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(12.dp),
+            color = LensColors.SurfaceContainerLow,
+            border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f))
         ) {
             Row(
+                modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    "Go Room by Room",
-                    style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                    color = LensColors.OnPrimary
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = LensColors.OnPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = LensColors.PrimaryFixed,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = LensColors.Primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "No bill needed right now! You can freely adjust numbers or check back anytime.",
+                        style = LensTypography.bodyMd,
+                        color = LensColors.SlateText,
+                        lineHeight = 18.sp
+                    )
+                }
             }
         }
+
+        // Bottom CTA Action Area
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onGoRoomByRoom,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
+                shape = RoundedCornerShape(12.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Start Home Audit",
+                        style = LensTypography.headlineSm.copy(fontSize = 16.sp),
+                        color = LensColors.OnPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = LensColors.OnPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = "Free for homeowners • Takes ~3 mins",
+                style = LensTypography.labelSm,
+                color = LensColors.SlateCaption
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun WorkflowStepItem(
-    number: String,
+private fun CitizenStepCard(
+    stepNumber: String,
     icon: ImageVector,
     title: String,
-    desc: String
+    description: String
 ) {
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        shape = RoundedCornerShape(12.dp),
+        color = LensColors.SurfaceContainerLowest,
+        border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f))
     ) {
-        Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = LensColors.SurfaceContainer,
-            modifier = Modifier.size(28.dp)
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    number,
-                    style = LensTypography.labelCaps,
-                    color = LensColors.Primary,
-                    fontWeight = FontWeight.Bold
-                )
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = LensColors.SurfaceContainerLow,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        stepNumber,
+                        style = LensTypography.headlineSm,
+                        color = LensColors.Primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(6.dp),
-            color = LensColors.SurfaceContainerLow
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -710,34 +874,35 @@ private fun WorkflowStepItem(
                 ) {
                     Text(
                         title,
-                        style = LensTypography.headlineSm.copy(fontSize = 14.sp),
+                        style = LensTypography.headlineSm.copy(fontSize = 15.sp),
                         color = LensColors.SlateText
                     )
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = LensColors.Primary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    desc,
-                    style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                    description,
+                    style = LensTypography.bodyMd,
                     color = LensColors.SlateCaption,
-                    lineHeight = 16.sp
+                    lineHeight = 18.sp
                 )
             }
         }
     }
 }
 
-// ─── Screen 2: Room Setup (Stitch 726604d...) ───────────────────────────────────
+// ─── Screen B: Room Setup (Stitch Design) ───────────────────────────────────
 
 @Composable
 fun RoomSetupContent(
     rooms: List<Room>,
     onAddRoom: () -> Unit,
+    onAddPresetRoom: (String) -> Unit = {},
     onRenameRoom: (Room) -> Unit,
     onRemoveRoom: (String) -> Unit,
     onMoveRoomUp: (Int) -> Unit,
@@ -750,173 +915,144 @@ fun RoomSetupContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Directive Header
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        // Friendly Header Banner
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = LensColors.SurfaceContainerHigh
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
+                            .size(7.dp)
                             .background(LensColors.Primary, CircleShape)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        "PRE-AUDIT ARCHITECTURE",
+                        "Your rooms · ${sortedRooms.size} added",
                         style = LensTypography.labelCaps,
-                        color = LensColors.Primary
+                        color = LensColors.SlateText,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-                Text(
-                    "STEP 01 OF 04",
-                    style = LensTypography.labelCaps,
-                    color = LensColors.SlateCaption
-                )
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
-                "Configure Household Rooms",
-                style = LensTypography.headlineMd,
+                "Configure your rooms",
+                style = LensTypography.headlineLg,
                 color = LensColors.SlateText
             )
             Text(
-                "Establish your room sequence. Scanning will proceed automatically in this order.",
+                "We will check your home room by room. You can add, rename, or reorder them anytime.",
                 style = LensTypography.bodyMd,
-                color = LensColors.SlateCaption
+                color = LensColors.SlateCaption,
+                lineHeight = 18.sp
             )
         }
 
-        // Telemetry Sub-Cell Status
+        // Helpful Walking Order Tip Callout
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(14.dp),
             color = LensColors.SurfaceContainerLow,
-            border = BorderStroke(1.dp, LensColors.Outline)
+            border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f))
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = LensColors.SurfaceContainer,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.ViewTimeline,
-                                contentDescription = null,
-                                tint = LensColors.Primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            "Active Sequence",
-                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                            color = LensColors.SlateText
-                        )
-                        Text(
-                            "${sortedRooms.size} Zones Initialized",
-                            style = LensTypography.bodyMd.copy(fontSize = 12.sp),
-                            color = LensColors.SlateCaption
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = LensColors.PrimaryFixed,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = LensColors.Primary,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = LensColors.SurfaceContainerHighest
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Bolt,
-                            contentDescription = null,
-                            tint = LensColors.Primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            "~14 Mins Total",
-                            style = LensTypography.labelCaps,
-                            color = LensColors.Primary
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "HELPFUL TIP",
+                        style = LensTypography.labelCaps,
+                        color = LensColors.Primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "Keep rooms in your daily walking order so scanning is fast, natural, and seamless.",
+                        style = LensTypography.bodyMd,
+                        color = LensColors.SlateText,
+                        lineHeight = 18.sp
+                    )
                 }
             }
         }
 
-        // Reorderable Room List
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Citizen-Friendly Room Cards List
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             sortedRooms.forEachIndexed { index, room ->
-                val expectedCount = when (room.name.lowercase()) {
-                    "bedroom" -> 3
-                    "hall", "living room", "hall / living room" -> 4
-                    "kitchen" -> 3
-                    "bathroom" -> 2
-                    else -> 2
+                val roomIcon = when (room.name.lowercase()) {
+                    "bedroom", "master bedroom", "guest bedroom" -> Icons.Default.Bed
+                    "kitchen" -> Icons.Default.Kitchen
+                    "bathroom" -> Icons.Default.Shower
+                    "hall", "living room", "hall / living room" -> Icons.Default.Chair
+                    else -> Icons.Default.MeetingRoom
                 }
 
-                val roomTag = when (room.name.lowercase()) {
-                    "bedroom" -> "Primary Bed"
-                    "hall", "living room", "hall / living room" -> "Living Area"
-                    "kitchen" -> "Utility & Cooking"
-                    "bathroom" -> "Wet Zone"
-                    else -> "Custom Zone"
+                val expectedAppliances = when (room.name.lowercase()) {
+                    "bedroom" -> "Fan, AC & lighting"
+                    "hall", "living room", "hall / living room" -> "Living area & entertainment"
+                    "kitchen" -> "Cooking & refrigeration"
+                    "bathroom" -> "Water heater zone"
+                    else -> "Everyday household appliances"
                 }
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = LensColors.SurfaceContainerLowest,
-                    border = BorderStroke(1.dp, LensColors.Outline)
+                    border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f)),
+                    shadowElevation = 1.dp
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.DragIndicator,
-                            contentDescription = "Reorder",
-                            tint = LensColors.SlateCaption.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        // 44px circular room icon badge
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = LensColors.SurfaceContainerLow,
-                            modifier = Modifier.size(34.dp)
+                            shape = CircleShape,
+                            color = LensColors.PrimaryFixed,
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = when (room.name.lowercase()) {
-                                        "bedroom" -> Icons.Default.Bed
-                                        "kitchen" -> Icons.Default.Kitchen
-                                        "bathroom" -> Icons.Default.Shower
-                                        else -> Icons.Default.Chair
-                                    },
+                                    imageVector = roomIcon,
                                     contentDescription = null,
                                     tint = LensColors.Primary,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Room Info
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
@@ -926,137 +1062,273 @@ fun RoomSetupContent(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
-                                    shape = RoundedCornerShape(3.dp),
-                                    color = LensColors.PrimaryContainer.copy(alpha = 0.1f)
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = LensColors.SurfaceContainer
                                 ) {
                                     Text(
-                                        roomTag,
-                                        style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                        color = LensColors.PrimaryContainer,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        "Room ${index + 1}",
+                                        style = LensTypography.labelCaps.copy(fontSize = 10.sp),
+                                        color = LensColors.SlateCaption,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "$expectedCount expected specs",
-                                    style = LensTypography.labelSm.copy(fontSize = 11.sp),
-                                    color = LensColors.PrimaryContainer
-                                )
-                                Text(" • ", color = LensColors.SlateCaption)
-                                Text(
-                                    "Zone 0${index + 1}",
-                                    style = LensTypography.labelSm.copy(fontSize = 11.sp),
-                                    color = LensColors.SlateCaption
-                                )
-                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                expectedAppliances,
+                                style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                                color = LensColors.SlateCaption,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
+                        // Room Actions (Edit, Up, Down, Delete)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = LensColors.Primary.copy(alpha = 0.1f),
-                                modifier = Modifier
-                                    .padding(end = 4.dp)
-                                    .clickable { onRenameRoom(room) }
+                            IconButton(
+                                onClick = { onRenameRoom(room) },
+                                modifier = Modifier.size(34.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = "Edit",
-                                        tint = LensColors.Primary,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(
-                                        "Edit",
-                                        style = LensTypography.labelCaps.copy(fontSize = 10.sp),
-                                        color = LensColors.Primary
-                                    )
-                                }
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit ${room.name}",
+                                    tint = LensColors.SlateCaption,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
 
                             IconButton(
                                 onClick = { onMoveRoomUp(index) },
                                 enabled = index > 0,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     Icons.Default.KeyboardArrowUp,
-                                    contentDescription = "Up",
-                                    tint = if (index > 0) LensColors.Primary else LensColors.SlateCaption.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(18.dp)
+                                    contentDescription = "Move Up",
+                                    tint = if (index > 0) LensColors.Primary else LensColors.SlateCaption.copy(alpha = 0.25f),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
+
                             IconButton(
                                 onClick = { onMoveRoomDown(index) },
                                 enabled = index < sortedRooms.size - 1,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Down",
-                                    tint = if (index < sortedRooms.size - 1) LensColors.Primary else LensColors.SlateCaption.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(18.dp)
+                                    contentDescription = "Move Down",
+                                    tint = if (index < sortedRooms.size - 1) LensColors.Primary else LensColors.SlateCaption.copy(alpha = 0.25f),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
+
                             IconButton(
                                 onClick = { onRemoveRoom(room.id) },
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(34.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "Remove",
+                                    contentDescription = "Delete ${room.name}",
                                     tint = LensColors.Error,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
                 }
             }
-
-            OutlinedButton(
-                onClick = onAddRoom,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(42.dp),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, LensColors.OutlineVariant)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Add Another Room", style = LensTypography.labelSm, color = LensColors.SlateText)
-            }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Sticky Bottom Trigger
-        Button(
-            onClick = onProceed,
+        // "+ Add Another Room" Button
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
-            shape = RoundedCornerShape(8.dp)
+                .clickable { onAddRoom() },
+            shape = RoundedCornerShape(12.dp),
+            color = LensColors.SurfaceContainerLow,
+            border = BorderStroke(1.dp, LensColors.Primary.copy(alpha = 0.3f))
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Start Room-by-Room Audit", style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold), color = LensColors.OnPrimary)
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.AddCircle,
+                    contentDescription = null,
+                    tint = LensColors.Primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "+ Add Another Room",
+                    style = LensTypography.headlineSm.copy(fontSize = 15.sp),
+                    color = LensColors.Primary
+                )
             }
         }
+
+        // Quick Add Common Presets
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "QUICK PRESETS",
+                style = LensTypography.labelCaps,
+                color = LensColors.SlateCaption
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("Balcony", "Terrace", "Dining Room", "Home Office").forEach { preset ->
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = LensColors.SurfaceContainerLowest,
+                        border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.2f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onAddPresetRoom(preset) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                tint = LensColors.Primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                preset,
+                                style = LensTypography.labelSm.copy(fontSize = 11.sp),
+                                color = LensColors.SlateText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // "Take your time" Comfort Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = LensColors.SurfaceContainer
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = LensColors.SurfaceContainerHigh,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = LensColors.Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Take your time",
+                        style = LensTypography.headlineSm.copy(fontSize = 14.sp),
+                        color = LensColors.SlateText
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "You can pause and resume this audit whenever convenient.",
+                        style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                        color = LensColors.SlateCaption
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Sticky Bottom Trigger Bar
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(LensColors.Primary, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Next: ${sortedRooms.firstOrNull()?.name ?: "Living Room"}",
+                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                        color = LensColors.SlateText
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "(Room 1 of ${sortedRooms.size})",
+                        style = LensTypography.labelCaps,
+                        color = LensColors.SlateCaption
+                    )
+                }
+                Text(
+                    "READY TO AUDIT",
+                    style = LensTypography.labelCaps,
+                    color = LensColors.Primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Button(
+                onClick = onProceed,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
+                shape = RoundedCornerShape(12.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Start Room-by-Room Audit",
+                        style = LensTypography.headlineSm.copy(fontSize = 16.sp),
+                        color = LensColors.OnPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = LensColors.OnPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-// ─── Screen 3: Active Room Staging (Stitch 7a2f79b...) ───────────────────────────
+// ─── Screen C: Room Audit (Stitch Minimal Reference) ─────────────────────────
 
 @Composable
 fun RoomOverviewContent(
@@ -1071,405 +1343,419 @@ fun RoomOverviewContent(
     onRecordVideoClicked: () -> Unit,
     onSkipRoom: () -> Unit
 ) {
+    var showVideoOptions by remember { mutableStateOf(false) }
+    val progressPercent = (activeIdx.toFloat() / total.coerceAtLeast(1).toFloat() * 100).toInt()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Step Tracker & Breadcrumb Flow
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLow,
-            border = BorderStroke(1.dp, LensColors.Outline)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = LensColors.Primary,
-                            modifier = Modifier.size(20.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    "$activeIdx",
-                                    style = LensTypography.labelCaps,
-                                    color = LensColors.OnPrimary
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Room $activeIdx of $total: ${room.name}",
-                            style = LensTypography.headlineSm.copy(fontSize = 14.sp),
-                            color = LensColors.SlateText
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = LensColors.Primary.copy(alpha = 0.12f),
-                            modifier = Modifier.clickable { onRenameRoom(room) }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Rename", tint = LensColors.Primary, modifier = Modifier.size(11.dp))
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text("Rename", style = LensTypography.labelCaps.copy(fontSize = 10.sp), color = LensColors.Primary)
-                            }
-                        }
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = LensColors.PrimaryFixed.copy(alpha = 0.4f)
+        // Progress Header
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(LensColors.Primary, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Room $activeIdx of $total · ${room.name}",
+                        style = LensTypography.labelCaps,
+                        color = LensColors.Primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    IconButton(
+                        onClick = { onRenameRoom(room) },
+                        modifier = Modifier.size(24.dp)
                     ) {
-                        Text(
-                            "STEP $activeIdx ACTIVE",
-                            style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                            color = LensColors.Primary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Rename Room",
+                            tint = LensColors.SlateCaption,
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                // 4-Segment Linear Step Meter
+                Text(
+                    "$progressPercent% Done",
+                    style = LensTypography.labelSm,
+                    color = LensColors.SlateCaption,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            // Segmented Progress Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                for (i in 1..total.coerceAtLeast(1)) {
+                    val isCompleted = i <= activeIdx
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(6.dp)
+                            .clip(CircleShape)
+                            .background(if (isCompleted) LensColors.Primary else LensColors.SurfaceContainerHigh)
+                    )
+                }
+            }
+        }
+
+        // Warm Title Section
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "Let's check your ${room.name.lowercase()}",
+                style = LensTypography.headlineLg,
+                color = LensColors.SlateText
+            )
+            Text(
+                "Add a photo of the room so we can help identify your appliances.",
+                style = LensTypography.bodyMd,
+                color = LensColors.SlateCaption,
+                lineHeight = 18.sp
+            )
+        }
+
+        // Primary Option: Add Room Photos Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = LensColors.SurfaceContainerLowest,
+            border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f)),
+            shadowElevation = 1.dp
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = LensColors.SurfaceContainerHigh,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.AddAPhoto,
+                                contentDescription = null,
+                                tint = LensColors.Primary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                "Add room photos",
+                                style = LensTypography.headlineSm,
+                                color = LensColors.SlateText
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.PrimaryFixed
+                            ) {
+                                Text(
+                                    "EASIEST",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.Primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "Take a picture of the room or upload from your gallery.",
+                            style = LensTypography.bodyMd,
+                            color = LensColors.SlateCaption,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dual Action Buttons: Side-by-side [Take a Photo] & [Choose Gallery]
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    for (i in 1..total.coerceAtLeast(4)) {
-                        val isFilled = i <= activeIdx
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(if (isFilled) LensColors.Primary else LensColors.SurfaceContainerHighest)
+                    Button(
+                        onClick = onCapturePhotoClicked,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.PhotoCamera,
+                                contentDescription = null,
+                                tint = LensColors.OnPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Take Photo",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                color = LensColors.OnPrimary
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clickable { onUploadPhotosClicked() },
+                        shape = RoundedCornerShape(12.dp),
+                        color = LensColors.SurfaceContainer,
+                        border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = null,
+                                tint = LensColors.Primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Choose Gallery",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                color = LensColors.SlateText
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Secondary Video Action Toggle
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    TextButton(onClick = { showVideoOptions = !showVideoOptions }) {
+                        Icon(
+                            Icons.Default.Videocam,
+                            contentDescription = null,
+                            tint = LensColors.Tertiary,
+                            modifier = Modifier.size(16.dp)
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            if (showVideoOptions) "Hide video options" else "Or choose a short room video clip",
+                            style = LensTypography.labelSm,
+                            color = LensColors.Tertiary
+                        )
+                    }
+
+                    if (showVideoOptions) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onRecordVideoClicked,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Record Video", style = LensTypography.labelSm)
+                            }
+                            OutlinedButton(
+                                onClick = onUploadVideoClicked,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Choose Video", style = LensTypography.labelSm)
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Technical Calibration Header & Guidance
+        // Option B: Live camera scan Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLowest,
-            border = BorderStroke(1.dp, LensColors.Outline)
+            shape = RoundedCornerShape(14.dp),
+            color = LensColors.SurfaceContainerLow,
+            border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f))
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Audit Zone: ${room.name}",
-                            style = LensTypography.headlineMd,
-                            color = LensColors.SlateText
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Choose an audit workflow: upload media for Gemini 3.8 Flash analysis, or scan the room in real time using on-device YOLO.",
-                            style = LensTypography.bodyMd,
-                            color = LensColors.SlateCaption,
-                            lineHeight = 18.sp
-                        )
-                    }
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = LensColors.SurfaceContainer,
-                        modifier = Modifier.size(38.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        color = LensColors.SurfaceContainerLowest,
+                        modifier = Modifier.size(42.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Default.ViewInAr,
                                 contentDescription = null,
-                                tint = LensColors.Primary,
-                                modifier = Modifier.size(20.dp)
+                                tint = LensColors.SlateCaption,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    "TARGET APPLIANCES IN THIS ROOM",
-                    style = LensTypography.labelCaps,
-                    color = LensColors.SlateCaption
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    TargetChip("AC", Icons.Default.AcUnit)
-                    TargetChip("Fan", Icons.Default.WindPower)
-                    TargetChip("Lights", Icons.Default.Lightbulb)
-                    TargetChip("TV", Icons.Default.Tv)
-                }
-            }
-        }
 
-        // ══════════════════════════════════════════════════════════════════
-        // WORKFLOW 1: UPLOAD (Backend Gemini 3.8 Flash)
-        // ══════════════════════════════════════════════════════════════════
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLowest,
-            border = BorderStroke(1.dp, LensColors.Outline)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = LensColors.SurfaceContainerLow,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.CloudUpload,
-                                contentDescription = null,
-                                tint = LensColors.Primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Upload Media",
-                                style = LensTypography.headlineSm,
-                                color = LensColors.SlateText
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = LensColors.PrimaryFixed.copy(alpha = 0.3f)
-                            ) {
-                                Text(
-                                    "GEMINI 3.8 FLASH",
-                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                    color = LensColors.Primary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
+                    Column {
                         Text(
-                            "Multi-modal AI detection with Gemini 3.8 Flash. Select from gallery or capture with camera for upload.",
-                            style = LensTypography.bodyMd,
-                            color = LensColors.SlateCaption,
-                            fontSize = 12.sp
+                            "Live camera scan",
+                            style = LensTypography.headlineSm.copy(fontSize = 15.sp),
+                            color = LensColors.SlateText
+                        )
+                        Text(
+                            "Scan around the room in real time",
+                            style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                            color = LensColors.SlateCaption
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Input Path Section 1: Gallery
-                Text(
-                    "PATH 1 & 2: SELECT FROM GALLERY",
-                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                    color = LensColors.SlateCaption
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onUploadPhotosClicked,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Photos", style = LensTypography.labelSm, color = LensColors.SlateText)
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = onUploadVideoClicked,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Video", style = LensTypography.labelSm, color = LensColors.SlateText)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Input Path Section 2: Camera Capture for Upload
-                Text(
-                    "PATH 3: CAPTURE MEDIA FOR UPLOAD",
-                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                    color = LensColors.SlateCaption
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onCapturePhotoClicked,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Take Photo", style = LensTypography.labelSm, color = LensColors.SlateText)
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = onRecordVideoClicked,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, LensColors.OutlineVariant)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Videocam, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Record Video", style = LensTypography.labelSm, color = LensColors.SlateText)
-                        }
-                    }
-                }
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════════
-        // WORKFLOW 2: LIVE SCAN (On-Device Local YOLO)
-        // ══════════════════════════════════════════════════════════════════
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = LensColors.SurfaceContainerLowest,
-            border = BorderStroke(1.dp, LensColors.Outline)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = LensColors.SurfaceContainerHigh,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.CenterFocusStrong,
-                                contentDescription = null,
-                                tint = LensColors.Primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Live Scan",
-                                style = LensTypography.headlineSm,
-                                color = LensColors.SlateText
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = LensColors.SurfaceContainerHighest
-                            ) {
-                                Text(
-                                    "OFFLINE YOLO",
-                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                    color = LensColors.SlateText,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            "Real-time camera scanning with on-device detector and live bounding boxes. Zero network requests.",
-                            style = LensTypography.bodyMd,
-                            color = LensColors.SlateCaption,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(14.dp))
                 Button(
                     onClick = onLiveScanClicked,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = LensColors.SurfaceContainerLowest),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DocumentScanner, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Start Live Scan (Local YOLO)", style = LensTypography.labelSm, color = LensColors.OnPrimary)
+                    Text(
+                        "Start Scan",
+                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                        color = LensColors.SlateText
+                    )
+                }
+            }
+        }
+
+        // Helpful Tips Box
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            color = LensColors.SurfaceContainer
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.TipsAndUpdates,
+                        contentDescription = null,
+                        tint = LensColors.Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        "HELPFUL TIPS",
+                        style = LensTypography.labelCaps,
+                        color = LensColors.SlateText,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text("• ", color = LensColors.Primary, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Try to include main appliances like ceiling fan, AC, or TV.",
+                            style = LensTypography.bodyMd,
+                            color = LensColors.SlateCaption,
+                            lineHeight = 16.sp
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text("• ", color = LensColors.Primary, fontWeight = FontWeight.Bold)
+                        Text(
+                            "You can snap and add more photos if things are spread out.",
+                            style = LensTypography.bodyMd,
+                            color = LensColors.SlateCaption,
+                            lineHeight = 16.sp
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text("• ", color = LensColors.Primary, fontWeight = FontWeight.Bold)
+                        Text(
+                            "You will review and edit every detected item in the next step.",
+                            style = LensTypography.bodyMd,
+                            color = LensColors.SlateCaption,
+                            lineHeight = 16.sp
+                        )
                     }
                 }
             }
         }
 
-        // Secondary Skip Action
-        TextButton(
-            onClick = onSkipRoom,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+        // Bottom Navigation: Skip Room
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text("Skip this room for now →", style = LensTypography.labelSm, color = LensColors.SlateCaption)
+            TextButton(onClick = onSkipRoom) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Skip this room for now",
+                        style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                        color = LensColors.SlateCaption
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = LensColors.SlateCaption,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Text(
+                "Room $activeIdx of $total • Next: ${if (activeIdx < total) "Next Room" else "Summary"}",
+                style = LensTypography.labelCaps,
+                color = LensColors.SlateCaption
+            )
         }
-    }
-}
 
-@Composable
-private fun TargetChip(label: String, icon: ImageVector) {
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = LensColors.SurfaceContainerLow,
-        border = BorderStroke(1.dp, LensColors.Outline)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null, tint = LensColors.Primary, modifier = Modifier.size(12.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(label, style = LensTypography.labelCaps.copy(fontSize = 10.sp), color = LensColors.SlateText)
-        }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

@@ -37,12 +37,16 @@ import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.SolarPower
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -70,6 +74,22 @@ import com.example.ui.components.SolarEaseBottomNavigation
 import com.example.ui.components.SolarEaseNavTab
 import com.example.ui.theme.*
 import java.util.Locale
+
+// ─── Stitch Material 3 Home Tokens ──────────────────────────────────────────────
+private object HomeColors {
+    val Background = Color(0xFFFBFCF3)
+    val Primary = Color(0xFF386A20)
+    val PrimaryContainer = Color(0xFFE8F5E1)
+    val TextPrimary = Color(0xFF191C18)
+    val TextSecondary = Color(0xFF5F665B)
+    val Border = Color(0xFFE1E5DA)
+    val CardBg = Color(0xFFFFFFFF)
+    val SurfaceSecondary = Color(0xFFF1F5E9)
+    val AccentOrange = Color(0xFFB85C00)
+    val Success = Color(0xFF217346)
+    val ChartHighlight = Color(0xFFF4B183)
+    val LightBlue = Color(0xFFEEF4FF)
+}
 
 // ─── Main Home Screen Entry Route ──────────────────────────────────────────────
 
@@ -166,7 +186,7 @@ fun HomeRoute(
     }
 
     Scaffold(
-        containerColor = StitchSurface,
+        containerColor = HomeColors.Background,
         bottomBar = {
             SolarEaseBottomNavigation(
                 currentTab = SolarEaseNavTab.HOME,
@@ -482,7 +502,8 @@ private fun StitchTopBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = StitchSurface.copy(alpha = 0.95f),
+        color = HomeColors.Background.copy(alpha = 0.95f),
+        border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
     ) {
         Row(
@@ -503,7 +524,7 @@ private fun StitchTopBar(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(StitchPrimaryContainer),
+                        .background(HomeColors.Primary),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -520,21 +541,21 @@ private fun StitchTopBar(
                             text = "SolarEase",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = StitchOnSurface,
+                            color = HomeColors.TextPrimary,
                             letterSpacing = (-0.3).sp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(StitchPrimaryFixed.copy(alpha = 0.6f))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                .background(HomeColors.PrimaryContainer)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "HOME",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchOnPrimaryFixedVariant,
+                                color = HomeColors.Primary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -548,14 +569,14 @@ private fun StitchTopBar(
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = StitchPrimaryContainer,
+                                tint = HomeColors.Primary,
                                 modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Text(
                                 text = userLocation,
                                 fontSize = 11.sp,
-                                color = StitchOnSurfaceVariant,
+                                color = HomeColors.TextSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -564,7 +585,7 @@ private fun StitchTopBar(
                         Text(
                             text = "REAP Solar Intelligence",
                             fontSize = 11.sp,
-                            color = StitchOnSurfaceVariant,
+                            color = HomeColors.TextSecondary,
                             letterSpacing = 0.2.sp
                         )
                     }
@@ -584,14 +605,14 @@ private fun StitchTopBar(
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications",
-                            tint = StitchOnSurfaceVariant,
+                            tint = HomeColors.TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(StitchPrimaryContainer)
+                                .background(HomeColors.AccentOrange)
                         )
                     }
                 }
@@ -600,7 +621,8 @@ private fun StitchTopBar(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(StitchPrimary)
+                        .background(HomeColors.Primary)
+                        .border(1.dp, HomeColors.Border, CircleShape)
                         .clickable { onProfileClick() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -608,7 +630,7 @@ private fun StitchTopBar(
                         text = userInitial.toString(),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = StitchOnPrimary
+                        color = Color.White
                     )
                 }
             }
@@ -647,7 +669,7 @@ private fun GreetingHeader(
                         modifier = Modifier
                             .size(7.dp)
                             .clip(CircleShape)
-                            .background(StitchPrimaryContainer)
+                            .background(HomeColors.Success)
                             .alpha(alphaAnim)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -655,7 +677,7 @@ private fun GreetingHeader(
                         text = if (hasConnectedBill) "SITE OVERVIEW" else "REAP HOUSEHOLD ONBOARDING",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = StitchPrimaryContainer,
+                        color = HomeColors.Success,
                         letterSpacing = 0.8.sp
                     )
                 }
@@ -664,23 +686,24 @@ private fun GreetingHeader(
                     text = if (!userName.isNullOrBlank()) "$greeting, $userName" else "$greeting 👋",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = StitchOnSurface,
+                    color = HomeColors.TextPrimary,
                     letterSpacing = (-0.5).sp
                 )
             }
 
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .background(StitchSurfaceContainerLow),
+                    .background(HomeColors.SurfaceSecondary)
+                    .border(1.dp, HomeColors.Border, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.WbSunny,
                     contentDescription = null,
-                    tint = StitchPrimaryContainer,
-                    modifier = Modifier.size(20.dp)
+                    tint = HomeColors.Primary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -693,7 +716,7 @@ private fun GreetingHeader(
                 "Let's understand your home's energy footprint and build your path to clean independence."
             },
             fontSize = 13.sp,
-            color = StitchOnSurfaceVariant,
+            color = HomeColors.TextSecondary,
             lineHeight = 18.sp
         )
     }
@@ -713,11 +736,13 @@ private fun PrimaryEnergyCard(
     onCancelEditingReading: () -> Unit,
     onEditCurrentReading: () -> Unit = {}
 ) {
+    var isDrawerExpanded by rememberSaveable { mutableStateOf(false) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = StitchSurfaceContainerLowest,
-        border = BorderStroke(1.dp, StitchOutline),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
     ) {
         if (!uiState.hasConnectedBill) {
@@ -727,7 +752,7 @@ private fun PrimaryEnergyCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(
@@ -737,19 +762,19 @@ private fun PrimaryEnergyCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(StitchSurfaceContainerLow),
+                                .background(HomeColors.SurfaceSecondary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ElectricMeter,
                                 contentDescription = null,
-                                tint = StitchPrimaryContainer,
+                                tint = HomeColors.Primary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -757,21 +782,21 @@ private fun PrimaryEnergyCard(
                             text = "Your Home Energy",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = StitchOnSurface
+                            color = HomeColors.TextPrimary
                         )
                     }
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(StitchSurfaceContainerHigh)
+                            .background(HomeColors.SurfaceSecondary)
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "Standby",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = StitchOnSurfaceVariant
+                            color = HomeColors.TextSecondary
                         )
                     }
                 }
@@ -780,7 +805,7 @@ private fun PrimaryEnergyCard(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    color = StitchSurfaceContainerLow
+                    color = HomeColors.SurfaceSecondary
                 ) {
                     Column(
                         modifier = Modifier
@@ -793,13 +818,13 @@ private fun PrimaryEnergyCard(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(StitchSurfaceContainerLowest),
+                                .background(HomeColors.CardBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ElectricMeter,
                                 contentDescription = null,
-                                tint = StitchPrimaryContainer,
+                                tint = HomeColors.Primary,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -808,14 +833,14 @@ private fun PrimaryEnergyCard(
                             text = "No electricity data connected yet",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = StitchOnSurface,
+                            color = HomeColors.TextPrimary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Connect your consumer service number to reveal your bi-monthly tariff slabs, actual consumption, and peak load profile.",
                             fontSize = 12.sp,
-                            color = StitchOnSurfaceVariant,
+                            color = HomeColors.TextSecondary,
                             textAlign = TextAlign.Center,
                             lineHeight = 17.sp
                         )
@@ -828,8 +853,8 @@ private fun PrimaryEnergyCard(
                         .fillMaxWidth()
                         .height(44.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = StitchPrimaryContainer,
-                        contentColor = StitchOnPrimary
+                        containerColor = HomeColors.Primary,
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -862,7 +887,7 @@ private fun PrimaryEnergyCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Header with Bill Connected Badge
@@ -873,23 +898,23 @@ private fun PrimaryEnergyCard(
                 ) {
                     Text(
                         text = "YOUR HOME ENERGY",
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = StitchOnSurfaceVariant,
+                        color = HomeColors.TextSecondary,
                         letterSpacing = 0.8.sp
                     )
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE8F5E9))
+                            .background(HomeColors.PrimaryContainer)
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = Color(0xFF1E7038),
+                                tint = HomeColors.Success,
                                 modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -897,7 +922,7 @@ private fun PrimaryEnergyCard(
                                 text = "Bill Connected ✓",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1E7038),
+                                color = HomeColors.Success,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -908,8 +933,8 @@ private fun PrimaryEnergyCard(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    color = StitchSurfaceContainerLow,
-                    border = BorderStroke(1.dp, StitchOutline)
+                    color = HomeColors.SurfaceSecondary,
+                    border = BorderStroke(1.dp, HomeColors.Border)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(
@@ -921,7 +946,7 @@ private fun PrimaryEnergyCard(
                                     text = "LAST BILL READING",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StitchOnSurfaceVariant,
+                                    color = HomeColors.TextSecondary,
                                     letterSpacing = 0.5.sp
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
@@ -929,7 +954,7 @@ private fun PrimaryEnergyCard(
                                     text = if (baselineKwh > 0.0) "${String.format(Locale.getDefault(), "%,.0f", baselineKwh)} kWh" else "Baseline Pending",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StitchOnSurface
+                                    color = HomeColors.TextPrimary
                                 )
                             }
 
@@ -938,7 +963,7 @@ private fun PrimaryEnergyCard(
                                     text = "LAST BILL DATE",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StitchOnSurfaceVariant,
+                                    color = HomeColors.TextSecondary,
                                     letterSpacing = 0.5.sp
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
@@ -946,19 +971,19 @@ private fun PrimaryEnergyCard(
                                     text = baselineDate,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = StitchOnSurface
+                                    color = HomeColors.TextPrimary
                                 )
                             }
                         }
 
                         if (prevBilledUnits != null && prevBilledUnits > 0.0) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            HorizontalDivider(color = StitchOutline.copy(alpha = 0.5f))
+                            HorizontalDivider(color = HomeColors.Border)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Previous billed units: ${String.format(Locale.getDefault(), "%,.0f", prevBilledUnits)} kWh (Historical baseline)",
                                 fontSize = 11.sp,
-                                color = StitchOnSurfaceVariant
+                                color = HomeColors.TextSecondary
                             )
                         }
                     }
@@ -973,7 +998,7 @@ private fun PrimaryEnergyCard(
                         text = "Enter today's meter reading",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = StitchOnSurface
+                        color = HomeColors.TextPrimary
                     )
 
                     OutlinedTextField(
@@ -983,7 +1008,7 @@ private fun PrimaryEnergyCard(
                         placeholder = {
                             Text(
                                 text = if (baselineKwh > 0.0) "e.g. ${String.format(Locale.getDefault(), "%.0f", baselineKwh + 132)}" else "e.g. 12582",
-                                color = StitchOnSurfaceVariant.copy(alpha = 0.6f)
+                                color = HomeColors.TextSecondary.copy(alpha = 0.6f)
                             )
                         },
                         trailingIcon = {
@@ -991,7 +1016,7 @@ private fun PrimaryEnergyCard(
                                 text = "kWh",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = StitchOnSurfaceVariant,
+                                color = HomeColors.TextSecondary,
                                 modifier = Modifier.padding(end = 12.dp)
                             )
                         },
@@ -1000,8 +1025,8 @@ private fun PrimaryEnergyCard(
                         isError = uiState.meterValidationError != null,
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StitchPrimaryContainer,
-                            unfocusedBorderColor = StitchOutline
+                            focusedBorderColor = HomeColors.Primary,
+                            unfocusedBorderColor = HomeColors.Border
                         )
                     )
 
@@ -1009,7 +1034,7 @@ private fun PrimaryEnergyCard(
                         Text(
                             text = uiState.meterValidationError,
                             fontSize = 12.sp,
-                            color = StitchError,
+                            color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(start = 4.dp)
                         )
                     }
@@ -1020,8 +1045,8 @@ private fun PrimaryEnergyCard(
                             .fillMaxWidth()
                             .height(44.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchPrimaryContainer,
-                            contentColor = StitchOnPrimary
+                            containerColor = HomeColors.Primary,
+                            contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -1044,13 +1069,13 @@ private fun PrimaryEnergyCard(
                             .weight(1f)
                             .height(38.dp),
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, StitchOutline)
+                        border = BorderStroke(1.dp, HomeColors.Border)
                     ) {
                         Text(
                             text = "View Bill History",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = StitchOnSurface
+                            color = HomeColors.TextPrimary
                         )
                     }
 
@@ -1061,8 +1086,8 @@ private fun PrimaryEnergyCard(
                             .height(38.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchSurfaceContainerLow,
-                            contentColor = StitchPrimaryContainer
+                            containerColor = HomeColors.AccentOrange,
+                            contentColor = Color.White
                         )
                     ) {
                         Text(
@@ -1076,6 +1101,7 @@ private fun PrimaryEnergyCard(
         } else {
             // ==================================================================
             // STATE C & D: CURRENT CYCLE LIVE DASHBOARD / TODAY'S READING SAVED
+            // Matches Stitch homescreen2 (compact collapsed) -> homescreen1 (drawer)
             // ==================================================================
             val metrics = uiState.currentEnergyMetrics
             val units = metrics?.unitsConsumed ?: 0.0
@@ -1087,8 +1113,8 @@ private fun PrimaryEnergyCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Header with Live Tracking Badge
                 Row(
@@ -1098,16 +1124,16 @@ private fun PrimaryEnergyCard(
                 ) {
                     Text(
                         text = "YOUR CURRENT ENERGY",
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = StitchOnSurfaceVariant,
+                        color = HomeColors.TextSecondary,
                         letterSpacing = 0.8.sp
                     )
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE8F5E9))
+                            .background(HomeColors.PrimaryContainer)
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1115,14 +1141,14 @@ private fun PrimaryEnergyCard(
                                 modifier = Modifier
                                     .size(6.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF1E7038))
+                                    .background(HomeColors.Success)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = if (uiState.isTodayReadingEntered) "TODAY SAVED ✓" else "LIVE TRACKING",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1E7038),
+                                color = HomeColors.Primary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -1139,270 +1165,406 @@ private fun PrimaryEnergyCard(
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
                                 text = if (units % 1.0 == 0.0) units.toInt().toString() else String.format(Locale.getDefault(), "%.1f", units),
-                                fontSize = 36.sp,
+                                fontSize = 34.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchOnSurface,
+                                color = HomeColors.TextPrimary,
                                 letterSpacing = (-1).sp
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "kWh",
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = StitchOnSurfaceVariant
+                                fontWeight = FontWeight.Medium,
+                                color = HomeColors.TextSecondary,
+                                modifier = Modifier.padding(bottom = 3.dp)
                             )
                         }
                         Text(
                             text = "Consumed since last bill",
                             fontSize = 11.sp,
-                            color = StitchOnSurfaceVariant
+                            color = HomeColors.TextSecondary
                         )
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = if (estBill > 0.0) "₹${String.format(Locale.getDefault(), "%,.0f", estBill)}" else "₹0.00",
-                            fontSize = 22.sp,
+                            text = if (estBill > 0.0) "₹${String.format(Locale.getDefault(), "%,.0f", estBill)}" else "₹0",
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFD97706) // Amber / orange accent for Estimated Cost
+                            color = HomeColors.AccentOrange
                         )
                         Text(
                             text = "Estimated Bill",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFB45309)
+                            fontWeight = FontWeight.Normal,
+                            color = HomeColors.TextSecondary
                         )
                     }
                 }
 
-                // Cycle Details Metric Cards (Current Reading, Average, Days Elapsed)
-                Row(
+                // Collapsed Context Banner (Cycle & Tariff)
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    color = HomeColors.SurfaceSecondary
                 ) {
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        color = StitchSurfaceContainerLow,
-                        border = BorderStroke(1.dp, StitchOutline)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("CURRENT READING", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StitchOnSurfaceVariant)
-                                if (!uiState.isTodayReadingEntered) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit previous reading",
-                                        modifier = Modifier
-                                            .size(13.dp)
-                                            .clickable { onEditCurrentReading() },
-                                        tint = StitchPrimaryContainer
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${String.format(Locale.getDefault(), "%,.0f", currentReadingVal)} kWh",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StitchOnSurface
-                            )
-                        }
-                    }
-
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFF0FDF4),
-                        border = BorderStroke(1.dp, Color(0xFFBBF7D0))
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text("AVERAGE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${String.format(Locale.getDefault(), "%.1f", avgDaily)} kWh/d",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StitchOnSurface
-                            )
-                        }
-                    }
-
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFF0F9FF),
-                        border = BorderStroke(1.dp, Color(0xFFBAE6FD))
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text("ELAPSED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0369A1))
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${metrics?.daysElapsed ?: 1} Days",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StitchOnSurface
-                            )
-                        }
+                        Text(
+                            text = "Cycle: $periodDisplay",
+                            fontSize = 11.sp,
+                            color = HomeColors.TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = uiState.tariffCategory.ifBlank { "LT-IA • Domestic" },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = HomeColors.Primary
+                        )
                     }
                 }
 
-                // Progress Track & Billing cycle dates
-                val progressFraction = (units / 1000.0).toFloat().coerceIn(0.05f, 1f)
-                Box(
+                // Interactive Collapse/Expand Dropdown Button
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(StitchSurfaceContainerHigh)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { isDrawerExpanded = !isDrawerExpanded },
+                    shape = RoundedCornerShape(8.dp),
+                    color = HomeColors.SurfaceSecondary,
+                    border = BorderStroke(1.dp, HomeColors.Border)
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .fillMaxWidth(progressFraction)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(StitchPrimaryContainer)
-                    )
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp, horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isDrawerExpanded || uiState.isEditingReading) "Hide Details" else "View Meter Readings & Entry",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = HomeColors.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (isDrawerExpanded || uiState.isEditingReading) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isDrawerExpanded || uiState.isEditingReading) "Collapse" else "Expand",
+                            tint = HomeColors.Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Cycle: $periodDisplay",
-                        fontSize = 12.sp,
-                        color = StitchOnSurfaceVariant
-                    )
-                    Text(
-                        text = uiState.tariffCategory,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = StitchOnSurface
-                    )
-                }
-
-                // Today's Reading Status & Edit Action
-                if (uiState.isTodayReadingEntered) {
-                    if (uiState.isEditingReading) {
-                        Surface(
+                // Collapsible Drawer (Expanded State from homescreen1)
+                AnimatedVisibility(visible = isDrawerExpanded || uiState.isEditingReading) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // 3 Telemetry Metric Sub-Cards
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            color = StitchSurfaceContainerLow,
-                            border = BorderStroke(1.dp, StitchOutline)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Edit Today's Reading", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedTextField(
-                                        value = uiState.meterInputText,
-                                        onValueChange = onMeterInputChanged,
-                                        modifier = Modifier.weight(1f),
-                                        trailingIcon = { Text("kWh", fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp)) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(6.dp)
-                                    )
-                                    Button(
-                                        onClick = onUpdateTodayReading,
-                                        shape = RoundedCornerShape(6.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer)
+                            // Current Reading Sub-Card
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                color = HomeColors.SurfaceSecondary,
+                                border = BorderStroke(1.dp, HomeColors.Border)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Update", fontSize = 12.sp)
+                                        Text(
+                                            text = "CURRENT",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = HomeColors.TextSecondary
+                                        )
+                                        if (!uiState.isTodayReadingEntered) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit previous reading",
+                                                modifier = Modifier
+                                                    .size(12.dp)
+                                                    .clickable { onEditCurrentReading() },
+                                                tint = HomeColors.Primary
+                                            )
+                                        }
                                     }
-                                    TextButton(onClick = onCancelEditingReading) {
-                                        Text("Cancel", fontSize = 12.sp, color = StitchOnSurfaceVariant)
-                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "${String.format(Locale.getDefault(), "%,.0f", currentReadingVal)} kWh",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HomeColors.TextPrimary
+                                    )
                                 }
-                                if (uiState.meterValidationError != null) {
-                                    Text(uiState.meterValidationError, fontSize = 11.sp, color = StitchError)
+                            }
+
+                            // Average Daily Sub-Card
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                color = HomeColors.SurfaceSecondary,
+                                border = BorderStroke(1.dp, HomeColors.Border)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Text(
+                                        text = "AVERAGE",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HomeColors.Success
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "${String.format(Locale.getDefault(), "%.1f", avgDaily)} kWh/d",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HomeColors.TextPrimary
+                                    )
+                                }
+                            }
+
+                            // Elapsed Days Sub-Card
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                color = HomeColors.SurfaceSecondary,
+                                border = BorderStroke(1.dp, HomeColors.Border)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Text(
+                                        text = "ELAPSED",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HomeColors.Primary
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "${metrics?.daysElapsed ?: 1} Days",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HomeColors.TextPrimary
+                                    )
                                 }
                             }
                         }
-                    } else {
-                        Row(
+
+                        // Progress Track
+                        val progressFraction = (units / 1000.0).toFloat().coerceIn(0.05f, 1f)
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFF1F8F3))
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(HomeColors.Border)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color(0xFF1E7038),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Today's reading (${String.format(Locale.getDefault(), "%,.0f", uiState.todayEnteredReading ?: currentReadingVal)} kWh) logged",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF1E7038),
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            TextButton(
-                                onClick = onStartEditingReading,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(12.dp), tint = StitchPrimaryContainer)
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text("Edit", fontSize = 11.sp, color = StitchPrimaryContainer, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                } else {
-                    // Next day arrived: prompt for new reading
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFFFF9E6),
-                        border = BorderStroke(1.dp, Color(0xFFFFE082))
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Enter today's meter reading",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF795548)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progressFraction)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(HomeColors.Primary)
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = uiState.meterInputText,
-                                    onValueChange = onMeterInputChanged,
-                                    modifier = Modifier.weight(1f),
-                                    placeholder = { Text("e.g. ${String.format(Locale.getDefault(), "%.0f", currentReadingVal + 5)}", fontSize = 12.sp) },
-                                    trailingIcon = { Text("kWh", fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp)) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(6.dp)
-                                )
-                                Button(
-                                    onClick = onSaveMeterReading,
-                                    shape = RoundedCornerShape(6.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer)
+                        }
+
+                        // Meter Reading Entry / Status / Edit
+                        if (uiState.isTodayReadingEntered) {
+                            if (uiState.isEditingReading) {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = HomeColors.SurfaceSecondary,
+                                    border = BorderStroke(1.dp, HomeColors.Border)
                                 ) {
-                                    Text("Save", fontSize = 12.sp)
+                                    Column(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Edit Today's Reading",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = HomeColors.TextPrimary
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            OutlinedTextField(
+                                                value = uiState.meterInputText,
+                                                onMeterInputChanged,
+                                                modifier = Modifier.weight(1f),
+                                                trailingIcon = {
+                                                    Text(
+                                                        text = "kWh",
+                                                        fontSize = 11.sp,
+                                                        color = HomeColors.TextSecondary,
+                                                        modifier = Modifier.padding(end = 8.dp)
+                                                    )
+                                                },
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                singleLine = true,
+                                                shape = RoundedCornerShape(6.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = HomeColors.Primary,
+                                                    unfocusedBorderColor = HomeColors.Border
+                                                )
+                                            )
+                                            Button(
+                                                onClick = onUpdateTodayReading,
+                                                shape = RoundedCornerShape(6.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = HomeColors.Primary,
+                                                    contentColor = Color.White
+                                                )
+                                            ) {
+                                                Text("Update", fontSize = 12.sp)
+                                            }
+                                            TextButton(onClick = onCancelEditingReading) {
+                                                Text("Cancel", fontSize = 12.sp, color = HomeColors.TextSecondary)
+                                            }
+                                        }
+                                        if (uiState.meterValidationError != null) {
+                                            Text(
+                                                text = uiState.meterValidationError,
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(HomeColors.PrimaryContainer)
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = HomeColors.Success,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Today's reading (${String.format(Locale.getDefault(), "%,.0f", uiState.todayEnteredReading ?: currentReadingVal)} kWh) logged",
+                                            fontSize = 11.sp,
+                                            color = HomeColors.Primary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    TextButton(
+                                        onClick = onStartEditingReading,
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            modifier = Modifier.size(12.dp),
+                                            tint = HomeColors.Primary
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(
+                                            text = "Edit",
+                                            fontSize = 11.sp,
+                                            color = HomeColors.Primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
-                            if (uiState.meterValidationError != null) {
-                                Text(uiState.meterValidationError, fontSize = 11.sp, color = StitchError)
+                        } else {
+                            // Reading not yet entered today
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                color = HomeColors.SurfaceSecondary,
+                                border = BorderStroke(1.dp, HomeColors.Border)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Enter today's meter reading",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HomeColors.TextPrimary
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedTextField(
+                                            value = uiState.meterInputText,
+                                            onValueChange = onMeterInputChanged,
+                                            modifier = Modifier.weight(1f),
+                                            placeholder = {
+                                                Text(
+                                                    text = "e.g. ${String.format(Locale.getDefault(), "%.0f", currentReadingVal + 5)}",
+                                                    fontSize = 12.sp,
+                                                    color = HomeColors.TextSecondary.copy(alpha = 0.6f)
+                                                )
+                                            },
+                                            trailingIcon = {
+                                                Text(
+                                                    text = "kWh",
+                                                    fontSize = 11.sp,
+                                                    color = HomeColors.TextSecondary,
+                                                    modifier = Modifier.padding(end = 8.dp)
+                                                )
+                                            },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = HomeColors.Primary,
+                                                unfocusedBorderColor = HomeColors.Border
+                                            )
+                                        )
+                                        Button(
+                                            onClick = onSaveMeterReading,
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = HomeColors.Primary,
+                                                contentColor = Color.White
+                                            )
+                                        ) {
+                                            Text("Save", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    if (uiState.meterValidationError != null) {
+                                        Text(
+                                            text = uiState.meterValidationError,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1422,15 +1584,15 @@ private fun ReapClassificationCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFFAF5FF), // Subtle purple tint for Energy Profile
-        border = BorderStroke(1.dp, Color(0xFFE9D5FF)),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1444,28 +1606,29 @@ private fun ReapClassificationCard(
                     Icon(
                         imageVector = Icons.Default.Verified,
                         contentDescription = null,
-                        tint = Color(0xFF7C3AED), // Purple accent
+                        tint = HomeColors.Primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = "Your Energy Profile",
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = StitchOnSurface
+                        color = HomeColors.TextPrimary
                     )
                 }
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (uiState.reapTier == ReapTier.PENDING) Color(0xFFF3E8FF) else Color(0xFFEDE9FE))
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(HomeColors.PrimaryContainer)
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (uiState.reapTier == ReapTier.PENDING) "Classification Pending" else uiState.reapTier.code,
-                        fontSize = 11.sp,
+                        text = if (uiState.reapTier == ReapTier.PENDING) "Pending" else uiState.reapTier.code,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF6D28D9)
+                        color = HomeColors.Primary,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }
@@ -1474,7 +1637,7 @@ private fun ReapClassificationCard(
                 Text(
                     text = "Your home will be classified into one of the 4 REAP benchmark tiers based on your recorded bi-monthly cycle units.",
                     fontSize = 12.sp,
-                    color = StitchOnSurfaceVariant,
+                    color = HomeColors.TextSecondary,
                     lineHeight = 17.sp
                 )
 
@@ -1490,7 +1653,7 @@ private fun ReapClassificationCard(
                             range = "≤ 500 u",
                             title = "Conservation",
                             subtitle = "Energy Saver Base",
-                            tint = StitchPrimaryContainer
+                            tint = HomeColors.Primary
                         )
                         ReapTierChip(
                             modifier = Modifier.weight(1f),
@@ -1498,7 +1661,7 @@ private fun ReapClassificationCard(
                             range = "500–800 u",
                             title = "Efficiency",
                             subtitle = "Targeted Optimization",
-                            tint = StitchTertiary
+                            tint = HomeColors.Success
                         )
                     }
                     Row(
@@ -1511,7 +1674,7 @@ private fun ReapClassificationCard(
                             range = "800–1000 u",
                             title = "Optimisation",
                             subtitle = "Load Balancing",
-                            tint = StitchSecondary
+                            tint = HomeColors.AccentOrange
                         )
                         ReapTierChip(
                             modifier = Modifier.weight(1f),
@@ -1519,23 +1682,23 @@ private fun ReapClassificationCard(
                             range = ">1000 u",
                             title = "Transition",
                             subtitle = "High Solar Yield",
-                            tint = StitchPrimary
+                            tint = HomeColors.Primary
                         )
                     }
                 }
             } else {
                 // Connected Tier Breakdown
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = uiState.reapTier.title,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = StitchOnSurface
+                        color = HomeColors.TextPrimary
                     )
                     Text(
                         text = uiState.reapTier.description,
                         fontSize = 12.sp,
-                        color = StitchOnSurfaceVariant,
+                        color = HomeColors.TextSecondary,
                         lineHeight = 17.sp
                     )
 
@@ -1543,7 +1706,8 @@ private fun ReapClassificationCard(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp),
-                            color = StitchSurfaceContainerLow
+                            color = HomeColors.SurfaceSecondary,
+                            border = BorderStroke(1.dp, HomeColors.Border)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -1557,15 +1721,15 @@ private fun ReapClassificationCard(
                                 ) {
                                     Text(
                                         text = "Current: ${uiState.unitsConsumed.toInt()} kWh",
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = StitchOnSurface
+                                        color = HomeColors.TextPrimary
                                     )
                                     Text(
                                         text = "Target: ${uiState.reapTier.targetUnits.toInt()} kWh",
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = StitchPrimaryContainer
+                                        color = HomeColors.Primary
                                     )
                                 }
                                 val targetFraction = (uiState.reapTier.targetUnits / uiState.unitsConsumed).toFloat().coerceIn(0.1f, 1f)
@@ -1574,19 +1738,19 @@ private fun ReapClassificationCard(
                                         .fillMaxWidth()
                                         .height(4.dp)
                                         .clip(RoundedCornerShape(2.dp))
-                                        .background(StitchSurfaceContainerHigh)
+                                        .background(HomeColors.Border)
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth(targetFraction)
                                             .fillMaxHeight()
-                                            .background(StitchPrimaryContainer)
+                                            .background(HomeColors.Primary)
                                     )
                                 }
                                 Text(
                                     text = "Targeting ${uiState.reapTier.targetUnits.toInt()} kWh brings your home into the lower tariff slab, unlocking subsidized baseline units.",
                                     fontSize = 11.sp,
-                                    color = StitchOnSurfaceVariant,
+                                    color = HomeColors.TextSecondary,
                                     lineHeight = 15.sp
                                 )
                             }
@@ -1610,7 +1774,8 @@ private fun ReapTierChip(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        color = StitchSurfaceContainerLow
+        color = HomeColors.SurfaceSecondary,
+        border = BorderStroke(1.dp, HomeColors.Border)
     ) {
         Column(
             modifier = Modifier
@@ -1623,10 +1788,10 @@ private fun ReapTierChip(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = code, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = tint)
-                Text(text = range, fontSize = 10.sp, color = StitchOnSurfaceVariant)
+                Text(text = range, fontSize = 10.sp, color = HomeColors.TextSecondary)
             }
-            Text(text = title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = StitchOnSurface)
-            Text(text = subtitle, fontSize = 10.sp, color = StitchOnSurfaceVariant, maxLines = 1)
+            Text(text = title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = HomeColors.TextPrimary)
+            Text(text = subtitle, fontSize = 10.sp, color = HomeColors.TextSecondary, maxLines = 1)
         }
     }
 }
@@ -1639,7 +1804,6 @@ private fun KnowYourConsumptionCard(
     onOpenSolarLens: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Current billing-cycle consumption from single source of truth (current meter reading - previous bill reading)
     val currentKwh = uiState.currentBillingCycleKwh
     val kwhText = if (currentKwh > 0.0) {
         if (currentKwh % 1.0 == 0.0) "${currentKwh.toInt()}" else String.format(Locale.getDefault(), "%.1f", currentKwh)
@@ -1654,35 +1818,35 @@ private fun KnowYourConsumptionCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFEEF2FF), // Indigo / light blue subtle accent
-        border = BorderStroke(1.dp, Color(0xFFC7D2FE))
+        color = HomeColors.SurfaceSecondary,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Section label (02 Reduce badge completely removed per requirement)
             Text(
                 text = "KNOW YOUR CONSUMPTION",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF4F46E5), // Indigo accent
+                color = HomeColors.Primary,
                 letterSpacing = 0.8.sp
             )
 
             Text(
                 text = headingText,
-                fontSize = 17.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = StitchOnSurface
+                color = HomeColors.TextPrimary
             )
 
             Text(
                 text = "Run an appliance audit to discover which heavy loads (AC, water heater, pump) can be optimized to lower your bill into the next lower tariff slab.",
                 fontSize = 12.sp,
-                color = StitchOnSurfaceVariant,
+                color = HomeColors.TextSecondary,
                 lineHeight = 17.sp
             )
 
@@ -1693,7 +1857,7 @@ private fun KnowYourConsumptionCard(
                     .height(42.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4338CA), // Deep Indigo
+                    containerColor = HomeColors.Primary,
                     contentColor = Color.White
                 )
             ) {
@@ -1702,9 +1866,14 @@ private fun KnowYourConsumptionCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Start Appliance Audit with Solar Lens →",
+                        text = "Start Appliance Audit with Solar Lens",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -1722,14 +1891,15 @@ private fun BillActionsSection(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFFFFBEB), // Amber / warm tint for Bill / Cost
-        border = BorderStroke(1.dp, Color(0xFFFDE68A))
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -1744,14 +1914,14 @@ private fun BillActionsSection(
                     Icon(
                         imageVector = Icons.Default.ReceiptLong,
                         contentDescription = null,
-                        tint = Color(0xFFD97706),
+                        tint = HomeColors.Primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "BILL & PAYMENT ACTIONS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFB45309),
+                        color = HomeColors.Primary,
                         letterSpacing = 0.6.sp
                     )
                 }
@@ -1765,15 +1935,15 @@ private fun BillActionsSection(
                     onClick = onViewBillHistory,
                     modifier = Modifier
                         .weight(1f)
-                        .height(38.dp),
+                        .height(40.dp),
                     shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.5f))
+                    border = BorderStroke(1.dp, HomeColors.Border)
                 ) {
                     Text(
                         text = "View Bill History",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF92400E)
+                        color = HomeColors.TextPrimary
                     )
                 }
 
@@ -1781,10 +1951,10 @@ private fun BillActionsSection(
                     onClick = onCheckDues,
                     modifier = Modifier
                         .weight(1f)
-                        .height(38.dp),
+                        .height(40.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFD97706),
+                        containerColor = HomeColors.AccentOrange,
                         contentColor = Color.White
                     )
                 ) {
@@ -2132,13 +2302,13 @@ private fun QuickToolsSection(
                 text = "Explore Tools",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = StitchOnSurface
+                color = HomeColors.TextPrimary
             )
             Text(
                 text = "QUICK ACCESS",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = StitchOnSurfaceVariant,
+                color = HomeColors.TextSecondary,
                 letterSpacing = 0.8.sp
             )
         }
@@ -2152,7 +2322,8 @@ private fun QuickToolsSection(
                 title = "Bill Status",
                 subtitle = if (hasConnectedBill) "TNEB $tariffCode" else "Check dues & units",
                 icon = Icons.Default.ReceiptLong,
-                iconTint = Color(0xFF0284C7), // Light blue accent
+                containerBg = HomeColors.PrimaryContainer,
+                iconTint = HomeColors.Primary,
                 onClick = onBillStatus
             )
             QuickToolCard(
@@ -2160,7 +2331,8 @@ private fun QuickToolsSection(
                 title = "Chatbot",
                 subtitle = "Ask Energy AI",
                 icon = Icons.Default.SmartToy,
-                iconTint = Color(0xFF4F46E5), // Indigo/purple accent
+                containerBg = HomeColors.LightBlue,
+                iconTint = Color(0xFF005683),
                 onClick = onChatbot
             )
         }
@@ -2172,9 +2344,10 @@ private fun QuickToolsSection(
             QuickToolCard(
                 modifier = Modifier.weight(1f),
                 title = "Solar Lens",
-                subtitle = "AI load & appliance audit",
+                subtitle = "AI load & audit",
                 icon = Icons.Default.CameraOutdoor,
-                iconTint = Color(0xFF2563EB), // Blue/indigo accent
+                containerBg = HomeColors.PrimaryContainer,
+                iconTint = HomeColors.Success,
                 onClick = onSolarLens
             )
             QuickToolCard(
@@ -2182,7 +2355,8 @@ private fun QuickToolsSection(
                 title = "Calculator",
                 subtitle = "Solar sizing & savings",
                 icon = Icons.Default.Calculate,
-                iconTint = Color(0xFFEA580C), // Amber/orange accent
+                containerBg = Color(0xFFFFEED9),
+                iconTint = HomeColors.AccentOrange,
                 onClick = onCalculator
             )
         }
@@ -2195,7 +2369,8 @@ private fun QuickToolCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    iconTint: Color,
+    containerBg: Color = HomeColors.SurfaceSecondary,
+    iconTint: Color = HomeColors.Primary,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -2209,9 +2384,9 @@ private fun QuickToolCard(
     Surface(
         onClick = onClick,
         modifier = modifier.scale(scale),
-        shape = RoundedCornerShape(14.dp),
-        color = StitchSurfaceContainerLowest,
-        border = BorderStroke(1.dp, StitchOutline),
+        shape = RoundedCornerShape(16.dp),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
         interactionSource = interactionSource,
         shadowElevation = 0.dp
     ) {
@@ -2224,7 +2399,7 @@ private fun QuickToolCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(iconTint.copy(alpha = 0.12f)),
+                    .background(containerBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -2239,13 +2414,13 @@ private fun QuickToolCard(
                 text = title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = StitchOnSurface
+                color = HomeColors.TextPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
-                color = StitchOnSurfaceVariant,
+                color = HomeColors.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -2262,14 +2437,14 @@ private fun RecentActivitySection(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = StitchSurfaceContainerLowest,
-        border = BorderStroke(1.dp, StitchOutline),
+        color = HomeColors.CardBg,
+        border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
@@ -2281,13 +2456,13 @@ private fun RecentActivitySection(
                     text = "Recent Activity",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = StitchOnSurface
+                    color = HomeColors.TextPrimary
                 )
                 Text(
                     text = "LOG",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = StitchOnSurfaceVariant,
+                    color = HomeColors.TextSecondary,
                     letterSpacing = 0.8.sp
                 )
             }
@@ -2296,7 +2471,8 @@ private fun RecentActivitySection(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
-                    color = StitchSurfaceContainerLow
+                    color = HomeColors.SurfaceSecondary,
+                    border = BorderStroke(1.dp, HomeColors.Border)
                 ) {
                     Column(
                         modifier = Modifier
@@ -2308,13 +2484,13 @@ private fun RecentActivitySection(
                             text = "No energy assessments yet",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = StitchOnSurface
+                            color = HomeColors.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "Your connected bill cycles, appliance audits, and savings milestones will populate here automatically.",
                             fontSize = 11.sp,
-                            color = StitchOnSurfaceVariant,
+                            color = HomeColors.TextSecondary,
                             textAlign = TextAlign.Center,
                             lineHeight = 15.sp
                         )
@@ -2337,21 +2513,21 @@ private fun RecentActivitySection(
                                     modifier = Modifier
                                         .size(7.dp)
                                         .clip(CircleShape)
-                                        .background(if (event.isPositive) StitchPrimaryContainer else StitchError)
+                                        .background(if (event.isPositive) HomeColors.Success else HomeColors.AccentOrange)
                                 )
                                 Column {
                                     Text(
                                         text = event.title,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = StitchOnSurface,
+                                        color = HomeColors.TextPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text = "${event.subtitle} • ${event.timeLabel}",
                                         fontSize = 11.sp,
-                                        color = StitchOnSurfaceVariant,
+                                        color = HomeColors.TextSecondary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -2363,14 +2539,14 @@ private fun RecentActivitySection(
                                     text = event.metricLabel,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (event.isPositive) StitchPrimaryContainer else StitchOnSurface
+                                    color = if (event.isPositive) HomeColors.Success else HomeColors.AccentOrange
                                 )
                             }
                         }
 
                         if (index < activities.lastIndex) {
                             HorizontalDivider(
-                                color = StitchSurfaceContainer,
+                                color = HomeColors.Border,
                                 thickness = 1.dp
                             )
                         }

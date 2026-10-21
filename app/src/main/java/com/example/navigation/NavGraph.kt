@@ -326,6 +326,7 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                     viewModel = lensViewModel,
                     onNavigateBack = { navController.popBackStack() },
                     onScanAnother = { 
+                        lensViewModel.startNewAudit()
                         navController.popBackStack(Screen.LensMain, false)
                     },
                     onNavigateHome = {

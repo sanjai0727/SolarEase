@@ -1,5 +1,6 @@
 package com.example.feature.lens.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.feature.lens.data.Appliance
@@ -10,6 +11,7 @@ import com.example.feature.lens.utils.ApplianceMaster
 import com.example.feature.lens.utils.DetectedAppliance
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,7 +72,11 @@ sealed class LensUiState {
     
     data class Processing(val room: Room, val message: String = "Analyzing...") : LensUiState()
     
-    data class Review(val room: Room, val newAppliances: List<EditableAppliance>) : LensUiState()
+    data class Review(
+        val room: Room,
+        val newAppliances: List<EditableAppliance>,
+        val isEditMode: Boolean = false
+    ) : LensUiState()
 
     data class RoomCompleted(val room: Room, val nextRoom: Room?) : LensUiState()
     
@@ -90,7 +96,8 @@ data class EditableAppliance(
     val powerWatts: Float,
     val usageHoursPerDay: Float,
     val monthlyUsageDays: Int,
-    val quantity: Int
+    val quantity: Int,
+    val serverId: String? = null
 ) {
     val monthlyKwh: Float
         get() = (powerWatts * usageHoursPerDay * monthlyUsageDays * quantity.coerceAtLeast(1)) / 1000f
@@ -112,7 +119,8 @@ data class ScannedAppliance(
 )
 
 class LensViewModel(
-    private val repository: LensRepository
+    private val repository: LensRepository,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
     private val uploadAnalyzer = com.example.feature.lens.utils.LensUploadAnalyzer(repository)
@@ -183,22 +191,50 @@ class LensViewModel(
     }
 
     fun startRoomSetup() {
+        activeAnalysisJob?.cancel()
+        activeAnalysisJob = null
+        _activeRoomId.value = null
+        _currentFrameDetections.value = emptyList()
+        _scanSession.value = emptyList()
+        val resetRooms = _rooms.value.map { it.copy(status = RoomStatus.PENDING, appliances = emptyList()) }
+        _rooms.value = resetRooms
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(resetRooms)
         _uiState.value = LensUiState.RoomSetup
     }
 
     fun proceedToScanning() {
-        val sortedRooms = _rooms.value.sortedBy { it.order }
-        val firstRoom = sortedRooms.firstOrNull()
-        if (firstRoom != null) {
-            _activeRoomId.value = firstRoom.id
-            if (firstRoom.status == RoomStatus.PENDING) {
-                updateRoomStatus(firstRoom.id, RoomStatus.IN_PROGRESS)
-            }
-            val updated = _rooms.value.find { it.id == firstRoom.id } ?: firstRoom
-            _uiState.value = LensUiState.RoomOverview(updated)
-        } else {
-            finishWholeHouse()
+        var currentRooms = _rooms.value.sortedBy { it.order }
+        if (currentRooms.isEmpty()) {
+            val defaults = com.example.feature.lens.data.LensRoomStorage.defaultRooms()
+            _rooms.value = defaults
+            com.example.feature.lens.data.LensRoomStorage.saveRooms(defaults)
+            currentRooms = defaults.sortedBy { it.order }
         }
+
+        // Always start fresh from room 1: reset statuses to PENDING and clear previous appliances
+        val resetRooms = currentRooms.map { it.copy(status = RoomStatus.PENDING, appliances = emptyList()) }
+        _rooms.value = resetRooms
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(resetRooms)
+        currentRooms = resetRooms
+
+        val targetRoom = currentRooms.first()
+
+        _activeRoomId.value = targetRoom.id
+        updateRoomStatus(targetRoom.id, RoomStatus.IN_PROGRESS)
+        val updated = _rooms.value.find { it.id == targetRoom.id } ?: targetRoom
+        _uiState.value = LensUiState.RoomOverview(updated)
+    }
+
+    fun startNewAudit() {
+        activeAnalysisJob?.cancel()
+        activeAnalysisJob = null
+        _activeRoomId.value = null
+        val resetRooms = _rooms.value.map { it.copy(status = RoomStatus.PENDING, appliances = emptyList()) }
+        _rooms.value = resetRooms
+        com.example.feature.lens.data.LensRoomStorage.saveRooms(resetRooms)
+        _currentFrameDetections.value = emptyList()
+        _scanSession.value = emptyList()
+        _uiState.value = LensUiState.RoomSetup
     }
 
     private fun updateRoomStatus(roomId: String, status: RoomStatus) {
@@ -275,24 +311,31 @@ class LensViewModel(
 
         for (candidate in candidates) {
             val label = candidate.label
-            val defaults = ApplianceMaster.getDefaults(label)
-            val powerWatts = defaults?.defaultWattage ?: 100f
-            val powerEstimateStr = "Est. ~${powerWatts.toInt()} W"
+            val isUnclassified = label.equals("Unclassified Candidate", ignoreCase = true) ||
+                    label.equals("Unclassified Object", ignoreCase = true) ||
+                    label.equals("Appliance", ignoreCase = true)
+            val defaults = if (!isUnclassified) ApplianceMaster.getDefaults(label) else null
+            val isRecognized = defaults != null && defaults.name != "Other / Custom Appliance"
+            val powerWatts = if (isRecognized) defaults!!.defaultWattage else 0f
+            val displayLabel = if (isRecognized) defaults!!.name else "Unclassified Object"
+            val powerEstimateStr = if (isRecognized && powerWatts > 0f) "Est. ~${powerWatts.toInt()} W" else "Unverified Candidate"
 
             frameDetections.add(
                 DetectedAppliance(
                     trackingId = candidate.trackingId,
                     boundingBox = candidate.boundingBox,
                     boundingBoxRelative = candidate.boundingBoxRelative,
-                    label = label,
+                    label = displayLabel,
                     powerEstimateStr = powerEstimateStr,
                     powerWatts = powerWatts,
-                    isVerified = true,
+                    isVerified = isRecognized,
                     isVerifying = false
                 )
             )
 
-            val matchedIndex = currentSession.indexOfFirst { it.lastTrackingId == candidate.trackingId || (it.label == label && now - it.lastSeenTimestamp < 3000L) }
+            val matchedIndex = currentSession.indexOfFirst {
+                it.lastTrackingId == candidate.trackingId || (it.label == displayLabel && now - it.lastSeenTimestamp < 3000L)
+            }
             if (matchedIndex != -1) {
                 currentSession[matchedIndex] = currentSession[matchedIndex].copy(
                     boundingBox = candidate.boundingBoxRelative,
@@ -302,7 +345,7 @@ class LensViewModel(
             } else {
                 currentSession.add(
                     ScannedAppliance(
-                        label = label,
+                        label = displayLabel,
                         powerWatts = powerWatts,
                         powerEstimateStr = powerEstimateStr,
                         boundingBox = candidate.boundingBoxRelative,
@@ -335,25 +378,42 @@ class LensViewModel(
 
         val grouped = _scanSession.value.groupBy { it.label }
         val editableAppliances = grouped.map { (label, list) ->
-            val defaults = ApplianceMaster.getDefaults(label)
+            val isUnclassified = label.equals("Unclassified Candidate", ignoreCase = true) ||
+                    label.equals("Unclassified Object", ignoreCase = true) ||
+                    label.equals("Unclassified Appliance", ignoreCase = true) ||
+                    label.equals("Appliance", ignoreCase = true)
+            val defaults = if (!isUnclassified) ApplianceMaster.getDefaults(label) else null
+            val isRecognized = defaults != null && defaults.name != "Other / Custom Appliance"
             val totalQty = list.sumOf { it.quantity }.coerceAtLeast(1)
+            // Preserve unverified/unknown wattage (0f) if not positively verified, requiring user calibration
+            val powerWatts = list.firstOrNull()?.powerWatts?.takeIf { it > 0f } ?: 0f
+            val finalLabel = if (isRecognized) defaults!!.name else "Unclassified Appliance"
             EditableAppliance(
                 id = java.util.UUID.randomUUID().toString(),
-                label = defaults?.name ?: label,
-                powerWatts = list.firstOrNull()?.powerWatts ?: (defaults?.defaultWattage ?: 100f),
+                label = finalLabel,
+                powerWatts = powerWatts,
                 usageHoursPerDay = defaults?.typicalUsageHoursPerDay ?: 4f,
                 monthlyUsageDays = defaults?.monthlyUsageDays ?: 30,
                 quantity = totalQty
             )
         }
         
+        val latestRoom = _rooms.value.find { it.id == room.id } ?: room
+        
+        // Clear scan session and frame overlays so stale detections do not leak
+        _scanSession.value = emptyList()
         _currentFrameDetections.value = emptyList()
-        _uiState.value = LensUiState.Review(room, editableAppliances)
+
+        // Keep current scan detections separate from previously saved room inventory.
+        // newAppliances contains ONLY the newly detected items from this scan session.
+        _uiState.value = LensUiState.Review(latestRoom, editableAppliances, isEditMode = false)
     }
 
     fun cancelAnalysis() {
         activeAnalysisJob?.cancel()
         activeAnalysisJob = null
+        _scanSession.value = emptyList()
+        _currentFrameDetections.value = emptyList()
         
         val currentState = _uiState.value
         if (currentState is LensUiState.Processing) {
@@ -405,12 +465,38 @@ class LensViewModel(
         }
     }
 
-    fun confirmReview() {
+    fun confirmReview(): Boolean {
         val currentState = _uiState.value
         if (currentState is LensUiState.Review) {
+            // Block confirmation if any appliance has unverified/zero wattage
+            if (currentState.newAppliances.any { it.powerWatts <= 0f }) {
+                return false
+            }
             val room = currentState.room
+            val finalAppliances = if (currentState.isEditMode) {
+                // Legitimate room editing: preserve user's reviewed modifications directly
+                currentState.newAppliances
+            } else {
+                // New scan / upload: merge newly confirmed appliances into room inventory without duplicate labels
+                val existing = room.appliances.toMutableList()
+                for (newApp in currentState.newAppliances) {
+                    val existingIndex = existing.indexOfFirst { it.label.equals(newApp.label, ignoreCase = true) }
+                    if (existingIndex != -1) {
+                        val old = existing[existingIndex]
+                        // Quantity merging must not increase counts merely because an appliance with the same name already exists
+                        existing[existingIndex] = old.copy(
+                            quantity = maxOf(old.quantity, newApp.quantity),
+                            powerWatts = if (old.powerWatts > 0f) old.powerWatts else newApp.powerWatts
+                        )
+                    } else {
+                        existing.add(newApp)
+                    }
+                }
+                existing
+            }
+
             val updatedRoom = room.copy(
-                appliances = (room.appliances + currentState.newAppliances).toList(),
+                appliances = finalAppliances,
                 status = RoomStatus.COMPLETED
             )
             _rooms.value = _rooms.value.map { r ->
@@ -425,7 +511,9 @@ class LensViewModel(
             } else null
 
             _uiState.value = LensUiState.RoomCompleted(updatedRoom, nextRoom)
+            return true
         }
+        return false
     }
 
     fun advanceFromRoomCompleted() {
@@ -449,7 +537,9 @@ class LensViewModel(
         val targetRoom = _rooms.value.find { it.id == roomId }
         if (targetRoom != null) {
             _activeRoomId.value = targetRoom.id
-            _uiState.value = LensUiState.Review(targetRoom, emptyList())
+            _scanSession.value = emptyList()
+            _currentFrameDetections.value = emptyList()
+            _uiState.value = LensUiState.Review(targetRoom, targetRoom.appliances, isEditMode = true)
         }
     }
 
@@ -458,30 +548,42 @@ class LensViewModel(
         _uiState.value = LensUiState.WholeHouseAnalytics(rooms = allRooms, saveStatus = SaveStatus.SAVING)
 
         // Asynchronously persist audited appliances to backend
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             try {
                 var hadFailure = false
-                for (room in allRooms) {
-                    for (appliance in room.appliances) {
-                        val request = ApplianceCreateRequest(
-                            applianceName = "${room.name} - ${appliance.label}",
-                            applianceType = appliance.label,
-                            powerRatingWatts = appliance.powerWatts,
-                            dailyUsageHours = appliance.usageHoursPerDay,
-                            quantity = appliance.quantity,
-                            monthlyConsumptionKwh = appliance.monthlyKwh,
-                            estimatedMonthlyCost = appliance.monthlyCost
-                        )
-                        val res = repository.createAppliance(request)
-                        if (res.isFailure) {
-                            hadFailure = true
+                val updatedRooms = allRooms.map { room ->
+                    val updatedAppliances = room.appliances.map { appliance ->
+                        if (appliance.serverId == null) {
+                            val request = ApplianceCreateRequest(
+                                applianceName = "${room.name} - ${appliance.label}",
+                                applianceType = appliance.label,
+                                powerRatingWatts = appliance.powerWatts,
+                                dailyUsageHours = appliance.usageHoursPerDay,
+                                quantity = appliance.quantity,
+                                monthlyConsumptionKwh = appliance.monthlyKwh,
+                                estimatedMonthlyCost = appliance.monthlyCost
+                            )
+                            val res = repository.createAppliance(request)
+                            if (res.isSuccess) {
+                                appliance.copy(serverId = res.getOrNull()?.id)
+                            } else {
+                                hadFailure = true
+                                appliance
+                            }
+                        } else {
+                            appliance
                         }
                     }
+                    room.copy(appliances = updatedAppliances)
                 }
+
+                _rooms.value = updatedRooms
+                com.example.feature.lens.data.LensRoomStorage.saveRooms(updatedRooms)
+
                 withContext(Dispatchers.Main) {
                     if (_uiState.value is LensUiState.WholeHouseAnalytics) {
                         _uiState.value = LensUiState.WholeHouseAnalytics(
-                            rooms = allRooms,
+                            rooms = updatedRooms,
                             saveStatus = if (hadFailure) SaveStatus.PARTIAL_FAILURE else SaveStatus.SUCCESS
                         )
                     }
@@ -515,11 +617,11 @@ class LensViewModel(
                     for (det in detectionResult.detections) {
                         val label = det.applianceType ?: det.label
                         val defaults = ApplianceMaster.getDefaults(label)
-                        val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
-                        val powerEstimateStr = if (det.powerRatingWatts != null) {
+                        val powerWatts = det.powerRatingWatts ?: 0f
+                        val powerEstimateStr = if (powerWatts > 0f) {
                             "${powerWatts.toInt()} W"
                         } else {
-                            "Est. ~${powerWatts.toInt()} W"
+                            "Unverified Load (Requires Input)"
                         }
 
                         val rectF = android.graphics.RectF(
@@ -595,11 +697,11 @@ class LensViewModel(
                     for (det in detectionResult.detections) {
                         val label = det.applianceType ?: det.label
                         val defaults = ApplianceMaster.getDefaults(label)
-                        val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
-                        val powerEstimateStr = if (det.powerRatingWatts != null) {
+                        val powerWatts = det.powerRatingWatts ?: 0f
+                        val powerEstimateStr = if (powerWatts > 0f) {
                             "${powerWatts.toInt()} W"
                         } else {
-                            "Est. ~${powerWatts.toInt()} W"
+                            "Unverified Load (Requires Input)"
                         }
 
                         val rectF = android.graphics.RectF(
@@ -724,15 +826,15 @@ class LensViewModel(
 
     /**
      * Dedicated Scan Flow handler for Instant Photo captures.
-     * Operates purely on-device via YOLO. Does NOT call Gemini.
+     * Operates purely on-device via local vision. Does NOT call Gemini.
      */
     fun processPhotoScan(
         imageBytes: ByteArray,
         scanDetector: com.example.feature.lens.detector.LensScanDetector,
         contextRoom: Room
     ) {
-        android.util.Log.i("LENS_SCAN", "[LENS_SCAN] provider=yolo mode=instant_photo size=${imageBytes.size}")
-        _uiState.value = LensUiState.Processing(contextRoom, "Processing photo scan with YOLO...")
+        android.util.Log.i("LENS_SCAN", "[LENS_SCAN] provider=on_device_vision mode=instant_photo size=${imageBytes.size}")
+        _uiState.value = LensUiState.Processing(contextRoom, "Processing photo scan with on-device vision...")
 
         activeAnalysisJob?.cancel()
         activeAnalysisJob = viewModelScope.launch(Dispatchers.IO) {
@@ -763,11 +865,11 @@ class LensViewModel(
                     for (det in detectionResult.detections) {
                         val label = det.applianceType ?: det.label
                         val defaults = ApplianceMaster.getDefaults(label)
-                        val powerWatts = det.powerRatingWatts ?: (defaults?.defaultWattage ?: 100f)
-                        val powerEstimateStr = if (det.powerRatingWatts != null) {
+                        val powerWatts = det.powerRatingWatts ?: 0f
+                        val powerEstimateStr = if (powerWatts > 0f) {
                             "${powerWatts.toInt()} W"
                         } else {
-                            "Est. ~${powerWatts.toInt()} W"
+                            "Unverified Load (Requires Input)"
                         }
 
                         val rectF = android.graphics.RectF(
@@ -831,15 +933,29 @@ class LensViewModel(
     fun popUiState() {
         val currentState = _uiState.value
         when (currentState) {
+            is LensUiState.WholeHouseAnalytics -> {
+                val sortedRooms = _rooms.value.sortedBy { it.order }
+                val lastRoom = sortedRooms.lastOrNull { it.status == RoomStatus.COMPLETED }
+                if (lastRoom != null) {
+                    _activeRoomId.value = lastRoom.id
+                    _uiState.value = LensUiState.RoomOverview(lastRoom)
+                } else {
+                    _uiState.value = LensUiState.RoomSetup
+                }
+            }
             is LensUiState.RoomCompleted -> {
                 _uiState.value = LensUiState.RoomOverview(currentState.room)
             }
             is LensUiState.RoomOverview -> navigateToPreviousWorkspace()
             is LensUiState.Review -> {
+                _scanSession.value = emptyList()
+                _currentFrameDetections.value = emptyList()
                 val latestRoom = _rooms.value.find { it.id == currentState.room.id } ?: currentState.room
                 _uiState.value = LensUiState.RoomOverview(latestRoom)
             }
             is LensUiState.CameraActive -> {
+                _scanSession.value = emptyList()
+                _currentFrameDetections.value = emptyList()
                 val latestRoom = _rooms.value.find { it.id == currentState.room.id } ?: currentState.room
                 _uiState.value = LensUiState.RoomOverview(latestRoom)
             }

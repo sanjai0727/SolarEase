@@ -207,7 +207,7 @@ fun EbServiceNumberScreen(
                                     decorationBox = { innerTextField ->
                                         if (consumerNumber.isEmpty()) {
                                             Text(
-                                                text = "e.g. 09440233135",
+                                                text = "e.g. 042345678901",
                                                 fontSize = 18.sp,
                                                 color = StitchSecondary.copy(alpha = 0.5f)
                                             )

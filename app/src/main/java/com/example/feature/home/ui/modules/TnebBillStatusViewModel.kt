@@ -74,7 +74,7 @@ class TnebBillStatusViewModel : ViewModel() {
             ?: ""
 
         if (serviceNo.isNotBlank()) {
-            _serviceConnectionNumber.value = serviceNo.filter { it.isDigit() }.take(11)
+            _serviceConnectionNumber.value = serviceNo.filter { it.isDigit() }.take(12)
         }
         if (mobileNo.isNotBlank()) {
             _registeredMobileNumber.value = mobileNo.filter { it.isDigit() }.takeLast(10)
@@ -87,11 +87,19 @@ class TnebBillStatusViewModel : ViewModel() {
         validate()
     }
 
+    /**
+     * Service connection number must contain exactly 12 numeric digits:
+     * - Digits 1–2: Region Code (e.g. 04 for Erode, 09 for Chennai South)
+     * - Digits 3–5: Division Code
+     * - Digits 6–8: Subdivision Code
+     * - Digits 9–12: Consumer Number
+     * Example format: 042345678901 (RRDDDSSSSCCCC without spaces).
+     */
     fun updateServiceConnectionNumber(number: String) {
-        val filtered = number.filter { it.isDigit() }.take(11)
+        val filtered = number.filter { it.isDigit() }.take(12)
         _serviceConnectionNumber.value = filtered
         validate()
-        if (filtered.length == 11) {
+        if (filtered.length == 12) {
             persistElectricityDetailsIfValid()
         }
     }
@@ -110,24 +118,24 @@ class TnebBillStatusViewModel : ViewModel() {
     }
 
     private fun validate() {
-        val isValidScn = _serviceConnectionNumber.value.length == 11
+        val isValidScn = _serviceConnectionNumber.value.length == 12
         val isValidRmn = _registeredMobileNumber.value.length == 10
         _isValid.value = isValidScn && isValidRmn
     }
 
     private fun persistElectricityDetailsIfValid() {
-        val scn = _serviceConnectionNumber.value.filter { it.isDigit() }.take(11)
+        val scn = _serviceConnectionNumber.value.filter { it.isDigit() }.take(12)
         val rmn = _registeredMobileNumber.value.filter { it.isDigit() }.takeLast(10)
         val current = com.example.core.session.UserSession.currentUser
         if (current != null) {
             val updated = current.copy(
-                ebServiceNumber = if (scn.length == 11) scn else current.ebServiceNumber,
+                ebServiceNumber = if (scn.length == 12) scn else current.ebServiceNumber,
                 tnebRegisteredMobile = if (rmn.length == 10) rmn else current.tnebRegisteredMobile
             )
             com.example.core.session.UserSession.saveUser(updated)
         } else {
             com.example.core.session.UserSession.saveExplicitElectricityDetails(
-                consumerNumber = if (scn.length == 11) scn else null,
+                consumerNumber = if (scn.length == 12) scn else null,
                 tnebMobile = if (rmn.length == 10) rmn else null
             )
         }
@@ -222,7 +230,7 @@ class TnebBillStatusViewModel : ViewModel() {
             TnebBillCache.save(parsedData)
             _billData.value = TnebBillCache.billData.value ?: parsedData
             val current = com.example.core.session.UserSession.currentUser
-            val scn = parsedData.consumerNumber.ifBlank { _serviceConnectionNumber.value.filter { it.isDigit() }.take(11) }
+            val scn = parsedData.consumerNumber.ifBlank { _serviceConnectionNumber.value.filter { it.isDigit() }.take(12) }
             val rmn = _registeredMobileNumber.value.filter { it.isDigit() }.takeLast(10)
             if (current != null) {
                 val updated = current.copy(
@@ -300,7 +308,7 @@ class TnebBillStatusViewModel : ViewModel() {
                 TnebBillCache.save(parsedData)
                 _billData.value = TnebBillCache.billData.value ?: parsedData
                 val current = com.example.core.session.UserSession.currentUser
-                val scn = parsedData.consumerNumber.ifBlank { _serviceConnectionNumber.value.filter { it.isDigit() }.take(11) }
+                val scn = parsedData.consumerNumber.ifBlank { _serviceConnectionNumber.value.filter { it.isDigit() }.take(12) }
                 val rmn = _registeredMobileNumber.value.filter { it.isDigit() }.takeLast(10)
                 if (current != null) {
                     val updated = current.copy(

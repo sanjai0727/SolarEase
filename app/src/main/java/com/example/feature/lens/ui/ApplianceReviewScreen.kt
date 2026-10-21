@@ -39,6 +39,7 @@ fun ApplianceReviewScreen(
     val rooms by viewModel.rooms.collectAsState()
 
     BackHandler {
+        viewModel.popUiState()
         onNavigateBack()
     }
 
@@ -57,6 +58,7 @@ fun ApplianceReviewScreen(
     val reviewState = uiState as LensUiState.Review
     val appliances = reviewState.newAppliances
     val room = reviewState.room
+    val hasZeroWattage = appliances.any { it.powerWatts <= 0f }
 
     val sortedRooms = rooms.sortedBy { it.order }
     val activeIdx = (sortedRooms.indexOfFirst { it.id == room.id } + 1).coerceAtLeast(1)
@@ -83,20 +85,23 @@ fun ApplianceReviewScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
+                        IconButton(onClick = {
+                            viewModel.popUiState()
+                            onNavigateBack()
+                        }, modifier = Modifier.size(36.dp)) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = LensColors.SlateText)
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Column {
                             Text(
-                                "Array Calibration",
+                                "Review Appliances",
                                 style = LensTypography.headlineSm.copy(fontSize = 15.sp),
                                 color = LensColors.SlateText
                             )
                             Text(
-                                "ROOM AUDIT: ${room.name.uppercase()}",
+                                "Room $activeIdx of $totalRooms · ${room.name}",
                                 style = LensTypography.labelCaps,
-                                color = LensColors.SlateCaption
+                                color = LensColors.Primary
                             )
                         }
                     }
@@ -136,26 +141,94 @@ fun ApplianceReviewScreen(
                         Text("+ Add Appliance", style = LensTypography.labelSm, color = LensColors.SlateText)
                     }
 
+                    if (hasZeroWattage) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = LensColors.Error.copy(alpha = 0.08f),
+                            border = BorderStroke(1.dp, LensColors.Error.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = LensColors.Error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Please specify a valid wattage (> 0 W) for all appliances before confirming.",
+                                    style = LensTypography.labelSm.copy(fontSize = 12.sp),
+                                    color = LensColors.Error
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "ROOM $activeIdx OF $totalRooms FINALIZATION",
+                            style = LensTypography.labelCaps,
+                            color = LensColors.SlateCaption
+                        )
+                        Text(
+                            "${room.name} Subtotal: ${String.format(java.util.Locale.US, "%.2f", roomPeakKw)} kW",
+                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                            color = LensColors.Primary
+                        )
+                    }
+
                     Button(
                         onClick = { viewModel.confirmReview() },
+                        enabled = !hasZeroWattage,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(52.dp),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LensColors.Primary,
+                            disabledContainerColor = LensColors.Primary.copy(alpha = 0.35f),
+                            disabledContentColor = LensColors.OnPrimary.copy(alpha = 0.6f)
+                        )
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "Confirm ${room.name} & Continue",
-                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                                color = LensColors.OnPrimary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LensColors.OnPrimary, modifier = Modifier.size(18.dp))
+                            Column {
+                                Text(
+                                    "Confirm ${room.name}",
+                                    style = LensTypography.headlineSm.copy(fontSize = 15.sp),
+                                    color = if (hasZeroWattage) LensColors.OnPrimary.copy(alpha = 0.6f) else LensColors.OnPrimary
+                                )
+                                Text(
+                                    if (activeIdx < sortedRooms.size) "Next: ${sortedRooms[activeIdx].name} (Room ${activeIdx + 1} of ${sortedRooms.size})" else "Next: Whole-House Analysis",
+                                    style = LensTypography.labelCaps.copy(fontSize = 10.sp),
+                                    color = if (hasZeroWattage) LensColors.OnPrimary.copy(alpha = 0.5f) else LensColors.OnPrimary.copy(alpha = 0.85f)
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = if (hasZeroWattage) 0.1f else 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = if (hasZeroWattage) LensColors.OnPrimary.copy(alpha = 0.6f) else LensColors.OnPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -172,39 +245,43 @@ fun ApplianceReviewScreen(
         ) {
             // Step Progress Header
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .background(LensColors.Primary, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Room $activeIdx of $totalRooms • Diagnostic Audit",
-                                style = LensTypography.labelCaps,
-                                color = LensColors.Primary
-                            )
-                        }
+                        Text(
+                            "Room $activeIdx of $totalRooms · ${room.name}",
+                            style = LensTypography.labelSm,
+                            color = LensColors.SlateCaption,
+                            fontWeight = FontWeight.Medium
+                        )
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = LensColors.SurfaceContainer
+                            shape = RoundedCornerShape(20.dp),
+                            color = LensColors.PrimaryFixed
                         ) {
-                            Text(
-                                "Phase A • 230V Balanced",
-                                style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                color = LensColors.SlateCaption,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(LensColors.Primary, CircleShape)
+                                )
+                                Text(
+                                    "${appliances.size} appliances found",
+                                    style = LensTypography.labelCaps.copy(fontSize = 10.sp),
+                                    color = LensColors.Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
-                    // 4-Step Linear Progress
+                    // Segmented Progress Bar
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -215,116 +292,134 @@ fun ApplianceReviewScreen(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(if (i <= activeIdx) LensColors.Primary else LensColors.SurfaceContainerHighest)
+                                    .height(6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (i <= activeIdx) LensColors.Primary else LensColors.SurfaceContainerHigh)
                             )
                         }
                     }
 
-                    Text("Review Detected Appliances", style = LensTypography.headlineMd, color = LensColors.SlateText)
-                    Text("${room.name} • ${appliances.size} Electrical Loads Identified", style = LensTypography.bodyMd, color = LensColors.SlateCaption)
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        "Review detected appliances",
+                        style = LensTypography.headlineLg,
+                        color = LensColors.SlateText
+                    )
+                    Text(
+                        "Check the appliances found in your ${room.name.lowercase()} and adjust details if needed.",
+                        style = LensTypography.bodyMd,
+                        color = LensColors.SlateCaption,
+                        lineHeight = 18.sp
+                    )
                 }
             }
 
-            // Room Power Envelope Banner
+            // Stitch Room Preview Strip Card
             item {
+                val roomIcon = when (room.name.lowercase()) {
+                    "bedroom", "master bedroom", "guest bedroom" -> Icons.Default.Bed
+                    "kitchen" -> Icons.Default.Kitchen
+                    "bathroom" -> Icons.Default.Shower
+                    "hall", "living room", "hall / living room" -> Icons.Default.Chair
+                    else -> Icons.Default.MeetingRoom
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = LensColors.SurfaceContainerLow,
-                    border = BorderStroke(1.dp, LensColors.Outline)
+                    border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f))
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Bed, contentDescription = null, tint = LensColors.SlateCaption, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Room Avatar with Verified Check Badge
+                        Box(modifier = Modifier.size(52.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = LensColors.SurfaceContainer,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = roomIcon,
+                                        contentDescription = null,
+                                        tint = LensColors.Primary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = LensColors.Primary,
+                                border = BorderStroke(2.dp, LensColors.SurfaceContainerLow),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .align(Alignment.BottomEnd)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = LensColors.OnPrimary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Room Info & Detection Confidence
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Verified,
+                                    contentDescription = null,
+                                    tint = LensColors.Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
                                 Text(
-                                    "${room.name.uppercase()} POWER ENVELOPE",
-                                    style = LensTypography.labelCaps,
+                                    "${room.name} Scan",
+                                    style = LensTypography.headlineSm.copy(fontSize = 15.sp),
+                                    color = LensColors.SlateText
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                "Lens identified ${appliances.size} devices from room photos",
+                                style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                                color = LensColors.SlateCaption
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = LensColors.PrimaryFixed
+                                ) {
+                                    Text(
+                                        "High Clarity",
+                                        style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                        color = LensColors.Primary,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    "92% match confidence",
+                                    style = LensTypography.labelCaps.copy(fontSize = 10.sp),
                                     color = LensColors.SlateCaption
                                 )
                             }
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = LensColors.PrimaryFixed
-                            ) {
-                                Text(
-                                    "ACTIVE INFERENCE",
-                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                    color = LensColors.Primary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                color = LensColors.SurfaceContainerLowest
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Peak Connected Load", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(
-                                            "%.2f".format(roomPeakKw),
-                                            style = LensTypography.metricValLg,
-                                            color = LensColors.SlateText
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text("kW", style = LensTypography.labelSm, color = LensColors.SlateCaption)
-                                    }
-                                }
-                            }
-
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                color = LensColors.SurfaceContainerLowest
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Est. Room Consumption", style = LensTypography.labelCaps, color = LensColors.SlateCaption)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(
-                                            "~${roomMonthlyKwh.toInt()}",
-                                            style = LensTypography.metricValLg,
-                                            color = LensColors.SlateText
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text("kWh/mo", style = LensTypography.labelSm, color = LensColors.SlateCaption)
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Calibrated tariff basis: ₹7.00 / kWh",
-                                style = LensTypography.labelSm.copy(fontSize = 11.sp),
-                                color = LensColors.SlateCaption
-                            )
-                            Text(
-                                "≈ ₹${roomMonthlyCost.toInt()} / mo",
-                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                                color = LensColors.SlateText
-                            )
                         }
                     }
                 }
@@ -341,6 +436,86 @@ fun ApplianceReviewScreen(
                         viewModel.removeReviewAppliance(id)
                     }
                 )
+            }
+
+            // Inline Verification Status Notice (Stitch Design)
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = LensColors.SurfaceContainerLowest,
+                    border = BorderStroke(1.dp, LensColors.Outline.copy(alpha = 0.15f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = LensColors.PrimaryFixed,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = LensColors.Primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Everything looks good",
+                                style = LensTypography.headlineSm.copy(fontSize = 14.sp),
+                                color = LensColors.SlateText
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val dailyEstKwh = (roomMonthlyKwh / 30f)
+                            Text(
+                                "Daily consumption estimated at ${String.format(java.util.Locale.US, "%.1f", dailyEstKwh)} kWh/day for this room",
+                                style = LensTypography.bodyMd.copy(fontSize = 12.sp),
+                                color = LensColors.SlateCaption
+                            )
+                        }
+                    }
+                }
+            }
+
+            // + Add Another Appliance Action Button
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.addReviewAppliance() },
+                    shape = RoundedCornerShape(12.dp),
+                    color = LensColors.SurfaceContainerLowest,
+                    border = BorderStroke(1.dp, LensColors.Primary.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.AddCircle,
+                            contentDescription = null,
+                            tint = LensColors.Primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "+ Add Another Appliance",
+                            style = LensTypography.headlineSm.copy(fontSize = 14.sp),
+                            color = LensColors.Primary
+                        )
+                    }
+                }
             }
 
             item {
@@ -423,9 +598,12 @@ private fun ApplianceCardStitch(
                 Button(
                     onClick = {
                         val w = wattageInput.toFloatOrNull() ?: appliance.powerWatts
-                        onUpdate(appliance.id, appliance.label, w.coerceAtLeast(1f), appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
-                        showWattageDialog = false
+                        if (w > 0f) {
+                            onUpdate(appliance.id, appliance.label, w, appliance.usageHoursPerDay, appliance.monthlyUsageDays, appliance.quantity)
+                            showWattageDialog = false
+                        }
                     },
+                    enabled = (wattageInput.toFloatOrNull() ?: 0f) > 0f,
                     colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary)
                 ) {
                     Text("Save")
@@ -440,13 +618,39 @@ private fun ApplianceCardStitch(
         )
     }
 
+    val isZeroWattage = appliance.powerWatts <= 0f
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         color = LensColors.SurfaceContainerLowest,
-        border = BorderStroke(1.dp, LensColors.Outline)
+        border = if (isZeroWattage) BorderStroke(1.5.dp, LensColors.Error) else BorderStroke(1.dp, LensColors.Outline)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
+            if (isZeroWattage) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = LensColors.Error.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, LensColors.Error.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showWattageDialog = true }
+                        .padding(bottom = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = LensColors.Error, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Rated power required (> 0 W) — Tap to set",
+                            style = LensTypography.labelSm.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                            color = LensColors.Error
+                        )
+                    }
+                }
+            }
             // Header Row: Icon, Detection Tag, and Remove
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -466,16 +670,54 @@ private fun ApplianceCardStitch(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = RoundedCornerShape(3.dp),
-                                color = LensColors.PrimaryFixed
-                            ) {
-                                Text(
-                                    "AI Suggested",
-                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
-                                    color = LensColors.Primary,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                )
+                            val isUnclassified = appliance.label.contains("Unclassified", ignoreCase = true) ||
+                                                 appliance.label.contains("Unverified", ignoreCase = true) ||
+                                                 appliance.label.equals("Other / Custom Appliance", ignoreCase = true)
+
+                            if (isUnclassified) {
+                                Surface(
+                                    shape = RoundedCornerShape(3.dp),
+                                    color = Color(0xFFFEF3C7)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(5.dp)
+                                                .background(Color(0xFFD97706), CircleShape)
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(
+                                            "Unverified Candidate",
+                                            style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                            color = Color(0xFFB45309)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Surface(
+                                    shape = RoundedCornerShape(3.dp),
+                                    color = LensColors.PrimaryFixed
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(5.dp)
+                                                .background(LensColors.PrimaryContainer, CircleShape)
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(
+                                            "AI Detected",
+                                            style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                            color = LensColors.Primary
+                                        )
+                                    }
+                                }
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("• ${(appliance.monthlyKwh).toInt()} kWh/mo", style = LensTypography.labelSm.copy(fontSize = 11.sp), color = LensColors.SlateCaption)
@@ -706,6 +948,44 @@ private fun ApplianceCardStitch(
                             inactiveTrackColor = LensColors.SurfaceContainerHighest
                         )
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Subtotal Strip (Stitch specification)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(6.dp),
+                color = LensColors.SurfaceContainerLow.copy(alpha = 0.7f)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "APPLIANCE SUBTOTAL",
+                        style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                        color = LensColors.SlateCaption
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "~${appliance.monthlyKwh.toInt()} kWh/mo",
+                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                            color = LensColors.SlateText
+                        )
+                        Text(
+                            "(₹${appliance.monthlyCost.toInt()})",
+                            style = LensTypography.labelSm.copy(fontWeight = FontWeight.Medium),
+                            color = LensColors.Primary
+                        )
+                    }
                 }
             }
         }

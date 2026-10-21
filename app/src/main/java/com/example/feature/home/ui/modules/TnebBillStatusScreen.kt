@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.feature.ebservice.util.formatConsumerNumber
 
 // Official SolarEase Design Palette
 private val SolarEaseEmerald = Color(0xFF1E7038)
@@ -229,9 +230,9 @@ fun TnebBillStatusEntryScreen(
                             color = TextDark
                         )
                         Text(
-                            text = "${serviceConnectionNumber.length}/11 Digits",
+                            text = "${serviceConnectionNumber.length}/12 Digits",
                             fontSize = 11.sp,
-                            color = if (serviceConnectionNumber.length == 11) SolarEaseEmerald else TextMuted,
+                            color = if (serviceConnectionNumber.length == 12) SolarEaseEmerald else TextMuted,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -241,12 +242,12 @@ fun TnebBillStatusEntryScreen(
                     OutlinedTextField(
                         value = serviceConnectionNumber,
                         onValueChange = { viewModel.updateServiceConnectionNumber(it) },
-                        placeholder = { Text("e.g. 04234567891", color = Color(0xFFA0AEC0)) },
+                        placeholder = { Text("e.g. 042345678901", color = Color(0xFFA0AEC0)) },
                         leadingIcon = {
                             Icon(Icons.Default.Bolt, contentDescription = null, tint = SolarEaseEmerald)
                         },
                         trailingIcon = {
-                            if (serviceConnectionNumber.length == 11) {
+                            if (serviceConnectionNumber.length == 12) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = "Valid", tint = SolarEaseEmerald)
                             }
                         },
@@ -458,11 +459,12 @@ fun TnebBillStatusEntryScreen(
             text = {
                 Column {
                     Text(
-                        "Your 11-digit Service Connection Number is composed of:\n\n" +
-                                "• Region Code (2 digits)\n" +
-                                "• Section Code (3 digits)\n" +
-                                "• Distribution Code (3 digits)\n" +
-                                "• Service Number (3-4 digits)\n\n" +
+                        "Your 12-digit Service Connection Number is composed of:\n\n" +
+                                "• Digits 1–2: Region Code\n" +
+                                "• Digits 3–5: Division Code\n" +
+                                "• Digits 6–8: Subdivision Code\n" +
+                                "• Digits 9–12: Consumer Number\n\n" +
+                                "Example: 042345678901 (without spaces).\n" +
                                 "It is printed at the top of any physical white meter card or previous receipt.",
                         fontSize = 14.sp,
                         lineHeight = 20.sp
@@ -583,7 +585,7 @@ fun TnebCaptchaVerificationScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Service: ${serviceConnectionNumber.take(2)}-${serviceConnectionNumber.drop(2).take(3)}-${serviceConnectionNumber.drop(5)}",
+                                text = "Service: ${formatConsumerNumber(serviceConnectionNumber)}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = TextDark

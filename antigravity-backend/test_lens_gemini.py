@@ -120,6 +120,254 @@ class GeminiLensUploadUnitTests(unittest.TestCase):
         self.assertNotIn("nemotron", service_source.lower())
         self.assertNotIn("nvidia", service_source.lower())
 
+    def test_lens_bug_006_timeout_raises_504(self):
+        """LENS-BUG-006: Gemini provider timeout raises HTTP 504 and does not block."""
+        import time
+        from fastapi import HTTPException
+
+        def delayed_call(*args, **kwargs):
+            time.sleep(0.3)
+            return MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.models.generate_content.side_effect = delayed_call
+
+        with patch("src.modules.lens.service._get_gemini_client", return_value=mock_client), \
+             patch("src.modules.lens.service.PROVIDER_TIMEOUT_SECONDS", 0.05):
+            import asyncio
+            with self.assertRaises(HTTPException) as ctx:
+                asyncio.run(
+                    ApplianceAnalysisService.analyze_media(b"fake-bytes", "image/jpeg", "UPLOAD_IMAGE")
+                )
+            self.assertEqual(ctx.exception.status_code, 504)
+            self.assertIn("timed out", ctx.exception.detail.lower())
+
+    def test_lens_bug_006_provider_failure_raises_502(self):
+        """LENS-BUG-006: Gemini provider failures map cleanly to HTTP 502."""
+        from fastapi import HTTPException
+
+        mock_client = MagicMock()
+        mock_client.models.generate_content.side_effect = RuntimeError("API connection reset by peer")
+
+        with patch("src.modules.lens.service._get_gemini_client", return_value=mock_client):
+            import asyncio
+            with self.assertRaises(HTTPException) as ctx:
+                asyncio.run(
+                    ApplianceAnalysisService.analyze_media(b"fake-bytes", "image/jpeg", "UPLOAD_IMAGE")
+                )
+            self.assertEqual(ctx.exception.status_code, 502)
+            self.assertIn("failed", ctx.exception.detail.lower())
+
+    def test_lens_bug_007_malformed_json_raises_502(self):
+        """LENS-BUG-007: Unparseable AI response raises HTTP 502 rather than returning empty detections."""
+        from fastapi import HTTPException
+
+        bad_payloads = [
+            "",
+            "   ",
+            "This is plain text with no JSON at all.",
+            "```json\n{ \"detected_appliances\": [ broken unclosed json",
+            "<div>Internal Server Error 500</div>",
+        ]
+
+        for payload in bad_payloads:
+            with self.subTest(payload=payload):
+                with self.assertRaises(HTTPException) as ctx:
+                    ApplianceAnalysisService._parse_gemini_response(payload, "UPLOAD")
+                self.assertEqual(ctx.exception.status_code, 502)
+
+    def test_lens_bug_007_invalid_schema_raises_502(self):
+        """LENS-BUG-007: JSON missing expected appliance list raises HTTP 502."""
+        from fastapi import HTTPException
+
+        invalid_schemas = [
+            json.dumps(["not", "a", "dict"]),
+            json.dumps({"status": "success", "items_count": 0}),
+            json.dumps({"detected_appliances": "not-a-list"}),
+        ]
+
+        for payload in invalid_schemas:
+            with self.subTest(payload=payload):
+                with self.assertRaises(HTTPException) as ctx:
+                    ApplianceAnalysisService._parse_gemini_response(payload, "UPLOAD")
+                self.assertEqual(ctx.exception.status_code, 502)
+
+    def test_lens_bug_007_valid_empty_appliances_preserved(self):
+        """LENS-BUG-007: Valid scan with 0 appliances returns empty detections without error."""
+        valid_empty = json.dumps({"detected_appliances": []})
+        result = ApplianceAnalysisService._parse_gemini_response(valid_empty, "UPLOAD")
+        self.assertEqual(len(result.detections), 0)
+        self.assertEqual(len(result.detected_appliances), 0)
+
+    def test_lens_bug_008_quantity_parsing_bounds_and_safety(self):
+        """LENS-BUG-008: Validate AI-generated quantities safely across types, strings, and bounds."""
+        parse_qty = ApplianceAnalysisService._parse_quantity
+
+        # Standard integers
+        self.assertEqual(parse_qty(1), 1)
+        self.assertEqual(parse_qty(5), 5)
+
+        # Word numbers
+        self.assertEqual(parse_qty("two"), 2)
+        self.assertEqual(parse_qty("three"), 3)
+        self.assertEqual(parse_qty("pair"), 2)
+        self.assertEqual(parse_qty("single"), 1)
+        self.assertEqual(parse_qty("five"), 5)
+
+        # Numeric strings & floats
+        self.assertEqual(parse_qty("4"), 4)
+        self.assertEqual(parse_qty("2.0"), 2)
+        self.assertEqual(parse_qty(3.7), 4)
+        self.assertEqual(parse_qty(1.2), 1)
+
+        # Missing / None
+        self.assertEqual(parse_qty(None), 1)
+
+        # Negative / Zero clamp to min 1
+        self.assertEqual(parse_qty(0), 1)
+        self.assertEqual(parse_qty(-10), 1)
+        self.assertEqual(parse_qty("0"), 1)
+        self.assertEqual(parse_qty("-5"), 1)
+
+        # Excessive values clamp to max 50
+        self.assertEqual(parse_qty(100), 50)
+        self.assertEqual(parse_qty(999999), 50)
+        self.assertEqual(parse_qty("500"), 50)
+
+        # Unparseable strings fallback safely to 1
+        self.assertEqual(parse_qty("several"), 1)
+        self.assertEqual(parse_qty("many"), 1)
+        self.assertEqual(parse_qty("N/A"), 1)
+
+        # Special float values
+        self.assertEqual(parse_qty(float("nan")), 1)
+        self.assertEqual(parse_qty(float("inf")), 1)
+        self.assertEqual(parse_qty(float("-inf")), 1)
+
+    def test_lens_bug_008_power_watts_parsing_bounds(self):
+        """LENS-BUG-008: Validate power rating parsing and household range bounds."""
+        parse_watts = ApplianceAnalysisService._parse_power_watts
+
+        # Plausible values
+        self.assertEqual(parse_watts(150), 150.0)
+        self.assertEqual(parse_watts(1500.5), 1500.5)
+        self.assertEqual(parse_watts("2000"), 2000.0)
+
+        # None / missing
+        self.assertIsNone(parse_watts(None))
+
+        # Invalid / Out of bounds
+        self.assertIsNone(parse_watts(0))
+        self.assertIsNone(parse_watts(-50))
+        self.assertIsNone(parse_watts(100000))
+        self.assertIsNone(parse_watts("invalid"))
+        self.assertIsNone(parse_watts(float("nan")))
+        self.assertIsNone(parse_watts(float("inf")))
+
+    def test_strict_visual_evidence_prompt_contains_negative_constraints(self):
+        """Regression: Prompt must explicitly prohibit guessing, context inference, and checklist matching."""
+        prompt_lower = LENS_UPLOAD_PROMPT.lower()
+        self.assertIn("do not guess", prompt_lower)
+        self.assertIn("visual proof", prompt_lower)
+        self.assertIn("refrigerator is visible", prompt_lower)
+        self.assertIn("normalization", prompt_lower)
+
+    def test_refrigerator_only_payload_does_not_gain_unrelated_appliances(self):
+        """Regression: A refrigerator detection with evidence must not append laptop, AC, or tube light."""
+        gemini_json = {
+            "detected_appliances": [
+                {
+                    "appliance_type": "Refrigerator",
+                    "appliance_name": "Single Door Refrigerator",
+                    "quantity": 1,
+                    "power_rating_watts": None,
+                    "confidence": 0.95,
+                    "evidence": "Visible tall silver refrigerator unit in kitchen corner."
+                }
+            ]
+        }
+        result = ApplianceAnalysisService._parse_gemini_response(json.dumps(gemini_json), "UPLOAD")
+        labels = [d.appliance_type for d in result.detected_appliances]
+        self.assertEqual(labels, ["Refrigerator"])
+        self.assertNotIn("Air Conditioner", labels)
+        self.assertNotIn("Laptop", labels)
+        self.assertNotIn("LED Tube Light", labels)
+        self.assertIsNone(result.detected_appliances[0].power_rating_watts)
+
+    def test_laptop_only_payload_does_not_gain_refrigerator(self):
+        """Regression: A laptop detection must not cause a refrigerator to be added."""
+        gemini_json = {
+            "detected_appliances": [
+                {
+                    "appliance_type": "Computer / Laptop",
+                    "appliance_name": "Silver Laptop",
+                    "quantity": 1,
+                    "power_rating_watts": 65.0,
+                    "confidence": 0.92,
+                    "evidence": "Open laptop screen and keyboard visible on wooden desk."
+                }
+            ]
+        }
+        result = ApplianceAnalysisService._parse_gemini_response(json.dumps(gemini_json), "UPLOAD")
+        labels = [d.appliance_type for d in result.detected_appliances]
+        self.assertEqual(labels, ["Computer / Laptop"])
+        self.assertNotIn("Refrigerator", labels)
+
+    def test_detections_lacking_evidence_are_omitted(self):
+        """Regression: Detections with missing, empty, or generic placeholder evidence are rejected."""
+        gemini_json = {
+            "detected_appliances": [
+                {
+                    "appliance_type": "Refrigerator",
+                    "appliance_name": "Refrigerator",
+                    "quantity": 1,
+                    "confidence": 0.9,
+                    "evidence": "Clearly visible in center frame."
+                },
+                {
+                    "appliance_type": "Air Conditioner",
+                    "appliance_name": "Air Conditioner",
+                    "quantity": 1,
+                    "confidence": 0.85,
+                    "evidence": "none"  # Generic placeholder -> reject
+                },
+                {
+                    "appliance_type": "Laptop",
+                    "appliance_name": "Laptop",
+                    "quantity": 1,
+                    "confidence": 0.85,
+                    "evidence": None  # Missing evidence -> reject
+                },
+                {
+                    "appliance_type": "LED Tube Light",
+                    "appliance_name": "LED Tube Light",
+                    "quantity": 1,
+                    "confidence": 0.85,
+                    "evidence": "seen"  # Too short (< 6 chars) -> reject
+                }
+            ]
+        }
+        result = ApplianceAnalysisService._parse_gemini_response(json.dumps(gemini_json), "UPLOAD")
+        self.assertEqual(len(result.detected_appliances), 1)
+        self.assertEqual(result.detected_appliances[0].appliance_type, "Refrigerator")
+
+    def test_low_confidence_speculative_detection_omitted(self):
+        """Regression: Speculative detections with confidence < 0.3 are omitted."""
+        gemini_json = {
+            "detected_appliances": [
+                {
+                    "appliance_type": "Television",
+                    "appliance_name": "Possible TV",
+                    "quantity": 1,
+                    "confidence": 0.15,
+                    "evidence": "Very dark shadow on the wall that might be a screen."
+                }
+            ]
+        }
+        result = ApplianceAnalysisService._parse_gemini_response(json.dumps(gemini_json), "UPLOAD")
+        self.assertEqual(len(result.detected_appliances), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

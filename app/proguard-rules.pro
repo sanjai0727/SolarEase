@@ -10,11 +10,19 @@
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -keepclassmembers class * {
     @kotlinx.serialization.SerialName <fields>;
-    @kotlinx.serialization.Serializable <fields>;
 }
--keep,allowobfuscation,allowshrinking class * {
-    @kotlinx.serialization.Serializable class *;
+-keepclassmembers class * {
+    *** Companion;
 }
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep class * implements kotlinx.serialization.KSerializer {
+    <init>(...);
+}
+-keep @kotlinx.serialization.Serializable class * { *; }
+-keepclassmembers @kotlinx.serialization.Serializable class * { *; }
+-keep class com.example.navigation.Screen** { *; }
 
 # Retrofit / Moshi / OkHttp
 -dontwarn retrofit2.**

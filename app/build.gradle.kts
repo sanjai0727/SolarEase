@@ -33,8 +33,8 @@ android {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       storeFile = file(keystorePath)
       storePassword = System.getenv("STORE_PASSWORD") ?: ""
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+      keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+      keyPassword = System.getenv("KEY_PASSWORD") ?: (System.getenv("STORE_PASSWORD") ?: "")
       enableV1Signing = true
       enableV2Signing = true
       enableV3Signing = true
@@ -55,6 +55,9 @@ android {
       val releaseKeystore = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
       if (releaseKeystore.exists() && !System.getenv("STORE_PASSWORD").isNullOrEmpty()) {
         signingConfig = signingConfigs.getByName("release")
+      } else {
+        // Fallback to debugConfig for local development and verification so the APK is always signed and installable
+        signingConfig = signingConfigs.getByName("debugConfig")
       }
       isCrunchPngs = false
       isMinifyEnabled = true
@@ -72,6 +75,15 @@ android {
     buildConfig = true
   }
   packaging {
+    resources {
+      excludes += listOf(
+        "/META-INF/{AL2.0,LGPL2.1}",
+        "META-INF/INDEX.LIST",
+        "META-INF/DEPENDENCIES",
+        "META-INF/LICENSE*",
+        "META-INF/NOTICE*"
+      )
+    }
     jniLibs {
       useLegacyPackaging = true
     }

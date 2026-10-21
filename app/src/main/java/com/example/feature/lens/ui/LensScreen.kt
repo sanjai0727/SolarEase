@@ -70,9 +70,8 @@ fun LensScreen(
     BackHandler {
         if (uiState is LensUiState.CameraActive) {
             viewModel.popUiState()
-        } else {
-            onNavigateBack()
         }
+        onNavigateBack()
     }
 
     LaunchedEffect(Unit) {
@@ -84,6 +83,8 @@ fun LensScreen(
     LaunchedEffect(uiState) {
         if (uiState is LensUiState.Review) {
             onNavigateToReview()
+        } else if (uiState is LensUiState.RoomOverview) {
+            onNavigateBack()
         }
     }
 
@@ -92,7 +93,10 @@ fun LensScreen(
             LensCameraContent(
                 viewModel = viewModel,
                 uiState = uiState as LensUiState.CameraActive,
-                onNavigateBack = { viewModel.popUiState() }
+                onNavigateBack = {
+                    viewModel.popUiState()
+                    onNavigateBack()
+                }
             )
         } else {
             Box(
@@ -219,7 +223,7 @@ private fun LensCameraContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "LIVE SCAN ACTIVE • ZERO NETWORK REQUESTS (OFFLINE YOLO)",
+                        "LIVE SCAN ACTIVE • ZERO NETWORK REQUESTS (ON-DEVICE VISION)",
                         style = LensTypography.labelCaps.copy(fontSize = 11.sp),
                         color = LensColors.InverseOnSurface
                     )
@@ -389,10 +393,10 @@ private fun LensCameraContent(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Surface(
                                     shape = RoundedCornerShape(2.dp),
-                                    color = LensColors.PrimaryContainer
+                                    color = if (detection.powerWatts > 0f) LensColors.PrimaryContainer else LensColors.OutlineVariant
                                 ) {
                                     Text(
-                                        "~${detection.powerWatts.toInt()}W",
+                                        if (detection.powerWatts > 0f) "~${detection.powerWatts.toInt()}W" else "UNVERIFIED",
                                         style = LensTypography.labelCaps.copy(fontSize = 9.sp),
                                         color = LensColors.OnPrimary,
                                         modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)

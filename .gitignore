@@ -56,9 +56,14 @@ env/
 Thumbs.db
 
 # =========================
-# Local artifacts
+# Local artifacts & temp
 # =========================
 .artifacts/
 .idea/
-.artifacts/
 antigravity-backend/alembic_out.txt
+tmp/
+output/
+lib/
+*.zip
+WhatsApp*
+stitch_*/

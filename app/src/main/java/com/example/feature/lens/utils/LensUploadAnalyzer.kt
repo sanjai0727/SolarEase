@@ -10,7 +10,7 @@ import com.example.feature.lens.data.LensRepository
  * Architecture boundary:
  * - Upload flow (Uploaded Image, Uploaded Video) exclusively delegates to
  *   Google Gemini 3.8 Flash via the SolarEase backend (/lens/analyze).
- * - Under NO circumstance does this analyzer invoke local YOLO or Scan detectors.
+ * - Under NO circumstance does this analyzer invoke on-device scan detectors.
  */
 class LensUploadAnalyzer(
     private val repository: LensRepository

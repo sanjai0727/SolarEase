@@ -99,13 +99,14 @@ def test_meter_flow():
         "baseline_reading": 12450.0,
         "previous_billed_units": 302.0,
         "tariff_code": "LT-1A",
-        "service_connection_number": "09234567890"
+        "service_connection_number": "042345678901"
     }
     resp = client.post("/meter/baseline", json=baseline_payload)
     assert resp.status_code == 200, resp.text
     base_data = resp.json()
     assert base_data["baseline_reading"] == 12450.0
     assert base_data["cycle_id"] == "BILL-20260901"
+    assert base_data["service_connection_number"] == "042345678901"
     assert base_data["is_active"] is True
     print(f"  [OK] Baseline set: {base_data['baseline_reading']} kWh on {base_data['baseline_date']}")
 

@@ -1056,6 +1056,7 @@ private fun BillCalculatorResultView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             )
+
             {
                 Text(
                     text = "TANGEDCO UTILITY ESTIMATE",
