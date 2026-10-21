@@ -245,7 +245,7 @@ fun EbServiceNumberScreen(
                                     .background(if (isValid) StitchPrimaryContainer else StitchSecondary)
                             )
                             Text(
-                                text = if (isValid) "Valid 12-digit consumer number" else "You can edit this number if needed.",
+                                text = if (isValid) "Valid ${consumerNumber.length}-digit consumer number" else "Enter 11 or 12 digit consumer number",
                                 fontSize = 12.sp,
                                 color = if (isValid) StitchPrimaryContainer else StitchSecondary
                             )

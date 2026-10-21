@@ -27,7 +27,7 @@ class EbServiceViewModel(application: Application) : AndroidViewModel(applicatio
         var isValid = false
         var parsedDetails: ConsumerNumberDetails? = null
         
-        if (rawNumber.length == 12) {
+        if (rawNumber.length in 11..12) {
             val parserResult = ConsumerNumberParser.parse(rawNumber)
             if (parserResult.isSuccess) {
                 isValid = true

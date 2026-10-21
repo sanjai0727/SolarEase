@@ -230,9 +230,9 @@ fun TnebBillStatusEntryScreen(
                             color = TextDark
                         )
                         Text(
-                            text = "${serviceConnectionNumber.length}/12 Digits",
+                            text = if (serviceConnectionNumber.length in 11..12) "${serviceConnectionNumber.length} Digits" else "${serviceConnectionNumber.length}/12 Digits",
                             fontSize = 11.sp,
-                            color = if (serviceConnectionNumber.length == 12) SolarEaseEmerald else TextMuted,
+                            color = if (serviceConnectionNumber.length in 11..12) SolarEaseEmerald else TextMuted,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -247,7 +247,7 @@ fun TnebBillStatusEntryScreen(
                             Icon(Icons.Default.Bolt, contentDescription = null, tint = SolarEaseEmerald)
                         },
                         trailingIcon = {
-                            if (serviceConnectionNumber.length == 12) {
+                            if (serviceConnectionNumber.length in 11..12) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = "Valid", tint = SolarEaseEmerald)
                             }
                         },
@@ -459,12 +459,12 @@ fun TnebBillStatusEntryScreen(
             text = {
                 Column {
                     Text(
-                        "Your 12-digit Service Connection Number is composed of:\n\n" +
+                        "Your 11 to 12-digit Service Connection Number is composed of:\n\n" +
                                 "• Digits 1–2: Region Code\n" +
                                 "• Digits 3–5: Division Code\n" +
                                 "• Digits 6–8: Subdivision Code\n" +
-                                "• Digits 9–12: Consumer Number\n\n" +
-                                "Example: 042345678901 (without spaces).\n" +
+                                "• Remaining digits: Consumer Number\n\n" +
+                                "Example: 042345678901 or 09440233135 (without spaces).\n" +
                                 "It is printed at the top of any physical white meter card or previous receipt.",
                         fontSize = 14.sp,
                         lineHeight = 20.sp

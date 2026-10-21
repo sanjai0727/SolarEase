@@ -274,14 +274,14 @@ class TnebBillStatusFlowTest {
     }
 
     @Test
-    fun test8_rejectionOf11DigitNumber_remainsInvalid() {
+    fun test8_rejectionOfTooShortNumber_remainsInvalid() {
         val viewModel = TnebBillStatusViewModel()
-        // 11 digits must be rejected as invalid
-        viewModel.updateServiceConnectionNumber("04234567890")
+        // 10 digits must be rejected as invalid
+        viewModel.updateServiceConnectionNumber("0423456789")
         viewModel.updateRegisteredMobileNumber("9876543210")
 
-        assertEquals("04234567890", viewModel.serviceConnectionNumber.value)
-        assertEquals(11, viewModel.serviceConnectionNumber.value.length)
+        assertEquals("0423456789", viewModel.serviceConnectionNumber.value)
+        assertEquals(10, viewModel.serviceConnectionNumber.value.length)
         assertFalse(viewModel.isValid.value)
     }
 
@@ -380,5 +380,26 @@ class TnebBillStatusFlowTest {
         )
         assertEquals("042345678901", baseline.serviceConnectionNumber)
         assertEquals(12, baseline.serviceConnectionNumber?.length)
+    }
+
+    @Test
+    fun test14_supportsBoth11And12DigitConsumerNumbers() {
+        val viewModel = TnebBillStatusViewModel()
+        viewModel.updateRegisteredMobileNumber("9876543210")
+
+        // 11 digits
+        viewModel.updateServiceConnectionNumber("09440233135")
+        assertEquals(11, viewModel.serviceConnectionNumber.value.length)
+        assertTrue("11-digit SCN must be valid", viewModel.isValid.value)
+
+        // 12 digits
+        viewModel.updateServiceConnectionNumber("042345678901")
+        assertEquals(12, viewModel.serviceConnectionNumber.value.length)
+        assertTrue("12-digit SCN must be valid", viewModel.isValid.value)
+
+        // 10 digits (too short)
+        viewModel.updateServiceConnectionNumber("0423456789")
+        assertEquals(10, viewModel.serviceConnectionNumber.value.length)
+        assertFalse("10-digit SCN must be invalid", viewModel.isValid.value)
     }
 }

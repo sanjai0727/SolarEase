@@ -99,7 +99,7 @@ class TnebBillStatusViewModel : ViewModel() {
         val filtered = number.filter { it.isDigit() }.take(12)
         _serviceConnectionNumber.value = filtered
         validate()
-        if (filtered.length == 12) {
+        if (filtered.length in 11..12) {
             persistElectricityDetailsIfValid()
         }
     }
@@ -118,7 +118,7 @@ class TnebBillStatusViewModel : ViewModel() {
     }
 
     private fun validate() {
-        val isValidScn = _serviceConnectionNumber.value.length == 12
+        val isValidScn = _serviceConnectionNumber.value.length in 11..12
         val isValidRmn = _registeredMobileNumber.value.length == 10
         _isValid.value = isValidScn && isValidRmn
     }
@@ -129,13 +129,13 @@ class TnebBillStatusViewModel : ViewModel() {
         val current = com.example.core.session.UserSession.currentUser
         if (current != null) {
             val updated = current.copy(
-                ebServiceNumber = if (scn.length == 12) scn else current.ebServiceNumber,
+                ebServiceNumber = if (scn.length in 11..12) scn else current.ebServiceNumber,
                 tnebRegisteredMobile = if (rmn.length == 10) rmn else current.tnebRegisteredMobile
             )
             com.example.core.session.UserSession.saveUser(updated)
         } else {
             com.example.core.session.UserSession.saveExplicitElectricityDetails(
-                consumerNumber = if (scn.length == 12) scn else null,
+                consumerNumber = if (scn.length in 11..12) scn else null,
                 tnebMobile = if (rmn.length == 10) rmn else null
             )
         }
