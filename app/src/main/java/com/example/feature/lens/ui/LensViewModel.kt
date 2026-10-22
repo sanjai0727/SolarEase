@@ -1,5 +1,6 @@
 package com.example.feature.lens.ui
 
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -140,6 +141,39 @@ class LensViewModel(
     private val _scanSession = MutableStateFlow<List<ScannedAppliance>>(emptyList())
     val scanSession: StateFlow<List<ScannedAppliance>> = _scanSession.asStateFlow()
 
+    companion object {
+        const val MAX_ROOM_PHOTOS = 4
+    }
+
+    private val _selectedRoomPhotos = MutableStateFlow<List<Uri>>(emptyList())
+    val selectedRoomPhotos: StateFlow<List<Uri>> = _selectedRoomPhotos.asStateFlow()
+
+    /**
+     * Attempts to add a captured photo URI.
+     * Returns true if added successfully, false if already at MAX_ROOM_PHOTOS or duplicate.
+     */
+    fun addSelectedPhoto(uri: Uri): Boolean {
+        val current = _selectedRoomPhotos.value
+        if (current.size >= MAX_ROOM_PHOTOS) return false
+        if (current.contains(uri)) return false
+        _selectedRoomPhotos.value = current + uri
+        return true
+    }
+
+    /**
+     * Removes a selected photo by URI.
+     */
+    fun removeSelectedPhoto(uri: Uri) {
+        _selectedRoomPhotos.value = _selectedRoomPhotos.value.filter { it != uri }
+    }
+
+    /**
+     * Clears selected photos when moving to another room, finishing audit, or cancelling.
+     */
+    fun clearSelectedPhotos() {
+        _selectedRoomPhotos.value = emptyList()
+    }
+
     private var activeAnalysisJob: Job? = null
     private var overlayTtlJob: Job? = null
 
@@ -229,6 +263,7 @@ class LensViewModel(
         activeAnalysisJob?.cancel()
         activeAnalysisJob = null
         _activeRoomId.value = null
+        clearSelectedPhotos()
         val resetRooms = _rooms.value.map { it.copy(status = RoomStatus.PENDING, appliances = emptyList()) }
         _rooms.value = resetRooms
         com.example.feature.lens.data.LensRoomStorage.saveRooms(resetRooms)
@@ -247,12 +282,14 @@ class LensViewModel(
     fun skipCurrentRoom() {
         val currentState = _uiState.value
         if (currentState is LensUiState.RoomOverview) {
+            clearSelectedPhotos()
             updateRoomStatus(currentState.room.id, RoomStatus.SKIPPED)
             moveToNextRoom()
         }
     }
 
     private fun moveToNextRoom() {
+        clearSelectedPhotos()
         val currentActiveId = _activeRoomId.value
         val sortedRooms = _rooms.value.sortedBy { it.order }
         
@@ -272,6 +309,7 @@ class LensViewModel(
     }
 
     fun navigateToPreviousWorkspace() {
+        clearSelectedPhotos()
         val currentActiveId = _activeRoomId.value
         if (currentActiveId == null) {
             _uiState.value = LensUiState.RoomSetup
@@ -414,6 +452,7 @@ class LensViewModel(
         activeAnalysisJob = null
         _scanSession.value = emptyList()
         _currentFrameDetections.value = emptyList()
+        clearSelectedPhotos()
         
         val currentState = _uiState.value
         if (currentState is LensUiState.Processing) {
@@ -765,6 +804,7 @@ class LensViewModel(
             return
         }
 
+        clearSelectedPhotos()
         _uiState.value = LensUiState.Processing(contextRoom, "Preparing images...")
 
         activeAnalysisJob?.cancel()

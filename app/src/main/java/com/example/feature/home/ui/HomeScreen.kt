@@ -1,12 +1,8 @@
 package com.example.feature.home.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -82,6 +78,7 @@ import com.example.feature.home.ui.modules.MeterReadingProgressionGraph
 import androidx.compose.material.icons.filled.History
 import com.example.ui.components.SolarEaseBottomNavigation
 import com.example.ui.components.SolarEaseNavTab
+import com.example.ui.components.subtleTopRightGradient
 import com.example.ui.theme.*
 import java.util.Locale
 
@@ -124,6 +121,8 @@ fun HomeRoute(
 
     var showAccountPreview by remember { mutableStateOf(false) }
     var showProfilePrompt by remember { mutableStateOf(false) }
+    var showInsightsAndTools by rememberSaveable { mutableStateOf(false) }
+    var showBillHelp by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -259,14 +258,35 @@ fun HomeRoute(
                         onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
                     )
 
-                    WhyConnectBillSection()
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = HomeColors.CardBg,
+                        border = BorderStroke(1.dp, HomeColors.Border),
+                        shadowElevation = 0.dp,
+                        onClick = { showBillHelp = !showBillHelp }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.Help, contentDescription = null, tint = HomeColors.Primary)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("Need help with your electricity bill?", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = HomeColors.TextPrimary)
+                                Text(if (showBillHelp) "Hide bill help" else "Find your service number and learn how it works", fontSize = 12.sp, color = HomeColors.TextSecondary)
+                            }
+                            Icon(if (showBillHelp) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showBillHelp) "Hide bill help" else "Show bill help", tint = HomeColors.Primary)
+                        }
+                    }
 
-                    WhereToFindConsumerNumberCard()
-
-                    ReapClassificationCard(
-                        uiState = uiState,
-                        onLearnMore = onNavigateToTnebBillStatus
-                    )
+                    AnimatedVisibility(visible = showBillHelp, enter = fadeIn(animationSpec = tween(180)), exit = fadeOut(animationSpec = tween(120))) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            WhyConnectBillSection()
+                            WhereToFindConsumerNumberCard()
+                            ReapClassificationCard(uiState = uiState, onLearnMore = onNavigateToTnebBillStatus)
+                        }
+                    }
                 } else if (step == 2) {
                     // ── STEP 2: Track Usage / Baseline Calibration ───────────
                     SyncedBillSummaryStrip(
@@ -320,34 +340,40 @@ fun HomeRoute(
                         onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
                     )
 
-                    MeterReadingProgressionGraph(
-                        points = uiState.meterGraphPoints,
-                        billData = uiState.billData,
-                        onEditReading = { viewModel.onInitiateEditReading(it) }
-                    )
+                    // Keep the dashboard focused; secondary tools remain available below.
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        color = HomeColors.CardBg,
+                        border = BorderStroke(1.dp, HomeColors.Border),
+                        shadowElevation = 0.dp,
+                        onClick = { showInsightsAndTools = !showInsightsAndTools }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(HomeColors.SurfaceSecondary), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Analytics, contentDescription = null, tint = HomeColors.Primary, modifier = Modifier.size(22.dp))
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("Usage insights & tools", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = HomeColors.TextPrimary)
+                                Text(if (showInsightsAndTools) "Hide extra details" else "View usage trends, bills and helpful tools", fontSize = 12.sp, color = HomeColors.TextSecondary)
+                            }
+                            Icon(if (showInsightsAndTools) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showInsightsAndTools) "Collapse insights and tools" else "Expand insights and tools", tint = HomeColors.Primary)
+                        }
+                    }
 
-                    ReapClassificationCard(
-                        uiState = uiState,
-                        onLearnMore = onNavigateToTnebBillStatus
-                    )
-
-                    BillActionsSection(
-                        onViewBillHistory = onNavigateToBillHistory,
-                        onCheckDues = onNavigateToTnebBillStatus
-                    )
-
-                    QuickToolsSection(
-                        onBillStatus = onNavigateToTnebBillStatus,
-                        onChatbot = onNavigateToElectricityChatbot,
-                        onSolarLens = onNavigateToSolarEaseLens,
-                        onCalculator = onNavigateToBillCalculator,
-                        hasConnectedBill = true,
-                        tariffCode = uiState.tariffCode
-                    )
-
-                    RecentActivitySection(
-                        activities = uiState.recentActivities
-                    )
+                    AnimatedVisibility(visible = showInsightsAndTools, enter = fadeIn(animationSpec = tween(180)), exit = fadeOut(animationSpec = tween(120))) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            MeterReadingProgressionGraph(points = uiState.meterGraphPoints, billData = uiState.billData, onEditReading = { viewModel.onInitiateEditReading(it) })
+                            ReapClassificationCard(uiState = uiState, onLearnMore = onNavigateToTnebBillStatus)
+                            BillActionsSection(onViewBillHistory = onNavigateToBillHistory, onCheckDues = onNavigateToTnebBillStatus)
+                            QuickToolsSection(onBillStatus = onNavigateToTnebBillStatus, onChatbot = onNavigateToElectricityChatbot, onSolarLens = onNavigateToSolarEaseLens, onCalculator = onNavigateToBillCalculator, hasConnectedBill = true, tariffCode = uiState.tariffCode)
+                            RecentActivitySection(activities = uiState.recentActivities)
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -720,16 +746,8 @@ private fun GreetingHeader(
     userName: String?,
     onboardingStep: Int
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val alphaAnim by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseAlpha"
-    )
+    // Keep the status marker steady; constant motion adds unnecessary visual noise.
+    val alphaAnim = 1f
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -749,9 +767,9 @@ private fun GreetingHeader(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = when (onboardingStep) {
-                            1 -> "ENERGY MONITORING • STEP 1"
-                            2 -> "TNEB SYNCED • STEP 2"
-                            else -> "LIVE MONITORING • STEP 3"
+                            1 -> "GET STARTED"
+                            2 -> "BILL CONNECTED"
+                            else -> "HOME ENERGY OVERVIEW"
                         },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
@@ -793,9 +811,9 @@ private fun GreetingHeader(
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = when (onboardingStep) {
-                1 -> "Let's start by connecting your electricity bill so we can understand your home's energy usage."
-                2 -> "Now enter the reading shown on your physical TNEB electricity meter. We'll use it to track your home's electricity consumption."
-                else -> "Your meter telemetry is tracking smoothly. Next step: find out where your electricity goes."
+                1 -> "Connect your electricity bill to get started."
+                2 -> "Enter the number shown on your electricity meter to track your usage."
+                else -> "See how much electricity you use and explore ways to save."
             },
             fontSize = 13.sp,
             color = HomeColors.TextSecondary,
@@ -827,7 +845,15 @@ private fun PrimaryEnergyCard(
         border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
     ) {
-        if (!uiState.hasConnectedBill) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .subtleTopRightGradient(
+                    shape = RoundedCornerShape(16.dp),
+                    radiusMultiplier = 0.70f
+                )
+        ) {
+            if (!uiState.hasConnectedBill) {
             // ==================================================================
             // STATE A: NEW USER / BILL NOT CONNECTED
             // ==================================================================
@@ -1744,6 +1770,7 @@ private fun PrimaryEnergyCard(
                 }
             }
         }
+        }
     }
 }
 
@@ -1793,9 +1820,9 @@ private fun OnboardingProgressBanner(
                     }
                     Text(
                         text = when (currentStep) {
-                            1 -> "STEP 1 OF 3 • GETTING STARTED"
-                            2 -> "STEP 2 OF 3 • BASELINE CALIBRATION"
-                            else -> "STEP 3 OF 3 • AUDIT & REDUCE"
+                            1 -> "STEP 1 OF 3 • CONNECT YOUR BILL"
+                            2 -> "STEP 2 OF 3 • ADD METER READING"
+                            else -> "STEP 3 OF 3 • CHECK HOME ENERGY"
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -3536,40 +3563,49 @@ private fun QuickToolCard(
         interactionSource = interactionSource,
         shadowElevation = 0.dp
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .subtleTopRightGradient(
+                    shape = RoundedCornerShape(16.dp),
+                    radiusMultiplier = 0.75f
+                )
         ) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(containerBg),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(14.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(containerBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = HomeColors.TextPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = HomeColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = HomeColors.TextPrimary
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 11.sp,
-                color = HomeColors.TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
@@ -3634,7 +3670,7 @@ private fun RecentActivitySection(
                         )
                         Spacer(modifier = Modifier.height(3.dp))
                         Text(
-                            text = "Your connected bill cycles, appliance audits, and savings milestones will populate here automatically.",
+                            text = "Your bill updates, home checks, and savings progress will appear here.",
                             fontSize = 11.sp,
                             color = HomeColors.TextSecondary,
                             textAlign = TextAlign.Center,
