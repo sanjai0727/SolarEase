@@ -43,7 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.R
@@ -118,12 +120,10 @@ fun AuthMainRoute(
 
                         Log.d("AuthFlowDiagnose", "AUTH STEP 1: Google credential request started")
                         try {
-                            val result = kotlinx.coroutines.withTimeout(15000L) {
-                                credentialManager.getCredential(
-                                    request = request,
-                                    context = activity
-                                )
-                            }
+                            val result = credentialManager.getCredential(
+                                request = request,
+                                context = activity
+                            )
                             Log.d("AuthFlowDiagnose", "AUTH STEP 2: Google credential received")
                             val credential = result.credential
 
@@ -137,9 +137,9 @@ fun AuthMainRoute(
                                 Log.e("AuthMainRoute", "Unexpected credential type")
                                 viewModel.setError("Unexpected credential type")
                             }
-                        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR: TimeoutCancellationException (Credential Manager timed out)")
-                            viewModel.setError("Sign in timed out. Please try again.")
+                        } catch (e: GetCredentialCancellationException) {
+                            Log.d("AuthFlowDiagnose", "AUTH CANCELLED: User dismissed Google Sign-In prompt")
+                            viewModel.resetState()
                         } catch (e: GetCredentialException) {
                             Log.e("AuthFlowDiagnose", "AUTH ERROR: GetCredentialException")
                             Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
@@ -150,8 +150,11 @@ fun AuthMainRoute(
                                 e
                             )
                             viewModel.setError(
-                                e.errorMessage?.toString() ?: "Sign in cancelled"
+                                e.errorMessage?.toString() ?: (e.message ?: "Google Sign-In failed")
                             )
+                        } catch (e: CancellationException) {
+                            // Propagate standard coroutine cancellation (do not swallow)
+                            throw e
                         } catch (e: Exception) {
                             Log.e("AuthFlowDiagnose", "AUTH ERROR: General Exception in Google Auth")
                             Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")

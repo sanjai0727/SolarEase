@@ -200,6 +200,13 @@ fun HomeRoute(
 
     Scaffold(
         containerColor = HomeColors.Background,
+        topBar = {
+            StitchTopBar(
+                userInitial = uiState.userInitial,
+                onProfileClick = { showAccountPreview = true },
+                onNotificationsClick = {}
+            )
+        },
         bottomBar = {
             SolarEaseBottomNavigation(
                 currentTab = SolarEaseNavTab.HOME,
@@ -215,18 +222,10 @@ fun HomeRoute(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // ── 1. Top Bar / App Branding ───────────────────────────
-            StitchTopBar(
-                userLocation = uiState.userAddress,
-                userInitial = uiState.userInitial,
-                onProfileClick = { showAccountPreview = true },
-                onNotificationsClick = {}
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val step = uiState.currentOnboardingStep
@@ -595,29 +594,30 @@ fun HomeRoute(
 
 @Composable
 private fun StitchTopBar(
-    userLocation: String?,
     userInitial: Char,
     onProfileClick: () -> Unit,
-    onNotificationsClick: () -> Unit
+    onNotificationsClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = HomeColors.Background.copy(alpha = 0.95f),
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
+        color = HomeColors.Background,
         border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Brand & Location
+            // Brand: SolarEase icon, App name, and HOME badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // SolarEase Icon Container
                 Box(
@@ -635,58 +635,29 @@ private fun StitchTopBar(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "SolarEase",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HomeColors.TextPrimary,
+                        letterSpacing = (-0.3).sp
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(HomeColors.PrimaryContainer)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
                         Text(
-                            text = "SolarEase",
-                            fontSize = 17.sp,
+                            text = "HOME",
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = HomeColors.TextPrimary,
-                            letterSpacing = (-0.3).sp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(HomeColors.PrimaryContainer)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "HOME",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = HomeColors.Primary,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-
-                    if (!userLocation.isNullOrBlank()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 1.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = HomeColors.Primary,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(
-                                text = userLocation,
-                                fontSize = 11.sp,
-                                color = HomeColors.TextSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "REAP Solar Intelligence",
-                            fontSize = 11.sp,
-                            color = HomeColors.TextSecondary,
-                            letterSpacing = 0.2.sp
+                            color = HomeColors.Primary,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }
