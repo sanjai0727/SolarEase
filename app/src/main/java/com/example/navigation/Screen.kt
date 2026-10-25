@@ -55,6 +55,9 @@ sealed class Screen {
     data object TnebBillStatus : Screen()
 
     @Serializable
+    data object MeterScanner : Screen()
+
+    @Serializable
     data object BillHistory : Screen()
     
     @Serializable

@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CameraOutdoor
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ElectricMeter
@@ -113,6 +114,7 @@ fun HomeRoute(
     onNavigateToRecommends: () -> Unit = {},
     onNavigateToActivity: () -> Unit = {},
     onNavigateToSolar: () -> Unit = {},
+    onNavigateToMeterScanner: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -254,7 +256,8 @@ fun HomeRoute(
                         onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
                         onStartEditingReading = { viewModel.startEditingReading() },
                         onCancelEditingReading = { viewModel.cancelEditingReading() },
-                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
+                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
+                        onScanMeterReading = onNavigateToMeterScanner
                     )
 
                     Surface(
@@ -303,7 +306,8 @@ fun HomeRoute(
                         onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
                         onStartEditingReading = { viewModel.startEditingReading() },
                         onCancelEditingReading = { viewModel.cancelEditingReading() },
-                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
+                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
+                        onScanMeterReading = onNavigateToMeterScanner
                     )
 
                     MeterCalibrationProgressCard(
@@ -336,7 +340,8 @@ fun HomeRoute(
                         onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
                         onStartEditingReading = { viewModel.startEditingReading() },
                         onCancelEditingReading = { viewModel.cancelEditingReading() },
-                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() }
+                        onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
+                        onScanMeterReading = onNavigateToMeterScanner
                     )
 
                     // Keep the dashboard focused; secondary tools remain available below.
@@ -805,7 +810,8 @@ private fun PrimaryEnergyCard(
     onUpdateTodayReading: () -> Unit,
     onStartEditingReading: () -> Unit,
     onCancelEditingReading: () -> Unit,
-    onEditCurrentReading: () -> Unit = {}
+    onEditCurrentReading: () -> Unit = {},
+    onScanMeterReading: () -> Unit = {}
 ) {
     var isDrawerExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -1129,12 +1135,31 @@ private fun PrimaryEnergyCard(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = if (uiState.isEditingReading) "Edit today's meter reading" else "Enter cumulative units from meter display",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = HomeColors.TextPrimary
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (uiState.isEditingReading) "Edit today's meter reading" else "Enter cumulative units from meter display",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = HomeColors.TextPrimary,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+
+                            IconButton(
+                                onClick = onScanMeterReading,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Scan meter reading",
+                                    tint = HomeColors.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
 
                         OutlinedTextField(
                             value = uiState.meterInputText,

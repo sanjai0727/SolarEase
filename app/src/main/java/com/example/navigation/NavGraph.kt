@@ -201,7 +201,8 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 onNavigateToBillHistory = { navController.navigate(Screen.BillHistory) },
                 onNavigateToSolarPanel = { navController.navigate(Screen.SolarPanel) },
                 onNavigateToProfile = { navController.navigateToTopLevel(Screen.Profile) },
-                onNavigateToRecommends = { navController.navigateToTopLevel(Screen.Recommends) }
+                onNavigateToRecommends = { navController.navigateToTopLevel(Screen.Recommends) },
+                onNavigateToMeterScanner = { navController.navigate(Screen.MeterScanner) }
             )
         }
 
@@ -347,6 +348,15 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                         popUpTo(Screen.Home) { inclusive = false }
                         launchSingleTop = true
                     }
+                }
+            )
+        }
+
+        composable<Screen.MeterScanner> {
+            com.example.feature.meterreading.ui.MeterScannerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onReadingConfirmed = {
+                    navController.popBackStack()
                 }
             )
         }

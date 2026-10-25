@@ -148,6 +148,7 @@ dependencies {
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.mlkit.objectdetection)
   implementation(libs.mlkit.imagelabeling)
+  implementation(libs.mlkit.text.recognition)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
