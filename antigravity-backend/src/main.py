@@ -17,6 +17,7 @@ from src.api.routes import router as api_router
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize Firebase Admin SDK
@@ -25,15 +26,25 @@ async def lifespan(app: FastAPI):
     except ValueError:
         try:
             from firebase_admin import credentials
-            # Uses GOOGLE_APPLICATION_CREDENTIALS explicitly from settings
-            cred = credentials.Certificate(settings.GOOGLE_APPLICATION_CREDENTIALS)
-            firebase_admin.initialize_app(cred)
-            logger.info("Firebase Admin SDK initialized successfully.")
+
+            if os.path.exists(settings.GOOGLE_APPLICATION_CREDENTIALS):
+                cred = credentials.Certificate(
+                    settings.GOOGLE_APPLICATION_CREDENTIALS
+                )
+                firebase_admin.initialize_app(cred)
+                logger.info("Firebase Admin SDK initialized with certificate file.")
+            else:
+                firebase_admin.initialize_app()
+                logger.info("Firebase Admin SDK initialized with Application Default Credentials.")
+
         except Exception as e:
-            logger.error("Failed to initialize Firebase Admin SDK. Please check configuration.")
+            logger.error(
+                "Failed to initialize Firebase Admin SDK. Please check configuration."
+            )
             raise e
+
     yield
-    # Cleanup on shutdown (if any)
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -42,11 +53,35 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
+    # Health and readiness checks
+    @app.get("/healthz")
+    @app.get("/health")
+    async def health_check():
+        return {
+            "status": "healthy",
+            "environment": settings.ENVIRONMENT,
+            "version": "1.0.0"
+        }
+
+    @app.get("/ready")
+    async def readiness_check():
+        from src.core.database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            return {"status": "ready", "database": "connected"}
+        except Exception as e:
+            return {"status": "degraded", "database": str(e)}
+        finally:
+            db.close()
+
     setup_middleware(app)
 
-    # Include root router
+    # Include API router
     app.include_router(api_router)
 
     return app
+
 
 app = create_app()

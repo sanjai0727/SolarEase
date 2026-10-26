@@ -144,16 +144,17 @@ fun OrderSummaryRoute(
 
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(text = "Customer Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(text = "Name", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = uiState.customerName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(text = uiState.username, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -165,15 +166,16 @@ fun OrderSummaryRoute(
 
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(text = "System: ${uiState.recommendedCapacityKW} kW ${uiState.systemType}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "Mount Type: ${uiState.mountType}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Divider(modifier = Modifier.padding(vertical = 16.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "Gross Total", style = MaterialTheme.typography.bodyMedium)
                     Text(text = currencyFormat.format(uiState.grossTotal), style = MaterialTheme.typography.bodyMedium)
@@ -185,7 +187,7 @@ fun OrderSummaryRoute(
                         Text(text = "-${currencyFormat.format(uiState.subsidyAmount)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                     }
                 }
-                Divider(modifier = Modifier.padding(vertical = 16.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "Total Paid via ${uiState.paymentMethod}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = currencyFormat.format(uiState.netPayable), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -205,7 +207,7 @@ fun OrderSummaryRoute(
         
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -231,13 +233,14 @@ fun OrderSummaryRoute(
             onClick = { showReceiptPopup = true },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 12.dp),
-            shape = MaterialTheme.shapes.extraLarge
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Text("View Order Details", style = MaterialTheme.typography.titleMedium)
+            Text("View Order Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         
+        Spacer(modifier = Modifier.height(12.dp))
+
         if (showReceiptPopup) {
             OrderReceiptPopup(
                 uiState = uiState,
@@ -252,17 +255,18 @@ fun OrderSummaryRoute(
             onClick = onNavigateNext,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 24.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
-            Text("Track Installation", style = MaterialTheme.typography.titleMedium)
+            Text("Track Installation", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -370,7 +374,7 @@ fun OrderReceiptPopup(
                         // Customer Details
                         Text(text = "Customer Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Name: ${uiState.customerName}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Name: ${uiState.username}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Mobile: ${uiState.mobileNumber}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Address: ${uiState.installationAddress}", style = MaterialTheme.typography.bodyMedium)
                         

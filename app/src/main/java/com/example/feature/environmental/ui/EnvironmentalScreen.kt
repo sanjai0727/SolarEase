@@ -9,7 +9,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -42,7 +44,7 @@ fun EnvironmentalRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Environmental Impact" else "Environmental Impact", style = MaterialTheme.typography.titleLarge)
                         Text("See how your solar system helps the planet", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -115,7 +117,7 @@ fun EmptyEnvironmentalState() {
 fun EnvironmentalContent(data: EnvironmentalDashboard) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { EnvironmentalOverviewCard(data.overview) }
@@ -136,7 +138,8 @@ fun EnvironmentalContent(data: EnvironmentalDashboard) {
 fun EnvironmentalOverviewCard(overview: EnvironmentalSummary) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)) // Light green
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -166,7 +169,7 @@ fun EnvironmentalOverviewCard(overview: EnvironmentalSummary) {
             Spacer(modifier = Modifier.height(16.dp))
             Surface(
                 color = Color(0xFFC8E6C9),
-                shape = MaterialTheme.shapes.medium,
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -204,8 +207,9 @@ fun LifetimeImpactSection(lifetime: LifetimeImpact) {
         Text("Lifetime Impact", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -219,7 +223,7 @@ fun LifetimeImpactSection(lifetime: LifetimeImpact) {
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                HorizontalDivider(color = Color(0xFFE2E8F0))
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -248,18 +252,19 @@ fun EnvironmentalComparisonSection(comparison: EnvironmentalComparison) {
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 ComparisonRow(icon = Icons.Default.Park, text = "${comparison.treesPlanted} Trees Planted")
-                Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE2E8F0))
                 ComparisonRow(icon = Icons.Default.DirectionsCar, text = "${comparison.carsRemoved} Cars Removed from Roads")
-                Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE2E8F0))
                 ComparisonRow(icon = Icons.Default.Factory, text = "${comparison.coalNotBurnedKg} kg Coal Not Burned")
-                Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE2E8F0))
                 ComparisonRow(icon = Icons.Default.LocalGasStation, text = "${comparison.petrolSavedLiters} Liters Petrol Saved")
-                Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE2E8F0))
                 ComparisonRow(icon = Icons.Default.Home, text = "${comparison.homesPowered} Homes Powered (1 year)")
             }
         }
@@ -284,8 +289,9 @@ fun ComparisonRow(icon: ImageVector, text: String) {
 fun MetricCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
@@ -307,8 +313,9 @@ fun MonthlyImpactSection(history: ImpactHistory) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Impact Over Time", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -389,9 +396,10 @@ fun SustainabilityGoalsSection(goals: List<EnvironmentalMilestone>) {
         goals.forEach { goal ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, if (goal.isCompleted) Color(0xFFC8E6C9) else Color(0xFFDDE4D5)),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (goal.isCompleted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = if (goal.isCompleted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -440,8 +448,9 @@ fun AchievementsSection(achievements: List<EnvironmentalAchievement>) {
         achievements.forEach { achievement ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -476,8 +485,9 @@ fun SmartInsightsSection(insights: List<EnvironmentalInsight>) {
         insights.forEach { insight ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -501,8 +511,9 @@ fun ImpactTimelineSection(timeline: ImpactTimeline) {
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFFDDE4D5)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 timeline.events.forEachIndexed { index, event ->
@@ -579,19 +590,31 @@ fun ImpactTimelineSection(timeline: ImpactTimeline) {
 fun ShareYourImpactSection() {
     Column {
         Text("Share Your Impact", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
-        Button(onClick = { }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        Button(
+            onClick = { },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Share Environmental Report")
         }
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        OutlinedButton(
+            onClick = { },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Download PDF")
         }
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        OutlinedButton(
+            onClick = { },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Generate Social Media Card")

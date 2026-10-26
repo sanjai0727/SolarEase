@@ -1,0 +1,170 @@
+package com.example.feature.home.ui.modules
+
+import kotlinx.serialization.Serializable
+import java.util.UUID
+
+@Serializable
+data class MeterCycleBaseline(
+    val cycleId: String,
+    val baselineDate: String, // e.g. "01 Sep 2026" or "01/09/2026"
+    val baselineReading: Double, // e.g. 12450.0
+    val previousBilledUnits: Double? = null, // Historical baseline only (e.g. 302.0)
+    val tariffCode: String = "LT-IA · Domestic",
+    val serviceConnectionNumber: String? = null
+)
+
+@Serializable
+data class MeterReadingRecord(
+    val id: String = UUID.randomUUID().toString(),
+    val billingCycleId: String = "CYCLE-1",
+    val readingValue: Double,
+    val readingDate: String, // e.g. "2026-09-30" (YYYY-MM-DD for deterministic daily deduplication)
+    val displayDate: String = "", // e.g. "30 Sep 2026"
+    val timestamp: Long = System.currentTimeMillis(),
+    val dailyConsumption: Double? = null, // Today - previous reading
+    val unitsSinceBaseline: Double = 0.0, // Today - baseline reading
+    val notes: String? = null,
+    val isCorrected: Boolean = false,
+    val correctionReason: String? = null,
+    val correctedAt: Long? = null
+)
+
+@Serializable
+data class CurrentCycleEnergyMetrics(
+    val billingCycleId: String,
+    val baselineReading: Double,
+    val baselineDate: String,
+    val currentReading: Double,
+    val currentReadingDate: String,
+    val unitsConsumed: Double, // Current reading - baseline reading (e.g. 132 kWh)
+    val daysElapsed: Int,
+    val avgUnitsPerDay: Double,
+    val estimatedBill: Double, // Calculated from TNEBBillCalculator
+    val isTodayLogged: Boolean,
+    val todayReading: Double? = null,
+    val tariffCategory: String = "LT-IA · Domestic",
+    val billingPeriodDisplay: String = ""
+)
+
+enum class MeterGraphRange(val label: String) {
+    CURRENT("CURRENT"),
+    M2("2M"),
+    M4("4M"),
+    M6("6M")
+}
+
+@Serializable
+data class MeterGraphPoint(
+    val dateLabel: String, // e.g. "24 Aug", "30 Sep", "Dec", "Jan"
+    val readingValue: Double, // Y-axis: meter reading e.g. 42000, 42440
+    val unitsConsumed: Double = 0.0, // kWh consumed since baseline
+    val dailyUnits: Double? = null,
+    val isBaseline: Boolean = false,
+    val fullDate: String = "",
+    val subLabel: String = "", // e.g. "Last Bill", "Today", "Start", "End"
+    val hasReading: Boolean = true, // false if monthly timeline guide without recorded reading
+    val readingDateIso: String = ""
+)
+
+data class MeterProgressionWindow(
+    val range: MeterGraphRange,
+    val windowOffset: Int = 0,
+    val periodTitle: String,
+    val points: List<MeterGraphPoint>,
+    val latestReading: Double,
+    val hasOlder: Boolean,
+    val hasNewer: Boolean,
+    val isInsufficientData: Boolean = false
+)
+
+@Serializable
+data class DailyConsumptionPoint(
+    val dateIso: String, // e.g. "2026-09-26"
+    val displayDate: String, // e.g. "26 Sep"
+    val fullDate: String, // e.g. "26 Sep 2026"
+    val dailyKwh: Double, // e.g. 5.0
+    val cumulativeReading: Double // e.g. 12455.0
+)
+
+data class SurroundingBounds(
+    val lowerBound: Double,
+    val lowerBoundDate: String,
+    val upperBound: Double?,
+    val upperBoundDate: String?
+)
+
+sealed class MeterValidationResult {
+    data class Success(val reading: MeterReadingRecord) : MeterValidationResult()
+    open class Error(open val message: String) : MeterValidationResult() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Error) return false
+            return message == other.message
+        }
+        override fun hashCode(): Int = message.hashCode()
+    }
+    data class LowerThanPrevious(
+        val enteredReading: Double,
+        val previousReading: MeterReadingRecord,
+        override val message: String = "Meter reading cannot be lower than the previous recorded reading (${String.format(java.util.Locale.getDefault(), "%,.0f", previousReading.readingValue)} kWh)."
+    ) : Error(message)
+    data class DuplicateToday(val existingReading: MeterReadingRecord) : MeterValidationResult()
+}
+
+/**
+ * Day slot on the Sunday–Saturday weekly bar chart.
+ */
+@Serializable
+data class WeeklyDayBarData(
+    val dayOfWeekIndex: Int, // Calendar.SUNDAY (1) .. Calendar.SATURDAY (7)
+    val dayLabel: String, // "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+    val dateIso: String, // "YYYY-MM-DD"
+    val displayDate: String, // e.g. "11 Oct"
+    val fullDate: String = "", // e.g. "Sunday, 11 Oct 2026"
+    val reading: MeterReadingRecord? = null,
+    val cumulativeKwh: Double? = null,
+    val relativeKwh: Double? = null, // Consumption above weekly baseline
+    val intervalConsumption: Double? = null, // Consumption since previous valid reading
+    val intervalDays: Int? = null, // Days since previous valid reading
+    val previousReadingDate: String? = null,
+    val previousReadingValue: Double? = null,
+    val isBaselinePoint: Boolean = false, // True if this reading acts as baseline anchor
+    val isDecreasedReading: Boolean = false, // Lower than previous reading (flagged for review)
+    val formattedTime: String? = null // e.g. "8:30 AM"
+)
+
+/**
+ * Weekly window data for the Sunday–Saturday weekly graph.
+ */
+@Serializable
+data class WeeklyMeterGraphData(
+    val weekOffset: Int = 0, // 0 = current week, 1 = 1 week ago, etc.
+    val startDateIso: String = "", // Sunday ISO
+    val endDateIso: String = "", // Saturday ISO
+    val periodTitle: String = "", // e.g. "5 Oct – 11 Oct"
+    val weeklyBaselineReading: Double? = null,
+    val weeklyBaselineDate: String? = null,
+    val baselineDescription: String = "",
+    val days: List<WeeklyDayBarData> = emptyList(),
+    val latestReading: Double? = null,
+    val hasOlder: Boolean = false,
+    val hasNewer: Boolean = false, // False if weekOffset == 0
+    val hasAnyReadingsInWeek: Boolean = false
+)
+
+enum class ReadingDetailsFilter(val label: String, val description: String) {
+    D7("7D", "Latest 7 saved readings"),
+    D30("30D", "Latest 30 saved readings"),
+    ALL("All", "Complete reading history")
+}
+
+data class ReadingHistoryItem(
+    val reading: MeterReadingRecord,
+    val previousReading: MeterReadingRecord? = null,
+    val consumptionSincePrevious: Double? = null,
+    val intervalDays: Int? = null,
+    val isBaseline: Boolean = false,
+    val isDecreased: Boolean = false,
+    val formattedTime: String = "",
+    val dateDisplay: String = ""
+)

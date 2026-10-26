@@ -18,19 +18,17 @@ class ConsumerNumberVisualTransformation : VisualTransformation {
         
         val offsetMapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
-                if (offset <= 1) return offset
-                if (offset <= 4) return offset + 1
-                if (offset <= 7) return offset + 2
-                if (offset <= 12) return offset + 3
-                return 15
+                if (offset <= 1) return offset.coerceAtMost(output.length)
+                if (offset <= 4) return (offset + 1).coerceAtMost(output.length)
+                if (offset <= 7) return (offset + 2).coerceAtMost(output.length)
+                return (offset + 3).coerceAtMost(output.length)
             }
 
             override fun transformedToOriginal(offset: Int): Int {
-                if (offset <= 2) return offset
-                if (offset <= 6) return offset - 1
-                if (offset <= 10) return offset - 2
-                if (offset <= 15) return offset - 3
-                return 12
+                if (offset <= 2) return offset.coerceAtMost(trimmed.length)
+                if (offset <= 6) return (offset - 1).coerceAtMost(trimmed.length)
+                if (offset <= 10) return (offset - 2).coerceAtMost(trimmed.length)
+                return (offset - 3).coerceAtMost(trimmed.length)
             }
         }
         

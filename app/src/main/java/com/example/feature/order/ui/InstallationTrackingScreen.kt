@@ -103,7 +103,7 @@ fun InstallationTrackingRoute(
             Spacer(modifier = Modifier.height(16.dp))
         
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                val userName = com.example.core.session.UserSession.currentUser?.customerName
+                val userName = com.example.core.session.UserSession.currentUser?.username
                 Text(
                     text = if (userName != null) "$userName's Installation" else "Installation Tracking",
                     style = MaterialTheme.typography.headlineMedium,
@@ -125,8 +125,9 @@ fun InstallationTrackingRoute(
         
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
@@ -137,7 +138,7 @@ fun InstallationTrackingRoute(
                     Spacer(modifier = Modifier.height(12.dp))
                     LinearProgressIndicator(
                         progress = { progressPercentage },
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.extraLarge),
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                     )
@@ -146,9 +147,10 @@ fun InstallationTrackingRoute(
             
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)) {
                     milestones.forEachIndexed { index, milestone ->
@@ -261,7 +263,7 @@ fun InstallationTrackingRoute(
             if (completedCount == milestones.size && milestones.isNotEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
@@ -308,8 +310,13 @@ fun InstallationTrackingRoute(
                             onNavigateNext()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = MaterialTheme.shapes.large
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
                     Text(
                         text = "Proceed to Dashboard",
@@ -318,7 +325,7 @@ fun InstallationTrackingRoute(
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
         

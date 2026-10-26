@@ -9,7 +9,11 @@ class User(Base, UUIDMixin, TimestampMixin):
     mobile_number: Mapped[str | None] = mapped_column(String(10), unique=True, index=True, nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     firebase_uid: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
-    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    username: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    house_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(nullable=True)
+    longitude: Mapped[float | None] = mapped_column(nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 class OTPVerification(Base, UUIDMixin, TimestampMixin):
@@ -20,3 +24,11 @@ class OTPVerification(Base, UUIDMixin, TimestampMixin):
     expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
     attempt_count: Mapped[int] = mapped_column(default=0)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+class RevokedToken(Base, UUIDMixin, TimestampMixin):
+    __tablename__ = "revoked_tokens"
+
+    jti: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    token_type: Mapped[str] = mapped_column(String(20), default="refresh")

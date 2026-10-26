@@ -1,116 +1,133 @@
 package com.example.feature.assessment.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.Factory
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ui.components.StepProgress
-import com.example.ui.components.SelectableCard
+import androidx.compose.ui.unit.sp
+import com.example.R
+import com.example.ui.theme.*
 
 @Composable
 fun CustomerCategoryRoute(
-    onNavigateNext: (String) -> Unit
+    vendorViewModel: SolarVendorViewModel,
+    onNavigateNext: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
-    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
-    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val state by vendorViewModel.state.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        StepProgress(currentStep = 5, totalSteps = 11)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Box(
+    CustomerCategoryScreen(
+        selectedCategory = state.propertyType,
+        onSelectCategory = { vendorViewModel.selectPropertyType(it) },
+        onNavigateNext = onNavigateNext,
+        onNavigateBack = onNavigateBack
+    )
+}
+
+@Composable
+fun CustomerCategoryScreen(
+    selectedCategory: String,
+    onSelectCategory: (String) -> Unit,
+    onNavigateNext: () -> Unit,
+    onNavigateBack: () -> Unit
+) {
+    Scaffold(
+        containerColor = StitchSurface,
+        topBar = {
+            Column {
+                StitchVendorTopBar(
+                    title = "Location Verification",
+                    onNavigateBack = onNavigateBack
+                )
+                StitchStepProgressBar(
+                    currentStep = 2,
+                    totalSteps = 8,
+                    stepTitle = "Location Type",
+                    category = "25% Complete"
+                )
+            }
+        },
+        bottomBar = {
+            Surface(
+                color = StitchSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                StitchPrimaryButton(
+                    text = "Continue",
+                    onClick = onNavigateNext
+                )
+            }
+        }
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Home,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
+            // Visual Hero Illustration from Stitch
+            StitchHeroIllustration(
+                drawableRes = R.drawable.ic_stitch_property_type,
+                contentDescription = "Property Type Illustration"
             )
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            // Header info
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Where will you install solar?",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StitchOnSurface,
+                    letterSpacing = (-0.3).sp
+                )
+                Text(
+                    text = "Choose the property where the solar system will be installed.",
+                    fontSize = 15.sp,
+                    color = StitchSecondary,
+                    lineHeight = 22.sp
+                )
+            }
 
-        Text(
-            text = "Customer Category",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Text(
-            text = "Select your property type.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-
-        val categories = listOf(
-            Triple("Residential", Icons.Default.Home, "Residential property"), 
-            Triple("Commercial", Icons.Default.Business, "Office or retail space"), 
-            Triple("Industrial", Icons.Default.Factory, "Factory or warehouse")
-        )
-        
-        categories.forEach { (category, icon, description) ->
-            SelectableCard(
-                selected = selectedCategory == category,
-                onClick = {
-                    selectedCategory = category
-                    errorMessage = null
-                },
-                title = category,
-                description = description,
-                icon = icon
+            // Exactly 2 options matching Stitch design
+            // 1. Home
+            StitchSelectableCard(
+                selected = selectedCategory == "Home" || selectedCategory == "Residential",
+                title = "Home",
+                subtitle = "Home — For residential houses, villas, or flats",
+                icon = Icons.Default.Home,
+                onClick = { onSelectCategory("Home") }
             )
-        }
-        
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 16.dp)
+
+            // 2. Business
+            StitchSelectableCard(
+                selected = selectedCategory == "Business" || selectedCategory == "Commercial",
+                title = "Business",
+                subtitle = "Business — For shops, offices, clinics and commercial spaces",
+                icon = Icons.Default.Business,
+                onClick = { onSelectCategory("Business") }
             )
-        }
 
-        Spacer(modifier = Modifier.weight(1f))
+            // Why we ask this?
+            StitchInfoCard(
+                icon = Icons.Default.Lightbulb,
+                title = "Why we ask this?",
+                description = "Tariff rates, sanction loads, and government subsidies (like PM Surya Ghar) depend on whether your setup is residential or commercial."
+            )
 
-        Button(
-            onClick = { selectedCategory?.let { onNavigateNext(it) } },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 8.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            enabled = selectedCategory != null,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-        ) {
-            Text("Continue", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
+

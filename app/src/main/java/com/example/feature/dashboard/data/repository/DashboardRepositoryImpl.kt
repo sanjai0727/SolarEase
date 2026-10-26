@@ -14,7 +14,7 @@ class DashboardRepositoryImpl : DashboardRepository {
         delay(1500)
         
         val mockData = CustomerDashboard(
-            customerName = com.example.core.session.UserSession.currentUser?.customerName ?: "Valued Customer",
+            username = com.example.core.session.UserSession.currentUser?.username ?: "Valued Customer",
             systemStatus = "Online",
             capacity = 2.5,
             systemType = "On Grid",

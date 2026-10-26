@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64.0"
+    android:viewportHeight="64.0">
+    <path android:pathData="M12 30L32 14L52 30V50C52 51.1046 51.1046 52 50 52H14C12.8954 52 12 51.1046 12 50V30Z" android:fillColor="#dae2fd" android:strokeColor="#005d42" android:strokeWidth="2.5" android:strokeLineJoin="round" />
+    <path android:pathData="M22 22.5L32 14.5L42 22.5" android:strokeColor="#005d42" android:strokeWidth="2.5" android:strokeLineCap="round" />
+    <path android:pathData="M 21.5,26.0 h 21.0 a 1.5,1.5 0 0,1 1.5,1.5 v 9.0 a 1.5,1.5 0 0,1 -1.5,1.5 h -21.0 a 1.5,1.5 0 0,1 -1.5,-1.5 v -9.0 a 1.5,1.5 0 0,1 1.5,-1.5 Z" android:fillColor="#047857" android:strokeColor="#97f5cc" android:strokeWidth="1.5" />
+    <path android:pathData="M 32.0,26.0 L 32.0,38.0" android:strokeColor="#97f5cc" android:strokeWidth="1.5" />
+    <path android:pathData="M 20.0,32.0 L 44.0,32.0" android:strokeColor="#97f5cc" android:strokeWidth="1.5" />
+    <path android:pathData="M 38.0,36.0 h 14.0 a 2.0,2.0 0 0,1 2.0,2.0 v 16.0 a 2.0,2.0 0 0,1 -2.0,2.0 h -14.0 a 2.0,2.0 0 0,1 -2.0,-2.0 v -16.0 a 2.0,2.0 0 0,1 2.0,-2.0 Z" android:fillColor="#ffffff" android:strokeColor="#005683" android:strokeWidth="2" />
+    <path android:pathData="M41 42H49" android:strokeColor="#005683" android:strokeWidth="2" android:strokeLineCap="round" />
+    <path android:pathData="M41 46H49" android:strokeColor="#005683" android:strokeWidth="2" android:strokeLineCap="round" />
+    <path android:pathData="M41 50H46" android:strokeColor="#005683" android:strokeWidth="2" android:strokeLineCap="round" />
+    <path android:pathData="M 37.5,42.0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0 Z" android:fillColor="#005d42" />
+    <path android:pathData="M 37.5,46.0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0 Z" android:fillColor="#005d42" />
+    <path android:pathData="M 37.5,50.0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0 Z" android:fillColor="#005d42" />
+</vector>

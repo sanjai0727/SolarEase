@@ -1,30 +1,66 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from src.core.database import get_db
+from src.core.config import settings
 from src.core.security import decode_token
 from src.modules.auth.repository import AuthRepository
 from src.modules.auth.models import User
 import uuid
-import firebase_admin.auth
+from firebase_admin import auth as firebase_auth
+import logging
 from typing import Any, Optional
-from src.modules.auth.schemas import FirebaseTokenRequest
+
 security = HTTPBearer()
 firebase_security = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
+
+
+def verify_app_check(request: Request) -> Optional[dict]:
+    """
+    Verifies Firebase App Check token on incoming requests.
+    Enforces check in production; warns or skips in development/testing.
+    """
+    app_check_token = request.headers.get("X-Firebase-AppCheck")
+    if not app_check_token:
+        if getattr(settings, "ENFORCE_APP_CHECK", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Firebase App Check token missing.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return None
+
+    try:
+        from firebase_admin import app_check
+        claims = app_check.verify_token(app_check_token)
+        return claims
+    except Exception as e:
+        if getattr(settings, "ENFORCE_APP_CHECK", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Firebase App Check verification failed: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        logger.warning(f"Non-production App Check token failed: {e}")
+        return None
+
 
 def get_verified_firebase_token(
-    request_body: Optional[FirebaseTokenRequest] = None,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(firebase_security)
 ) -> dict[str, Any]:
     """
     Verifies a Firebase ID token sent in the Authorization header.
     Returns the decoded Firebase claims if valid.
     """
-    token = None
-    if credentials:
-        token = credentials.credentials
-    elif request_body:
-        token = request_body.firebase_id_token
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Firebase authentication token missing.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials.strip()
 
     if not token:
         raise HTTPException(
@@ -34,32 +70,34 @@ def get_verified_firebase_token(
         )
 
     try:
-        decoded_token = firebase_admin.auth.verify_id_token(token)
-        return decoded_token
-    except Exception as e:
-        import logging
-        logger = logging.getLogger("firebase_diag")
-        app = firebase_admin.get_app()
-        logger.error(f"Firebase token verification failed. Exception: {e.__class__.__name__}, Message: {str(e)}")
-        logger.error(f"Firebase Admin app name: {app.name}")
-        logger.error(f"Firebase Project ID: {app.project_id}")
-        
-        # Try to extract unverified claims just for logging issuer/audience
-        try:
-            from jose import jwt
-            unverified_claims = jwt.get_unverified_claims(token)
-            logger.error(f"Token Issuer (iss): {unverified_claims.get('iss')}")
-            logger.error(f"Token Audience (aud): {unverified_claims.get('aud')}")
-        except Exception as jwt_e:
-            logger.error(f"Could not extract unverified claims: {jwt_e}")
-
-        # Catching generic Exception from firebase_admin.auth to prevent
-        # exposing internal Firebase errors or stack traces to the client.
+        return firebase_auth.verify_id_token(token, check_revoked=True)
+    except firebase_auth.CertificateFetchError:
+        logger.error("Firebase public-key retrieval failed during ID token verification.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase authentication is temporarily unavailable.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except (
+        firebase_auth.ExpiredIdTokenError,
+        firebase_auth.RevokedIdTokenError,
+        firebase_auth.UserDisabledError,
+        firebase_auth.InvalidIdTokenError,
+    ) as error:
+        logger.info("Firebase ID token rejected: %s", error.__class__.__name__)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired Firebase authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    except Exception as error:
+        logger.error("Firebase ID token verification failed: %s", error.__class__.__name__)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Firebase authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -93,6 +131,14 @@ def get_current_user(
         )
 
     repository = AuthRepository(db)
+    jti = payload.get("jti")
+    if jti and repository.is_token_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user = repository.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
@@ -101,4 +147,8 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    try:
+        setattr(user, "_token_payload", payload)
+    except (AttributeError, TypeError):
+        pass
     return user

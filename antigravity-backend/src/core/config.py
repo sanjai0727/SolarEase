@@ -4,10 +4,11 @@ import json
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SolarEase AntiGravity Backend"
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    ENVIRONMENT: str = "production"
+    DEBUG: bool = False
     DATABASE_URL: str
     CORS_ORIGINS: str = '["*"]'
+    ENFORCE_APP_CHECK: bool = False
 
 
     # JWT Config
@@ -16,6 +17,10 @@ class Settings(BaseSettings):
 
     # Firebase
     GOOGLE_APPLICATION_CREDENTIALS: str = "firebase-adminsdk.json"
+
+    # Gemini
+    GEMINI_API_KEY: str = ""
+    # Solar Lens Upload uses Gemini 3.8 Flash via Vertex AI (Application Default Credentials)
 
     @property
     def get_cors_origins(self) -> list[str]:

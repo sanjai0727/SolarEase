@@ -11,7 +11,7 @@ data class NotificationItem(
 )
 
 data class CustomerDashboard(
-    val customerName: String,
+    val username: String,
     val systemStatus: String, // "Online", "Offline", "Maintenance", "Fault"
     val capacity: Double,
     val systemType: String,

@@ -46,7 +46,7 @@ fun FinancialRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Financials" else "Financial", style = MaterialTheme.typography.titleLarge)
                         Text("Track your investment and savings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -121,7 +121,7 @@ fun FinancialContent(data: FinancialDashboard) {
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -178,7 +178,7 @@ fun FinancialContent(data: FinancialDashboard) {
 fun FinancialOverviewCard(summary: InvestmentSummary, format: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -198,7 +198,7 @@ fun FinancialOverviewCard(summary: InvestmentSummary, format: NumberFormat) {
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -224,7 +224,7 @@ fun SavingsMilestoneCard(milestones: MilestonesData, format: NumberFormat) {
     if (milestones.achieved != null) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
@@ -248,7 +248,7 @@ fun SavingsMilestoneCard(milestones: MilestonesData, format: NumberFormat) {
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -287,8 +287,10 @@ fun TodaySavingsSection(savings: SavingsSummary, format: NumberFormat) {
 fun MetricCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
@@ -303,8 +305,10 @@ fun MetricCard(title: String, value: String, icon: ImageVector, modifier: Modifi
 fun BillComparisonSection(comparison: BillComparison, format: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Electricity Bill Comparison", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -325,7 +329,7 @@ fun BillComparisonSection(comparison: BillComparison, format: NumberFormat) {
             }
             
             Spacer(modifier = Modifier.height(20.dp))
-            Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -342,7 +346,7 @@ fun BillComparisonSection(comparison: BillComparison, format: NumberFormat) {
             Spacer(modifier = Modifier.height(16.dp))
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.medium,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -362,8 +366,10 @@ fun BillComparisonSection(comparison: BillComparison, format: NumberFormat) {
 fun RoiSection(roi: RoiSummary, format: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Return on Investment (ROI)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -413,7 +419,7 @@ fun RoiSection(roi: RoiSummary, format: NumberFormat) {
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -437,8 +443,10 @@ fun SavingsHistorySection(history: SavingsHistory) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Monthly Savings History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -561,8 +569,10 @@ fun FinancialInsightsSection(insights: List<FinancialInsight>) {
 fun TwentyFiveYearSavingsSection(savings: Projectedsavings, format: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("25-Year Projected Savings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -573,7 +583,7 @@ fun TwentyFiveYearSavingsSection(savings: Projectedsavings, format: NumberFormat
             Text(format.format(savings.netProfit), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -593,8 +603,10 @@ fun TwentyFiveYearSavingsSection(savings: Projectedsavings, format: NumberFormat
 fun IncentivesSection(subsidy: SubsidyInformation, format: NumberFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -622,7 +634,11 @@ fun IncentivesSection(subsidy: SubsidyInformation, format: NumberFormat) {
             } else {
                 Text("No active subsidy applications.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(onClick = { /* Apply */ }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { /* Apply */ },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
                     Text("Explore Subsidies")
                 }
             }
@@ -637,8 +653,10 @@ fun SmartRecommendationsSection(recommendations: List<FinancialInsight>) {
         recommendations.forEach { recommendation ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -660,18 +678,27 @@ fun ReportsSection() {
     Column {
         Text("Reports", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f).height(44.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
                 Text("Monthly Report")
             }
-            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f).height(44.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
                 Text("Annual Report")
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = { }, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = { },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+        ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Download Full PDF")
+            Text("Download Full PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
     }
 }

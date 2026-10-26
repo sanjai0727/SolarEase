@@ -22,7 +22,7 @@ import com.example.ui.components.StepProgress
 fun AuthOtpRoute(
     fullName: String,
     phoneNumber: String,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToHome: () -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
@@ -32,7 +32,7 @@ fun AuthOtpRoute(
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
             viewModel.resetState()
-            onNavigateToProfile()
+            onNavigateToHome()
         }
     }
 
@@ -40,7 +40,7 @@ fun AuthOtpRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         StepProgress(currentStep = 2, totalSteps = 11)
         
@@ -49,7 +49,7 @@ fun AuthOtpRoute(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -83,7 +83,7 @@ fun AuthOtpRoute(
             onValueChange = { otp = it },
             label = { Text("Enter OTP") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = MaterialTheme.shapes.medium,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth(),
             isError = uiState is AuthUiState.Error,
             supportingText = {
@@ -99,29 +99,31 @@ fun AuthOtpRoute(
             onClick = { viewModel.verifyOtp(otp, fullName, phoneNumber) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+                .height(52.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
             enabled = uiState !is AuthUiState.Loading && otp.isNotBlank()
         ) {
             if (uiState is AuthUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             } else {
-                Text("Verify", style = MaterialTheme.typography.titleMedium)
+                Text("Verify", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
         }
         
+        Spacer(modifier = Modifier.height(8.dp))
+
         TextButton(
             onClick = onNavigateBack, 
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 8.dp)
+                .padding(bottom = 12.dp)
         ) {
-            Text("Change Phone Number", style = MaterialTheme.typography.titleSmall)
+            Text("Change Phone Number", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

@@ -43,7 +43,7 @@ fun AuthPhoneRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         StepProgress(currentStep = 1, totalSteps = 11)
         
@@ -52,7 +52,7 @@ fun AuthPhoneRoute(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -86,7 +86,7 @@ fun AuthPhoneRoute(
             onValueChange = { fullName = it },
             label = { Text("Full Name *") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-            shape = MaterialTheme.shapes.medium,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth(),
             isError = fullName.isNotEmpty() && !isFullNameValid,
             supportingText = {
@@ -106,7 +106,7 @@ fun AuthPhoneRoute(
             },
             label = { Text("Mobile Number *") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = MaterialTheme.shapes.medium,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth(),
             isError = uiState is AuthUiState.Error || (phoneNumber.isNotEmpty() && !isPhoneNumberValid),
             supportingText = {
@@ -130,21 +130,21 @@ fun AuthPhoneRoute(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 8.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+                .height(52.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
             enabled = uiState !is AuthUiState.Loading && isFullNameValid && isPhoneNumberValid
         ) {
             if (uiState is AuthUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             } else {
-                Text("Get OTP", style = MaterialTheme.typography.titleMedium)
+                Text("Get OTP", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }

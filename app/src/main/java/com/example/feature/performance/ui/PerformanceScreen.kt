@@ -43,7 +43,7 @@ fun PerformanceRoute(
             TopAppBar(
                 title = { 
                     Column {
-                        val userName = com.example.core.session.UserSession.currentUser?.customerName
+                        val userName = com.example.core.session.UserSession.currentUser?.username
                         Text(if (userName != null) "$userName's Performance" else "Performance", style = MaterialTheme.typography.titleLarge)
                         Text("Monitor your solar energy production", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -115,7 +115,7 @@ fun PerformanceContent(data: PerformanceDashboard) {
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -180,7 +180,7 @@ fun PerformanceContent(data: PerformanceDashboard) {
 fun LiveEnergyCard(liveData: LiveGeneration) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -203,7 +203,7 @@ fun LiveEnergyCard(liveData: LiveGeneration) {
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -269,8 +269,10 @@ fun GenerationChartsSection(history: GenerationHistory) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Generation Charts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -345,8 +347,10 @@ fun SimpleBarChart(data: List<ChartDataPoint>, color: Color) {
 fun EnergyFlowSection(flow: EnergyFlow) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Energy Flow", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -393,8 +397,9 @@ fun ExpandableDataSection(
     
     Card(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         onClick = { expanded = !expanded }
     ) {
@@ -415,7 +420,7 @@ fun ExpandableDataSection(
             
             if (expanded) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
                 Spacer(modifier = Modifier.height(16.dp))
                 content()
             }
@@ -498,21 +503,30 @@ fun ReportsSection() {
     Column {
         Text("Reports", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f).height(44.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
                 Text("Daily")
             }
-            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f).height(44.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
                 Text("Monthly")
             }
-            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f).height(44.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
                 Text("Annual")
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = { }, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = { },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+        ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Export Full Report (PDF)")
+            Text("Export Full Report (PDF)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
     }
 }
