@@ -60,7 +60,6 @@ fun SystemTypeScreen(
                 color = StitchSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 StitchPrimaryButton(
@@ -134,6 +133,7 @@ fun SystemTypeScreen(
                 title = "Need help deciding?",
                 description = "Most homes in Tamil Nadu choose On-Grid because it is the most affordable and qualifies for full DBT subsidies."
             )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

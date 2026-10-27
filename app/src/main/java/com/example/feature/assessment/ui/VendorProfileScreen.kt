@@ -65,7 +65,6 @@ fun VendorProfileScreen(
                 color = StitchSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -605,6 +604,7 @@ fun VendorProfileScreen(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

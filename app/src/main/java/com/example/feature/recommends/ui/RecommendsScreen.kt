@@ -76,7 +76,7 @@ fun RecommendsScreen(
     onNavigateToSolarVendor: () -> Unit = {}
 ) {
     Scaffold(
-        containerColor = Color(0xFFF8FAFC),
+        containerColor = StitchSurface,
         topBar = {
             RecommendsTopBar(
                 userAddress = uiState.userAddress,
@@ -108,8 +108,8 @@ fun RecommendsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. Hero Header Section with Eco Illustration
             RecommendsHeroHeader()
@@ -148,12 +148,7 @@ fun RecommendsScreen(
                 onMantraClick = onMantraClick
             )
 
-            // 6. Solar Vendor / Solar Potential Entry Card
-            SolarVendorCard(
-                onExploreSolar = onNavigateToSolarVendor
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -168,58 +163,56 @@ private fun RecommendsTopBar(
     onProfileClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding(),
-        color = Color(0xFFF8FAFC).copy(alpha = 0.95f),
-        border = BorderStroke(0.5.dp, Color(0xFFE2E8F0))
+        modifier = Modifier.fillMaxWidth(),
+        color = StitchSurface.copy(alpha = 0.95f),
+        border = BorderStroke(1.dp, StitchOutline)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF047857).copy(alpha = 0.12f)),
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(StitchPrimary),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.SolarPower,
                         contentDescription = "SolarEase",
-                        tint = Color(0xFF047857),
+                        tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 Column {
                     Text(
                         text = "SolarEase",
-                        fontSize = 16.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A),
-                        letterSpacing = (-0.2).sp
+                        color = StitchOnSurface,
+                        letterSpacing = (-0.3).sp
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = Color(0xFF047857),
+                            tint = StitchPrimary,
                             modifier = Modifier.size(12.dp)
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = userAddress,
                             fontSize = 11.sp,
-                            color = Color(0xFF64748B),
+                            color = StitchSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -229,9 +222,9 @@ private fun RecommendsTopBar(
 
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF047857))
+                    .background(StitchPrimary)
                     .clickable { onProfileClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -239,7 +232,7 @@ private fun RecommendsTopBar(
                     imageVector = Icons.Default.Person,
                     contentDescription = "Profile",
                     tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

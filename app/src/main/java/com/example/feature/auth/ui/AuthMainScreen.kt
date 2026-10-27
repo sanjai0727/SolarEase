@@ -4,38 +4,35 @@ import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
@@ -45,16 +42,14 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
-import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.R
-import com.example.ui.components.StepProgress
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
-
 
 enum class AuthMode {
     SIGN_UP, SIGN_IN
@@ -74,98 +69,76 @@ fun AuthMainRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     var authMode by rememberSaveable { mutableStateOf(AuthMode.SIGN_UP) }
-    var username by rememberSaveable { mutableStateOf("") }
     var activeAuthAction by rememberSaveable { mutableStateOf(ActiveAuthAction.NONE) }
-
-    var usernameError by rememberSaveable { mutableStateOf<String?>(null) }
-
-    val usernameRegex = "^(?=.*[a-zA-Z])[a-zA-Z0-9_]{3,30}$".toRegex()
-    val isUsernameValid = usernameError == null
 
     val submitAuth: () -> Unit = {
         if (uiState !is AuthUiState.Loading) {
-            val sanitized = username.filterNot { it.isWhitespace() }
-            username = sanitized
-            var isValid = true
-            if (authMode == AuthMode.SIGN_UP) {
-                if (!usernameRegex.matches(sanitized)) {
-                    usernameError = "Username must be 3–30 characters and can contain letters, numbers, and underscores."
-                    isValid = false
-                } else {
-                    usernameError = null
-                }
-            }
-            if (isValid) {
-                Log.d("AuthFlow", "Username validation passed")
-                Log.d("AuthFlow", "Google authentication started")
-                activeAuthAction = ActiveAuthAction.GOOGLE
-                val activity = context as? Activity
-                if (activity != null) {
-                    coroutineScope.launch {
-                        viewModel.setLoading()
-                        val credentialManager = CredentialManager.create(context)
+            Log.d("AuthFlow", "Google authentication started")
+            activeAuthAction = ActiveAuthAction.GOOGLE
+            val activity = context as? Activity
+            if (activity != null) {
+                coroutineScope.launch {
+                    viewModel.setLoading()
+                    val credentialManager = CredentialManager.create(context)
 
-                        val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
-                            .setFilterByAuthorizedAccounts(false)
-                            .setServerClientId(context.getString(R.string.default_web_client_id))
-                            .setAutoSelectEnabled(false)
-                            .build()
+                    val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(context.getString(R.string.default_web_client_id))
+                        .setAutoSelectEnabled(false)
+                        .build()
 
-                        val request: GetCredentialRequest = GetCredentialRequest.Builder()
-                            .addCredentialOption(googleIdOption)
-                            .build()
+                    val request: GetCredentialRequest = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
 
-                        Log.d("AuthFlowDiagnose", "AUTH STEP 1: Google credential request started")
-                        try {
-                            val result = credentialManager.getCredential(
-                                request = request,
-                                context = activity
-                            )
-                            Log.d("AuthFlowDiagnose", "AUTH STEP 2: Google credential received")
-                            val credential = result.credential
+                    Log.d("AuthFlowDiagnose", "AUTH STEP 1: Google credential request started")
+                    try {
+                        val result = credentialManager.getCredential(
+                            request = request,
+                            context = activity
+                        )
+                        Log.d("AuthFlowDiagnose", "AUTH STEP 2: Google credential received")
+                        val credential = result.credential
 
-                            if (credential is androidx.credentials.CustomCredential &&
-                                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                            ) {
-                                val googleIdTokenCredential =
-                                    GoogleIdTokenCredential.createFrom(credential.data)
-                                viewModel.signInWithGoogle(googleIdTokenCredential.idToken, sanitized, authMode == AuthMode.SIGN_UP)
-                            } else {
-                                Log.e("AuthMainRoute", "Unexpected credential type")
-                                viewModel.setError("Unexpected credential type")
-                            }
-                        } catch (e: GetCredentialCancellationException) {
-                            Log.d("AuthFlowDiagnose", "AUTH CANCELLED: User dismissed Google Sign-In prompt")
-                            viewModel.resetState()
-                        } catch (e: GetCredentialException) {
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR: GetCredentialException")
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
-                            Log.e(
-                                "AuthMainRoute",
-                                "GetCredentialException: type=${e::class.java.name}, message=${e.message}, errorMessage=${e.errorMessage}",
-                                e
-                            )
-                            viewModel.setError(
-                                e.errorMessage?.toString() ?: (e.message ?: "Google Sign-In failed")
-                            )
-                        } catch (e: CancellationException) {
-                            // Propagate standard coroutine cancellation (do not swallow)
-                            throw e
-                        } catch (e: Exception) {
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR: General Exception in Google Auth")
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
-                            Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
-                            Log.e(
-                                "AuthMainRoute",
-                                "Exception: type=${e::class.java.name}, message=${e.message}",
-                                e
-                            )
-                            viewModel.setError(e.message ?: "An error occurred")
+                        if (credential is androidx.credentials.CustomCredential &&
+                            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                        ) {
+                            val googleIdTokenCredential =
+                                GoogleIdTokenCredential.createFrom(credential.data)
+                            viewModel.signInWithGoogle(googleIdTokenCredential.idToken, null, authMode == AuthMode.SIGN_UP)
+                        } else {
+                            Log.e("AuthMainRoute", "Unexpected credential type")
+                            viewModel.setError("Unexpected credential type")
                         }
+                    } catch (e: GetCredentialCancellationException) {
+                        Log.d("AuthFlowDiagnose", "AUTH CANCELLED: User dismissed Google Sign-In prompt")
+                        viewModel.resetState()
+                    } catch (e: GetCredentialException) {
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR: GetCredentialException")
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
+                        Log.e(
+                            "AuthMainRoute",
+                            "GetCredentialException: type=${e::class.java.name}, message=${e.message}, errorMessage=${e.errorMessage}",
+                            e
+                        )
+                        viewModel.setError(
+                            e.errorMessage?.toString() ?: (e.message ?: "Google Sign-In failed")
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR: General Exception in Google Auth")
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR TYPE: ${e::class.java.name}")
+                        Log.e("AuthFlowDiagnose", "AUTH ERROR MESSAGE: ${e.message}")
+                        Log.e(
+                            "AuthMainRoute",
+                            "Exception: type=${e::class.java.name}, message=${e.message}",
+                            e
+                        )
+                        viewModel.setError(e.message ?: "An error occurred")
                     }
                 }
             }
@@ -183,258 +156,164 @@ fun AuthMainRoute(
         }
     }
 
-    val primaryGreen = MaterialTheme.colorScheme.primary
+    val primaryGreen = Color(0xFF386A20)
+    val backgroundCream = Color(0xFFFBFCF3)
+    val textPrimary = Color(0xFF191C18)
+    val textSecondary = Color(0xFF747873)
+    val outlineBorder = Color(0xFFDDE4D5)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  HERO SECTION â€” Clean abstract energy-tech background
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawAbstractEnergyBackground(size)
-            }
-
-            // SolarEase logo and app name â€” primary focal point
-            Column(
-                modifier = Modifier
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Logo container
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.92f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.WbSunny,
-                        contentDescription = "SolarEase Logo",
-                        tint = primaryGreen,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // App name
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(style = SpanStyle(
-                            color = Color(0xFF1A1A1A),
-                            fontWeight = FontWeight.Bold
-                        )) {
-                            append("Solar")
-                        }
-                        withStyle(style = SpanStyle(
-                            color = primaryGreen,
-                            fontWeight = FontWeight.Bold
-                        )) {
-                            append("Ease")
-                        }
-                    },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontSize = 22.sp
-                )
-            }
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  WAVE TRANSITION â€” smooth blend into white
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp)
-                .offset(y = (-32).dp)
-        ) {
-            val w = size.width
-            val h = size.height
-            val wavePath = Path().apply {
-                moveTo(0f, 0f)
-                cubicTo(w * 0.30f, h * 1.2f, w * 0.70f, h * -0.2f, w, h * 0.35f)
-                lineTo(w, h)
-                lineTo(0f, h)
-                close()
-            }
-            drawPath(wavePath, Color.White)
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  WELCOME TEXT â€” Dynamic based on auth mode
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    Scaffold(
+        containerColor = backgroundCream
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-28).dp)
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Animated heading
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // -------------------------------------------------------------
+            //  BRANDING - Compact Logo and Wordmark
+            // -------------------------------------------------------------
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White)
+                    .border(1.dp, outlineBorder, RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.WbSunny,
+                    contentDescription = "SolarEase Logo",
+                    tint = primaryGreen,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(
+                        style = SpanStyle(
+                            color = textPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ) {
+                        append("Solar")
+                    }
+                    withStyle(
+                        style = SpanStyle(
+                            color = primaryGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ) {
+                        append("Ease")
+                    }
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                fontSize = 24.sp,
+                letterSpacing = (-0.5).sp
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            // -------------------------------------------------------------
+            //  HEADINGS - Dynamic Animated Heading & Short Subtitle
+            // -------------------------------------------------------------
             AnimatedContent(
                 targetState = authMode,
                 transitionSpec = {
                     (fadeIn(tween(250, easing = EaseOutCubic)) +
-                        slideInHorizontally(tween(300, easing = EaseOutCubic)) { if (targetState == AuthMode.SIGN_IN) -40 else 40 })
+                            slideInHorizontally(tween(300, easing = EaseOutCubic)) { if (targetState == AuthMode.SIGN_IN) -40 else 40 })
                         .togetherWith(
                             fadeOut(tween(150, easing = EaseInCubic)) +
-                                slideOutHorizontally(tween(200, easing = EaseInCubic)) { if (targetState == AuthMode.SIGN_IN) 40 else -40 }
+                                    slideOutHorizontally(tween(200, easing = EaseInCubic)) { if (targetState == AuthMode.SIGN_IN) 40 else -40 }
                         )
                 },
                 label = "welcomeHeading"
             ) { mode ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = if (mode == AuthMode.SIGN_IN) "Welcome back to" else "Start your journey with",
+                        text = if (mode == AuthMode.SIGN_IN) "Welcome back" else "Create your account",
                         style = MaterialTheme.typography.headlineMedium,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "SolarEase",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = primaryGreen,
-                        fontSize = 34.sp,
+                        color = textPrimary,
                         textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // Green accent line
             Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .width(36.dp)
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(primaryGreen)
+
+            // Clean short supporting sentence
+            Text(
+                text = if (authMode == AuthMode.SIGN_IN)
+                    "Sign in to track your solar energy and manage your usage."
+                else
+                    "Understand your energy and take control of your usage.",
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                color = textSecondary,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp,
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Animated subtitle
-            AnimatedContent(
-                targetState = authMode,
-                transitionSpec = {
-                    fadeIn(tween(280, 80, easing = EaseOutCubic))
-                        .togetherWith(fadeOut(tween(120, easing = EaseInCubic)))
-                },
-                label = "welcomeSubtitle"
-            ) { mode ->
-                Text(
-                    text = if (mode == AuthMode.SIGN_IN)
-                        "Continue understanding your energy.\nTake control of your usage."
-                    else
-                        "Understand your energy.\nTake control of your usage.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color(0xFF8A8A8A),
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  AUTH SECTION
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-28).dp)
-                .padding(horizontal = 24.dp)
-        ) {
-            // â”€â”€ Sliding Segmented Tab Control â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -------------------------------------------------------------
+            //  SLIDING SEGMENTED CONTROL (Sign In / Create Account)
+            // -------------------------------------------------------------
             SlidingSegmentedControl(
                 selectedMode = authMode,
                 onModeChange = { authMode = it },
                 primaryGreen = primaryGreen
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // â”€â”€ Username Field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            OutlinedTextField(
-                value = username,
-                onValueChange = { newUsername ->
-                    val sanitized = newUsername.filterNot { it.isWhitespace() }
-                    username = sanitized
-                    if (usernameError != null && usernameRegex.matches(sanitized)) {
-                        usernameError = null
-                    }
-                },
-                label = { Text("Enter your username") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "User Icon",
-                        tint = primaryGreen
-                    )
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        keyboardController?.hide()
-                        submitAuth()
-                    }
-                ),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = primaryGreen,
-                    focusedLabelColor = primaryGreen,
-                    unfocusedBorderColor = Color(0xFFE0E0E0),
-                    unfocusedContainerColor = Color(0xFFFAFAFA),
-                    focusedContainerColor = Color.White
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                isError = usernameError != null,
-                supportingText = {
-                    if (usernameError != null) {
-                        Text(usernameError!!)
-                    }
-                }
-            )
-
+            // -------------------------------------------------------------
+            //  ERROR STATE (If any)
+            // -------------------------------------------------------------
             if (uiState is AuthUiState.Error) {
-                Text(
-                    text = (uiState as AuthUiState.Error).message,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = (uiState as AuthUiState.Error).message,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // â”€â”€ Google Auth Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -------------------------------------------------------------
+            //  PRIMARY GOOGLE AUTH BUTTON
+            // -------------------------------------------------------------
             Surface(
-                onClick = {
-                    keyboardController?.hide()
-                    submitAuth()
-                },
+                onClick = { submitAuth() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 color = primaryGreen,
-                shadowElevation = 4.dp,
+                shadowElevation = 2.dp,
                 enabled = uiState !is AuthUiState.Loading
             ) {
                 Row(
@@ -444,7 +323,7 @@ fun AuthMainRoute(
                 ) {
                     if (uiState is AuthUiState.Loading && activeAuthAction == ActiveAuthAction.GOOGLE) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(20.dp),
                             color = Color.White,
                             strokeWidth = 2.dp
                         )
@@ -453,7 +332,8 @@ fun AuthMainRoute(
                             text = if (authMode == AuthMode.SIGN_UP) "Signing up..." else "Signing in...",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 15.sp
                         )
                     } else {
                         Image(
@@ -466,7 +346,8 @@ fun AuthMainRoute(
                             text = if (authMode == AuthMode.SIGN_UP) "Sign up with Google" else "Continue with Google",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 15.sp
                         )
                     }
                 }
@@ -474,7 +355,9 @@ fun AuthMainRoute(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // â”€â”€ Toggle Sign In / Sign Up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -------------------------------------------------------------
+            //  SIMPLE ACCOUNT NAVIGATION LINK
+            // -------------------------------------------------------------
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -483,11 +366,13 @@ fun AuthMainRoute(
                 Text(
                     text = if (authMode == AuthMode.SIGN_UP) "Already have an account? " else "Don't have an account? ",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF8A8A8A)
+                    fontSize = 14.sp,
+                    color = textSecondary
                 )
                 Text(
                     text = if (authMode == AuthMode.SIGN_UP) "Sign in" else "Sign up",
                     style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = primaryGreen,
                     modifier = Modifier.clickable(
@@ -499,15 +384,14 @@ fun AuthMainRoute(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  SLIDING SEGMENTED CONTROL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// -----------------------------------------------------------------
+//  SLIDING SEGMENTED CONTROL (iOS-style Segmented Pill)
+// -----------------------------------------------------------------
 
 @Composable
 private fun SlidingSegmentedControl(
@@ -517,10 +401,9 @@ private fun SlidingSegmentedControl(
 ) {
     val tabIndex = if (selectedMode == AuthMode.SIGN_IN) 0 else 1
 
-    // Animate the indicator offset as a fraction: 0f = left, 1f = right
     val indicatorFraction by animateFloatAsState(
         targetValue = tabIndex.toFloat(),
-        animationSpec = tween(320, easing = EaseOutQuart),
+        animationSpec = tween(280, easing = EaseOutQuart),
         label = "tabSlide"
     )
 
@@ -528,12 +411,13 @@ private fun SlidingSegmentedControl(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF0F0F0))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFFEEF3EA))
+            .border(1.dp, Color(0xFFDDE4D5), RoundedCornerShape(14.dp))
             .padding(4.dp)
     ) {
         val containerWidth = maxWidth
-        val tabWidth = (containerWidth - 4.dp) / 2  // half minus spacing
+        val tabWidth = (containerWidth - 4.dp) / 2
 
         // Sliding indicator
         Box(
@@ -546,7 +430,7 @@ private fun SlidingSegmentedControl(
                 }
                 .width(tabWidth)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(11.dp))
                 .background(Color.White)
         )
 
@@ -567,13 +451,14 @@ private fun SlidingSegmentedControl(
                 contentAlignment = Alignment.Center
             ) {
                 val textColor by animateColorAsState(
-                    targetValue = if (selectedMode == AuthMode.SIGN_IN) primaryGreen else Color(0xFF999999),
-                    animationSpec = tween(250),
+                    targetValue = if (selectedMode == AuthMode.SIGN_IN) primaryGreen else Color(0xFF747873),
+                    animationSpec = tween(200),
                     label = "signInColor"
                 )
                 Text(
                     text = "Sign In",
                     style = MaterialTheme.typography.titleSmall,
+                    fontSize = 14.sp,
                     fontWeight = if (selectedMode == AuthMode.SIGN_IN) FontWeight.Bold else FontWeight.Medium,
                     color = textColor
                 )
@@ -591,13 +476,14 @@ private fun SlidingSegmentedControl(
                 contentAlignment = Alignment.Center
             ) {
                 val textColor by animateColorAsState(
-                    targetValue = if (selectedMode == AuthMode.SIGN_UP) primaryGreen else Color(0xFF999999),
-                    animationSpec = tween(250),
+                    targetValue = if (selectedMode == AuthMode.SIGN_UP) primaryGreen else Color(0xFF747873),
+                    animationSpec = tween(200),
                     label = "signUpColor"
                 )
                 Text(
                     text = "Create Account",
                     style = MaterialTheme.typography.titleSmall,
+                    fontSize = 14.sp,
                     fontWeight = if (selectedMode == AuthMode.SIGN_UP) FontWeight.Bold else FontWeight.Medium,
                     color = textColor
                 )
@@ -605,85 +491,3 @@ private fun SlidingSegmentedControl(
         }
     }
 }
-
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  ABSTRACT ENERGY BACKGROUND â€” Clean, premium, modern
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-private fun DrawScope.drawAbstractEnergyBackground(canvasSize: Size) {
-    val w = canvasSize.width
-    val h = canvasSize.height
-
-    // â”€â”€ Base gradient â€” soft green atmospheric tone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    drawRect(
-        brush = Brush.verticalGradient(
-            colorStops = arrayOf(
-                0.0f to Color(0xFFECF5ED),
-                0.4f to Color(0xFFD5EBDA),
-                0.75f to Color(0xFFBBDEC2),
-                1.0f to Color(0xFFA2D3AB)
-            ),
-            startY = 0f,
-            endY = h
-        ),
-        size = canvasSize
-    )
-
-    // â”€â”€ Subtle radial glow â€” warm center light â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    drawCircle(
-        brush = Brush.radialGradient(
-            colorStops = arrayOf(
-                0.0f to Color(0x14FFFFFF),
-                0.5f to Color(0x08FFFFFF),
-                1.0f to Color.Transparent
-            ),
-            center = Offset(w * 0.5f, h * 0.35f),
-            radius = w * 0.55f
-        ),
-        radius = w * 0.55f,
-        center = Offset(w * 0.5f, h * 0.35f)
-    )
-
-    // â”€â”€ Flowing shape â€” gentle curve, lower-left â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    val flowPath1 = Path().apply {
-        moveTo(0f, h * 0.65f)
-        cubicTo(w * 0.25f, h * 0.50f, w * 0.55f, h * 0.70f, w * 0.85f, h * 0.55f)
-        cubicTo(w * 0.95f, h * 0.50f, w, h * 0.52f, w, h * 0.55f)
-        lineTo(w, h)
-        lineTo(0f, h)
-        close()
-    }
-    drawPath(
-        flowPath1,
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF8FCC93).copy(alpha = 0.35f),
-                Color(0xFF6ABF6E).copy(alpha = 0.25f)
-            ),
-            startY = h * 0.50f,
-            endY = h
-        )
-    )
-
-    // â”€â”€ Flowing shape â€” softer curve, overlapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    val flowPath2 = Path().apply {
-        moveTo(0f, h * 0.78f)
-        cubicTo(w * 0.30f, h * 0.65f, w * 0.60f, h * 0.80f, w, h * 0.70f)
-        lineTo(w, h)
-        lineTo(0f, h)
-        close()
-    }
-    drawPath(
-        flowPath2,
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF6ABF6E).copy(alpha = 0.20f),
-                Color(0xFF4CAF50).copy(alpha = 0.15f)
-            ),
-            startY = h * 0.65f,
-            endY = h
-        )
-    )
-}
-

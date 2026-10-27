@@ -67,7 +67,6 @@ fun RecommendationScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -289,6 +288,7 @@ fun RecommendationScreen(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

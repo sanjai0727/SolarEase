@@ -44,8 +44,7 @@ fun PaymentOptionRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         StepProgress(currentStep = 11, totalSteps = 11)
         
@@ -54,7 +53,7 @@ fun PaymentOptionRoute(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -85,6 +84,7 @@ fun PaymentOptionRoute(
         if (uiState.error != null) {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -98,9 +98,10 @@ fun PaymentOptionRoute(
         uiState.estimateResult?.let { result ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -114,10 +115,10 @@ fun PaymentOptionRoute(
                             Text("-${currencyFormat.format(result.subsidyAmount)}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
                         }
                     }
-                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Net Payable", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(currencyFormat.format(result.netPayable), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(currencyFormat.format(result.netPayable), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -145,18 +146,18 @@ fun PaymentOptionRoute(
             onClick = { uiState.selectedPaymentMethod?.let { onNavigateNext(it) } },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 8.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+                .height(52.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             enabled = uiState.selectedPaymentMethod != null && uiState.error == null,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
             val buttonText = if (uiState.paymentAmount > 0) "Pay ${currencyFormat.format(uiState.paymentAmount)}" else "Pay"
-            Text(buttonText, style = MaterialTheme.typography.titleMedium)
+            Text(buttonText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }

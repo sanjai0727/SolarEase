@@ -82,7 +82,6 @@ fun AvailableAreaScreen(
                 color = StitchSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 StitchPrimaryButton(
@@ -357,6 +356,7 @@ fun AvailableAreaScreen(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

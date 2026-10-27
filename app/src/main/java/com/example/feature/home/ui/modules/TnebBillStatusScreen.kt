@@ -34,17 +34,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.feature.ebservice.util.formatConsumerNumber
 
 // Official SolarEase Design Palette
-private val SolarEaseEmerald = Color(0xFF1E7038)
-private val SolarEaseEmeraldDark = Color(0xFF145227)
-private val SolarEaseEmeraldContainer = Color(0xFFE8F5E9)
-private val SoftBackground = Color(0xFFF5F7FB)
-private val InfoBlueContainer = Color(0xFFE3F2FD)
-private val InfoBlueText = Color(0xFF1976D2)
-private val CardBorderColor = Color(0xFFE2E8F0)
-private val TextDark = Color(0xFF1E222D)
-private val TextMuted = Color(0xFF5D6778)
-private val ErrorContainer = Color(0xFFFFEBEE)
-private val ErrorText = Color(0xFFD32F2F)
+private val SolarEaseEmerald = Color(0xFF386A20)
+private val SolarEaseEmeraldDark = Color(0xFF2D5518)
+private val SolarEaseEmeraldContainer = Color(0xFFE5F2D9)
+private val SoftBackground = Color(0xFFFBFCF3)
+private val InfoBlueContainer = Color(0xFFEAF3FF)
+private val InfoBlueText = Color(0xFF18324B)
+private val CardBorderColor = Color(0xFFDDE4D5)
+private val TextDark = Color(0xFF191C18)
+private val TextMuted = Color(0xFF747873)
+private val ErrorContainer = Color(0xFFFFDAD6)
+private val ErrorText = Color(0xFFBA1A1A)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

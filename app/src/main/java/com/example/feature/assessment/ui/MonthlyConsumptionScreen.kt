@@ -78,7 +78,6 @@ fun MonthlyConsumptionScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -388,6 +387,7 @@ fun MonthlyConsumptionScreen(
                 title = "How is this used?",
                 description = "This helps us estimate the exact solar system capacity (kW) needed to reduce your bi-monthly bill to zero."
             )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

@@ -99,7 +99,7 @@ fun SystemDetailsContent(details: SolarSystemDetails) {
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Section 1: System Overview
@@ -192,7 +192,7 @@ fun SystemDetailsContent(details: SolarSystemDetails) {
 fun OverviewCard(details: SolarSystemDetails, dateFormat: SimpleDateFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -223,7 +223,7 @@ fun OverviewCard(details: SolarSystemDetails, dateFormat: SimpleDateFormat) {
                 InfoItem("Health", "${details.plantHealth}%", MaterialTheme.colorScheme.onPrimary)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f), modifier = Modifier.size(18.dp).padding(top = 2.dp))
@@ -246,7 +246,7 @@ fun InfoItem(label: String, value: String, color: androidx.compose.ui.graphics.C
 fun LiveStatusCard(liveStatus: LiveStatus?, timeFormat: SimpleDateFormat) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -328,8 +328,9 @@ fun ExpandableSection(
     
     Card(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         onClick = { expanded = !expanded }
     ) {
@@ -358,7 +359,7 @@ fun ExpandableSection(
             
             if (expanded) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
                 Spacer(modifier = Modifier.height(16.dp))
                 content()
             }
@@ -519,7 +520,7 @@ fun DocumentsContent(docs: List<DocumentShortcut>) {
                 Icon(Icons.Default.Download, contentDescription = "Download", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (doc != docs.last()) {
-                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
             }
         }
     }

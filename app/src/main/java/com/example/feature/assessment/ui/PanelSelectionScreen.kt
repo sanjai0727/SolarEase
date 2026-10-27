@@ -66,7 +66,6 @@ fun PanelSelectionScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -271,6 +270,7 @@ fun PanelSelectionScreen(
                 title = "Why does panel type matter?",
                 description = "Government subsidies under PM Surya Ghar require DCR (Made in India) cells and modules. Non-DCR panels can be imported and might offer different pricing."
             )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

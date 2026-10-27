@@ -48,7 +48,6 @@ fun SolarEaseBottomNavigation(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .height(64.dp)
                 .padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.SpaceAround,

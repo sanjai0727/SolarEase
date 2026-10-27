@@ -213,17 +213,15 @@ fun StitchVendorTopBar(
     onNavigateBack: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding(),
+        modifier = Modifier.fillMaxWidth(),
         color = StitchSurface,
-        border = BorderStroke(0.5.dp, StitchOutline.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, StitchOutline)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -283,7 +281,7 @@ fun StitchStepProgressBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(

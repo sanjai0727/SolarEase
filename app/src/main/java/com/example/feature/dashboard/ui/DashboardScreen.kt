@@ -197,9 +197,9 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
         // System Summary Card
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            shape = MaterialTheme.shapes.large,
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("System Summary", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
@@ -215,7 +215,7 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
-                Divider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
@@ -285,9 +285,10 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
         
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -361,7 +362,7 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
             
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                shape = MaterialTheme.shapes.medium,
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -376,7 +377,7 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
                             }
                         }
                         if (index == 0 && dashboardData.notifications.size > 1) {
-                            Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f))
                         }
                     }
                 }
@@ -393,9 +394,10 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
         )
         
         Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -416,6 +418,8 @@ fun DashboardContent(dashboardData: CustomerDashboard, onNavigateToMySolarSystem
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -429,7 +433,7 @@ fun SummaryCard(
 ) {
     Card(
         modifier = Modifier.width(140.dp).height(120.dp),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -452,8 +456,9 @@ data class QuickAction(val title: String, val description: String, val icon: Ima
 fun QuickActionCard(modifier: Modifier = Modifier, action: QuickAction) {
     Card(
         modifier = modifier.height(130.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         onClick = action.onClick
     ) {

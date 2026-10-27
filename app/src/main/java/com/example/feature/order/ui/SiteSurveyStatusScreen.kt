@@ -133,9 +133,10 @@ fun SiteSurveyStatusRoute(
 
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +151,7 @@ fun SiteSurveyStatusRoute(
                     Text(text = "Time: $surveyTime", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider()
+                HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFE2E8F0))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
@@ -163,15 +164,15 @@ fun SiteSurveyStatusRoute(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
                         onClick = { /* Call Surveyor */ },
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.medium
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Call Surveyor")
                     }
                     OutlinedButton(
                         onClick = { showRescheduleSheet = true },
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.medium
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Reschedule")
                     }
@@ -181,9 +182,9 @@ fun SiteSurveyStatusRoute(
         
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier.padding(20.dp).fillMaxWidth(),
@@ -216,10 +217,11 @@ fun SiteSurveyStatusRoute(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
-                .clip(MaterialTheme.shapes.medium)
+                .clip(RoundedCornerShape(16.dp))
                 .clickable { isChecklistExpanded = !isChecklistExpanded },
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFDDE4D5)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth().animateContentSize()) {
@@ -252,7 +254,7 @@ fun SiteSurveyStatusRoute(
         
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -275,23 +277,22 @@ fun SiteSurveyStatusRoute(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         Button(
             onClick = onNavigateNext,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(bottom = 24.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
-            Text("Simulate Survey Completion", style = MaterialTheme.typography.titleMedium)
+            Text("Simulate Survey Completion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 
     if (showRescheduleSheet) {

@@ -59,7 +59,6 @@ fun MountTypeScreen(
                 color = StitchSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 StitchPrimaryButton(
@@ -124,6 +123,7 @@ fun MountTypeScreen(
                 title = "Good to know",
                 description = "Rooftop setups are the most popular in urban homes as they don't consume ground space and capture unshaded sunlight."
             )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

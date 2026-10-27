@@ -130,65 +130,18 @@ private fun AnalyticsTopBar(
     onProfileClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding(),
+        modifier = Modifier.fillMaxWidth(),
         color = StitchSurface.copy(alpha = 0.95f),
-        border = BorderStroke(0.5.dp, StitchOutline)
+        border = BorderStroke(1.dp, StitchOutline)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(StitchPrimaryContainer.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SolarPower,
-                        contentDescription = "SolarEase",
-                        tint = StitchPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Column {
-                    Text(
-                        text = "SolarEase",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StitchOnSurface,
-                        letterSpacing = (-0.2).sp
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = StitchPrimaryContainer,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = userLocation,
-                            fontSize = 11.sp,
-                            color = StitchOnSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -196,45 +149,63 @@ private fun AnalyticsTopBar(
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .clip(CircleShape)
-                        .background(StitchSurfaceContainerLow),
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(StitchPrimary),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = StitchOnSurface,
+                        imageVector = Icons.Default.SolarPower,
+                        contentDescription = "SolarEase",
+                        tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .align(Alignment.TopEnd)
-                            .offset(x = (-6).dp, y = 6.dp)
-                            .clip(CircleShape)
-                            .background(StitchPrimaryContainer)
-                    )
                 }
+                Column {
+                    Text(
+                        text = "SolarEase",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StitchOnSurface,
+                        letterSpacing = (-0.3).sp
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = StitchPrimary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = userLocation,
+                            fontSize = 11.sp,
+                            color = StitchSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
 
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(StitchPrimaryContainer)
-                        .clickable { onProfileClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(StitchPrimary)
+                    .clickable { onProfileClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Profile",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. EMPTY / NOT CONNECTED STATE (Exact Stitch Implementation)
@@ -249,8 +220,8 @@ private fun EmptyAnalyticsView(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Analytics Context & Category Header
         Column(modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)) {
@@ -612,8 +583,8 @@ private fun PopulatedAnalyticsView(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Section 1: Header & Range Switcher
         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {

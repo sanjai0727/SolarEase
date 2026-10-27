@@ -215,15 +215,12 @@ fun ProfileContent(
     var showHelpSheet by remember { mutableStateOf(false) }
     var showLanguageSheet by remember { mutableStateOf(false) }
     var showAboutSheet by remember { mutableStateOf(false) }
-    var showRewardsSheet by remember { mutableStateOf(false) }
-    var showHistorySheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
-            .padding(top = 8.dp, bottom = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // ── 1. PROFILE HEADER (No Top Edit Button) ─────────────────────
@@ -232,16 +229,10 @@ fun ProfileContent(
             onAddressClick = { showAddressSheet = true }
         )
 
-        // ── 2. ENERGY SAVINGS (Compact 2×2 Dashboard Grid) ─────────────
-        EnergySavingsSection()
+        // ── 2. ENERGY DETAILS (Current vs Previous Cycle Consumption) ──
+        EnergyDetailsSection()
 
-        // ── 3. REWARDS & CREDITS ───────────────────────────────────────
-        RewardsCreditsSection(
-            onViewRewardsClick = { showRewardsSheet = true },
-            onCreditHistoryClick = { showHistorySheet = true }
-        )
-
-        // ── 4. MY DETAILS (Functional Rows with Dialogs) ───────────────
+        // ── 3. MY DETAILS (Functional Rows with Dialogs) ───────────────
         MyDetailsSection(
             user = user,
             onPersonalInfoClick = { showPersonalInfoSheet = true },
@@ -259,8 +250,10 @@ fun ProfileContent(
             onAboutClick = { showAboutSheet = true }
         )
 
-        // ── 6. SIGN OUT & FOOTER ───────────────────────────────────────
+        // ── 5. SIGN OUT & FOOTER ───────────────────────────────────────
         SignOutSection(onSignOutClick = onSignOutClick)
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 
     // ── Sheets / Modals ──
@@ -352,14 +345,6 @@ fun ProfileContent(
 
     if (showAboutSheet) {
         AboutSolarEaseSheet(onDismiss = { showAboutSheet = false })
-    }
-
-    if (showRewardsSheet) {
-        ViewRewardsSheet(onDismiss = { showRewardsSheet = false })
-    }
-
-    if (showHistorySheet) {
-        CreditHistorySheet(onDismiss = { showHistorySheet = false })
     }
 }
 
@@ -541,15 +526,23 @@ private fun extractCity(address: String?): String {
     }
 }
 
-// ─── 2. ENERGY SAVINGS SECTION (Compact 2×2 Dashboard Grid) ─────────────────────
+// ─── 2. ENERGY DETAILS SECTION ──────────────────────────────────────────────────
 
 @Composable
-private fun EnergySavingsSection() {
+private fun EnergyDetailsSection() {
     val cachedBill = TnebBillCache.billData.collectAsState().value
-    val unitsConsumed = cachedBill?.latestBill?.units?.toIntOrNull() ?: 30
+    val bills = cachedBill?.bills ?: emptyList()
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Section header
+    val currentBill = bills.firstOrNull()
+    val previousBill = if (bills.size >= 2) bills[1] else null
+
+    val currentKwh = currentBill?.units?.toDoubleOrNull() ?: currentBill?.kwh?.toDoubleOrNull()
+    val previousKwh = previousBill?.units?.toDoubleOrNull() ?: previousBill?.kwh?.toDoubleOrNull()
+
+    val diffKwh = if (currentKwh != null && previousKwh != null) currentKwh - previousKwh else null
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Section Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -557,399 +550,237 @@ private fun EnergySavingsSection() {
         ) {
             Column {
                 Text(
-                    text = "Energy Savings",
-                    fontSize = 16.sp,
+                    text = "Energy Details",
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = StitchOnSurface,
                     letterSpacing = (-0.3).sp
                 )
                 Text(
-                    text = "Accumulated across verified billing cycles",
+                    text = "Billing cycle consumption & trend",
                     fontSize = 12.sp,
-                    color = StitchOnSurfaceVariant
+                    color = StitchSecondary
                 )
             }
+            if (currentBill != null && currentBill.period.isNotBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = StitchSurfaceContainer
+                ) {
+                    Text(
+                        text = currentBill.period,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = StitchSecondary
+                    )
+                }
+            }
+        }
+
+        if (currentKwh == null) {
+            // Empty State: Valid billing data is unavailable (Never fabricate numbers)
             Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = StitchSurfaceContainer
-            ) {
-                Text(
-                    text = "BI-MONTHLY CYCLE",
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = StitchOnSurfaceVariant,
-                    letterSpacing = 0.5.sp
-                )
-            }
-        }
-
-        // Sleek compact 2×2 grid with reduced padding and height
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EnergySavingCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Filled.Bolt,
-                iconBgColor = StitchSecondaryContainer,
-                iconTint = StitchTertiary,
-                label = "SAVED",
-                value = "$unitsConsumed",
-                unit = "kWh",
-                subtitle = "Net reduction"
-            )
-            EnergySavingCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Filled.MilitaryTech,
-                iconBgColor = StitchPrimaryFixed.copy(alpha = 0.5f),
-                iconTint = StitchPrimaryContainer,
-                label = "VERIFIED",
-                value = "98",
-                unit = "Pts",
-                valueTint = StitchPrimaryContainer,
-                unitTint = StitchPrimaryContainer.copy(alpha = 0.8f),
-                subtitle = "Bill credits"
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EnergySavingCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Filled.EnergySavingsLeaf,
-                iconBgColor = StitchPrimaryFixed.copy(alpha = 0.5f),
-                iconTint = StitchPrimaryContainer,
-                label = "OFFSET",
-                value = "24.6",
-                unit = "kg",
-                subtitle = "CO₂ reduction"
-            )
-            EnergySavingCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Filled.BarChart,
-                iconBgColor = StitchSurfaceContainerHigh,
-                iconTint = StitchTertiaryContainer,
-                label = "AUDITED",
-                value = "Bill-based",
-                unit = "",
-                subtitle = "TNEB verified"
-            )
-        }
-
-        // Info note
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = StitchSurfaceContainerLow,
-            border = BorderStroke(1.dp, StitchSurfaceContainer)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(15.dp),
-                    tint = StitchPrimaryContainer
-                )
-                Text(
-                    text = "Energy Credits come from verified bill-to-bill consumption reduction, independent of daily habit check-ins.",
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
-                    color = StitchOnSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EnergySavingCard(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    iconBgColor: Color,
-    iconTint: Color,
-    label: String,
-    value: String,
-    unit: String,
-    valueTint: Color = StitchOnSurface,
-    unitTint: Color = StitchOnSurfaceVariant,
-    subtitle: String
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = StitchSurfaceContainerLowest,
-        shadowElevation = 0.5.dp,
-        border = BorderStroke(1.dp, StitchSurfaceContainer)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(16.dp),
+                color = StitchSurfaceContainerLowest,
+                border = BorderStroke(1.dp, StitchOutline)
             ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(iconBgColor),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = icon,
+                        imageVector = Icons.Default.Bolt,
                         contentDescription = null,
-                        modifier = Modifier.size(15.dp),
-                        tint = iconTint
+                        tint = StitchSecondary,
+                        modifier = Modifier.size(36.dp)
                     )
-                }
-                Text(
-                    text = label,
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = StitchOnSurfaceVariant,
-                    letterSpacing = 0.5.sp
-                )
-            }
-            Column {
-                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = value,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = valueTint,
-                        letterSpacing = (-0.3).sp
-                    )
-                    if (unit.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = unit,
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = unitTint
-                        )
-                    }
-                }
-                Text(
-                    text = subtitle,
-                    fontSize = 10.5.sp,
-                    color = StitchOnSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-// ─── 3. REWARDS & CREDITS SECTION ───────────────────────────────────────────────
-
-@Composable
-private fun RewardsCreditsSection(
-    onViewRewardsClick: () -> Unit,
-    onCreditHistoryClick: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Section header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Rewards & Credits",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = StitchOnSurface,
-                letterSpacing = (-0.3).sp
-            )
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = StitchPrimaryFixed.copy(alpha = 0.5f)
-            ) {
-                Text(
-                    text = "TIER 1 ACTIVE",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = StitchPrimaryContainer,
-                    letterSpacing = 0.5.sp
-                )
-            }
-        }
-
-        // Rewards card
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = StitchSurfaceContainerLowest,
-            shadowElevation = 1.dp,
-            border = BorderStroke(1.dp, StitchSurfaceContainer)
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Credits header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(StitchPrimaryFixed.copy(alpha = 0.45f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CardGiftcard,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = StitchPrimaryContainer
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = "Energy Credits: 98",
-                                fontSize = 15.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StitchOnSurface
-                            )
-                            Text(
-                                text = "Current Balance",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = StitchOnSurfaceVariant
-                            )
-                        }
-                    }
-                    Text(
-                        text = "49%",
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Black,
+                        text = "No Billing Cycle Data Available",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = StitchOnSurface,
-                        letterSpacing = (-0.3).sp
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Connect your TNEB consumer number in Electricity Details to automatically track verified consumption metrics.",
+                        fontSize = 13.sp,
+                        color = StitchSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
                     )
                 }
-
-                // Progress bar
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(7.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(StitchSurfaceContainer)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.49f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(50))
-                                .background(StitchPrimaryContainer)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(text = "0 Credits", fontSize = 10.5.sp, color = StitchOnSurfaceVariant)
-                        Text(
-                            text = "98 / 200 Target",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StitchPrimaryContainer
-                        )
-                        Text(text = "200 Credits", fontSize = 10.5.sp, color = StitchOnSurfaceVariant)
-                    }
-                }
-
-                // Next reward info
+            }
+        } else {
+            // Exactly Two Primary Metrics: (1) Current Consumption, (2) Consumption Difference
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Metric 1: Current Consumption
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    color = StitchSurfaceContainerLow
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    color = StitchSurfaceContainerLowest,
+                    border = BorderStroke(1.dp, StitchOutline)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Stars,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = StitchPrimaryContainer
-                        )
-                        Text(
-                            text = "102 credits to unlock Next Reward (Tier 1 Eco Voucher).",
-                            fontSize = 11.5.sp,
-                            color = StitchOnSurface,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(StitchPrimary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Bolt,
+                                    contentDescription = null,
+                                    tint = StitchPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = "CURRENT",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchSecondary,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+
+                        Column {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.0f", currentKwh),
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = StitchOnSurface,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "kWh",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = StitchSecondary,
+                                    modifier = Modifier.padding(bottom = 2.dp)
+                                )
+                            }
+                            Text(
+                                text = "Current billing cycle",
+                                fontSize = 11.sp,
+                                color = StitchSecondary
+                            )
+                        }
                     }
                 }
 
-                // Action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Metric 2: Consumption Difference
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    color = StitchSurfaceContainerLowest,
+                    border = BorderStroke(1.dp, StitchOutline)
                 ) {
-                    Button(
-                        onClick = onViewRewardsClick,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(38.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchPrimaryContainer,
-                            contentColor = Color.White
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(text = "View Rewards", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = onCreditHistoryClick,
-                        modifier = Modifier.height(38.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = StitchOnSurfaceVariant
-                        ),
-                        border = BorderStroke(1.dp, StitchOutline),
-                        contentPadding = PaddingValues(horizontal = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.History,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Credit History", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Icon(
-                            imageVector = Icons.Filled.ChevronRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
+                        val isIncrease = diffKwh != null && diffKwh > 0
+                        val isDecrease = diffKwh != null && diffKwh < 0
+                        val diffColor = when {
+                            diffKwh == null -> StitchSecondary
+                            isDecrease -> StitchPrimary
+                            isIncrease -> Color(0xFFC62828)
+                            else -> StitchSecondary
+                        }
+                        val diffIcon = when {
+                            isDecrease -> Icons.Default.ArrowDownward
+                            isIncrease -> Icons.Default.ArrowUpward
+                            else -> Icons.Default.Remove
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(diffColor.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = diffIcon,
+                                    contentDescription = null,
+                                    tint = diffColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = "DIFFERENCE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StitchSecondary,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+
+                        Column {
+                            if (diffKwh != null) {
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = (if (diffKwh > 0) "+" else "") + String.format(java.util.Locale.US, "%.0f", diffKwh),
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = diffColor,
+                                        letterSpacing = (-0.5).sp
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "kWh",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = StitchSecondary,
+                                        modifier = Modifier.padding(bottom = 2.dp)
+                                    )
+                                }
+                                Text(
+                                    text = when {
+                                        isDecrease -> "Reduced vs prev cycle"
+                                        isIncrease -> "Increased vs prev cycle"
+                                        else -> "Same as prev cycle"
+                                    },
+                                    fontSize = 11.sp,
+                                    color = diffColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                Text(
+                                    text = "—",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = StitchSecondary
+                                )
+                                Text(
+                                    text = "No previous cycle",
+                                    fontSize = 11.sp,
+                                    color = StitchSecondary
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -67,7 +67,6 @@ fun RequestConfirmationScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -403,6 +402,7 @@ fun RequestConfirmationScreen(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

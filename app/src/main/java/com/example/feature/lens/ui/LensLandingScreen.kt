@@ -425,7 +425,7 @@ private fun LensTopAppBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -667,8 +667,8 @@ fun IntroductionContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Welcoming Card with Delightful Native Vector Illustration
         Surface(
@@ -1382,8 +1382,8 @@ fun RoomOverviewContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Progress Header
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1931,7 +1931,7 @@ fun RoomOverviewContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -2090,8 +2090,8 @@ fun RoomCompletedContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Progress Rail
         Surface(
@@ -2274,9 +2274,9 @@ fun RoomCompletedContent(
             onClick = onContinue,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -2297,6 +2297,8 @@ fun RoomCompletedContent(
             Spacer(modifier = Modifier.width(4.dp))
             Text("Modify ${room.name} appliances", style = LensTypography.labelSm, color = LensColors.SlateCaption)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

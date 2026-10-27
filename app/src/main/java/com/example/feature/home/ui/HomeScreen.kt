@@ -227,7 +227,7 @@ fun HomeRoute(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val step = uiState.currentOnboardingStep
@@ -605,9 +605,7 @@ private fun StitchTopBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding(),
+        modifier = modifier.fillMaxWidth(),
         color = HomeColors.Background,
         border = BorderStroke(1.dp, HomeColors.Border),
         shadowElevation = 0.dp
@@ -615,7 +613,7 @@ private fun StitchTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {

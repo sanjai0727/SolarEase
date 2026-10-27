@@ -27,18 +27,18 @@ import java.text.NumberFormat
 import java.util.Locale
 
 // Color Tokens matching Stitch Consumer Energy System
-private val SolarEaseEmerald = Color(0xFF1E7038)
-private val SolarEaseEmeraldDark = Color(0xFF145227)
-private val SolarEaseEmeraldContainer = Color(0xFFE8F5E9)
-private val SoftBackground = Color(0xFFF5F7FB)
-private val InfoBlueContainer = Color(0xFFE3F2FD)
-private val InfoBlueText = Color(0xFF1976D2)
-private val CardBorderColor = Color(0xFFE2E8F0)
-private val TextDark = Color(0xFF1E222D)
-private val TextMuted = Color(0xFF5D6778)
+private val SolarEaseEmerald = Color(0xFF386A20)
+private val SolarEaseEmeraldDark = Color(0xFF2D5518)
+private val SolarEaseEmeraldContainer = Color(0xFFE5F2D9)
+private val SoftBackground = Color(0xFFFBFCF3)
+private val InfoBlueContainer = Color(0xFFEAF3FF)
+private val InfoBlueText = Color(0xFF18324B)
+private val CardBorderColor = Color(0xFFDDE4D5)
+private val TextDark = Color(0xFF191C18)
+private val TextMuted = Color(0xFF747873)
 private val WarningAmber = Color(0xFFD97706)
 private val WarningAmberContainer = Color(0xFFFEF3C7)
-private val ErrorRed = Color(0xFFDC2626)
+private val ErrorRed = Color(0xFFBA1A1A)
 
 // Internal Screen Destination within the Bill Module
 private enum class BillDashboardScreen {
