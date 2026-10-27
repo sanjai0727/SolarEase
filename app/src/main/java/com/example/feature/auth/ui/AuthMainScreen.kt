@@ -69,7 +69,6 @@ fun AuthMainRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
     var authMode by rememberSaveable { mutableStateOf(AuthMode.SIGN_UP) }
     var activeAuthAction by rememberSaveable { mutableStateOf(ActiveAuthAction.NONE) }
 
@@ -107,7 +106,10 @@ fun AuthMainRoute(
                         ) {
                             val googleIdTokenCredential =
                                 GoogleIdTokenCredential.createFrom(credential.data)
-                            viewModel.signInWithGoogle(googleIdTokenCredential.idToken, null, authMode == AuthMode.SIGN_UP)
+                            viewModel.signInWithGoogle(
+                                googleIdToken = googleIdTokenCredential.idToken,
+                                isSignUp = authMode == AuthMode.SIGN_UP
+                            )
                         } else {
                             Log.e("AuthMainRoute", "Unexpected credential type")
                             viewModel.setError("Unexpected credential type")

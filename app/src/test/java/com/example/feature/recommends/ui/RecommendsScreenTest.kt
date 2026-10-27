@@ -503,7 +503,8 @@ class RecommendsScreenTest {
         // 4. 9 Energy-Saving Mantras section exists below
         composeTestRule.onNodeWithText("9 Energy-Saving Mantras").assertExists()
 
-        // 5. In Version 1 scope: Solar Vendor card is removed from Recommends screen
+        // 5. In Version 1 scope: Solar Vendor card must NOT exist
+        composeTestRule.onNodeWithText("How much could your home reduce its carbon footprint?").assertDoesNotExist()
         composeTestRule.onNodeWithText("Explore Solar").assertDoesNotExist()
     }
 
@@ -570,7 +571,7 @@ class RecommendsScreenTest {
     }
 
     @Test
-    fun testSolarVendorCardRemovedInVersion1Scope() {
+    fun testSolarVendorDiscoveryRemovedFromRecommendsScreen() {
         val testState = com.example.feature.recommends.model.RecommendsUiState()
 
         composeTestRule.setContent {
@@ -583,8 +584,9 @@ class RecommendsScreenTest {
             )
         }
 
-        // Verify Solar Vendor Card is removed from Recommends in Version 1 scope
+        // Solar vendor discovery and connection UI must not be displayed in Version 1
         composeTestRule.onNodeWithText("Explore Solar").assertDoesNotExist()
         composeTestRule.onNodeWithText("How much could your home reduce its carbon footprint?").assertDoesNotExist()
+        composeTestRule.onNodeWithText("connect with trusted solar vendors near you", substring = true).assertDoesNotExist()
     }
 }

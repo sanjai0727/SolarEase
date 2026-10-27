@@ -147,7 +147,6 @@ fun RecommendsScreen(
                 onToggleExpand = onToggleMantrasExpanded,
                 onMantraClick = onMantraClick
             )
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
@@ -2092,88 +2091,6 @@ private fun MantraCard(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. SOLAR VENDOR / SOLAR POTENTIAL CARD
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun SolarVendorCard(
-    onExploreSolar: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onExploreSolar),
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF7FAF4),
-        border = BorderStroke(1.dp, Color(0xFFD6E4CF)),
-        shadowElevation = 0.5.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Subtle primary green accent solar visual
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFE8F5E1))
-                    .border(1.dp, Color(0xFFC7DEC0), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SolarPower,
-                    contentDescription = "Solar Potential",
-                    tint = Color(0xFF386A20),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Text(
-                text = "How much could your home reduce its carbon footprint?",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF0F172A),
-                lineHeight = 21.sp
-            )
-
-            Text(
-                text = "Explore your solar potential and connect with trusted solar vendors near you.",
-                fontSize = 13.sp,
-                color = Color(0xFF64748B),
-                lineHeight = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Button(
-                onClick = onExploreSolar,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF386A20),
-                    contentColor = Color.White
-                ),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                Text(
-                    text = "Explore Solar",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(
-                    imageVector = Icons.Default.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
             }
         }
     }
