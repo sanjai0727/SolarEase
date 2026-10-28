@@ -9,6 +9,9 @@ from src.modules.auth.schemas import (
     UserUpdateRequest,
     RefreshTokenRequest,
     FirebaseTokenRequest,
+    ResolveIdentifierRequest,
+    ResolveIdentifierResponse,
+    CheckUsernameResponse,
 )
 from src.modules.auth.repository import AuthRepository
 from src.modules.auth.service import AuthService
@@ -127,3 +130,27 @@ def update_me(
     service: AuthService = Depends(get_auth_service),
 ):
     return service.update_profile(current_user, request)
+
+
+@router.post(
+    "/resolve-identifier",
+    response_model=ResolveIdentifierResponse
+)
+def resolve_identifier(
+    request: ResolveIdentifierRequest,
+    service: AuthService = Depends(get_auth_service),
+):
+    email = service.resolve_identifier(request.identifier)
+    return ResolveIdentifierResponse(email=email)
+
+
+@router.get(
+    "/check-username",
+    response_model=CheckUsernameResponse
+)
+def check_username(
+    username: str,
+    service: AuthService = Depends(get_auth_service),
+):
+    result = service.check_username(username)
+    return CheckUsernameResponse(**result)

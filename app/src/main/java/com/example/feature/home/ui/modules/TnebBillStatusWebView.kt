@@ -181,7 +181,11 @@ fun TnebBillStatusWebView(
                                             var bText = document.body ? (document.body.innerText || '') : '';
                                             
                                             // Check for CAPTCHA or details errors
-                                            if (bText.toLowerCase().includes('invalid captcha')) {
+                                            var errElem = document.querySelector('.ui-messages-error-summary, .ui-messages-error-detail, .ui-message-error-detail, .ui-message-error-summary');
+                                            if (errElem && errElem.innerText && errElem.innerText.trim()) {
+                                                result.isError = true;
+                                                result.errorMessage = errElem.innerText.trim();
+                                            } else if (bText.toLowerCase().includes('invalid captcha')) {
                                                 result.isError = true;
                                                 result.errorMessage = 'INVALID_CAPTCHA';
                                             }
@@ -242,7 +246,7 @@ fun TnebBillStatusWebView(
                                                     var rows = tbl.rows;
                                                     for (var r = 0; r < rows.length; r++) {
                                                         var cells = rows[r].cells;
-                                                        if (cells.length >= 18) {
+                                                        if (cells.length >= 8) {
                                                             var d = (cells[0].innerText || '').trim();
                                                             if (/\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(d)) {
                                                                 var getV = function(idx) { return (idx < cells.length) ? (cells[idx].innerText || '').trim() : ''; };

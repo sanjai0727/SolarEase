@@ -90,3 +90,16 @@ class FirebaseSyncResponse(BaseModel):
     email: str | None = None
     mobile_number: str | None
     is_verified: bool
+
+
+class ResolveIdentifierRequest(BaseModel):
+    identifier: str = Field(..., min_length=1, max_length=255)
+
+
+class ResolveIdentifierResponse(BaseModel):
+    email: str
+
+
+class CheckUsernameResponse(BaseModel):
+    available: bool
+    message: str

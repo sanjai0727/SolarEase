@@ -129,41 +129,62 @@ class AuthService:
         provider_name = self._get_social_provider_name(provider)
         conflict_msg = f"This {provider_name} account is already linked to an existing account. Please sign in instead."
 
+        clean_email = email.strip().lower()
+        clean_username = username.strip().lower() if username else None
+
         if is_signup:
             if user:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=conflict_msg
                 )
-            existing_email_user = self.repository.get_user_by_email(email)
+            existing_email_user = self.repository.get_user_by_email(clean_email)
             if existing_email_user:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=conflict_msg
                 )
+            if clean_username:
+                existing_username_user = self.repository.get_user_by_username(clean_username)
+                if existing_username_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="This username is already taken. Please choose another username."
+                    )
             # Step 3: Create new User without mobile_number
-            return self.repository.create_user(
-                email=email,
-                username=username,
-                firebase_uid=firebase_uid,
-                is_verified=True,
-                name=name
-            )
+            try:
+                return self.repository.create_user(
+                    email=clean_email,
+                    username=username.strip() if username else None,
+                    firebase_uid=firebase_uid,
+                    is_verified=True,
+                    name=name
+                )
+            except Exception:
+                self.repository.db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An account with this email or username already exists. Please sign in instead."
+                )
         else: # is_signup == False
             if user:
-                if username and user.username and username.lower() != user.username.lower():
+                if username and user.username and clean_username != user.username.lower():
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="The username does not match this account. Please check your username and try again."
                     )
+                if not user.username and username:
+                    user.username = username.strip()
+                    self.repository.db.commit()
+                    self.repository.db.refresh(user)
                 if not user.is_verified:
                     self.repository.update_user_verification(user, True)
                 return user
 
-            # Allow fallback to email matching
-            existing_email_user = self.repository.get_user_by_email(email)
+            # Allow fallback to email matching (e.g. account linking or existing email)
+            existing_email_user = self.repository.get_user_by_email(clean_email)
             if existing_email_user:
-                if username and existing_email_user.username and username.lower() != existing_email_user.username.lower():
+                if username and existing_email_user.username and clean_username != existing_email_user.username.lower():
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="The username does not match this account. Please check your username and try again."
@@ -174,6 +195,10 @@ class AuthService:
                         detail=conflict_msg
                     )
                 self.repository.link_firebase_uid(existing_email_user, firebase_uid)
+                if not existing_email_user.username and username:
+                    existing_email_user.username = username.strip()
+                    self.repository.db.commit()
+                    self.repository.db.refresh(existing_email_user)
                 if not existing_email_user.is_verified:
                     self.repository.update_user_verification(existing_email_user, True)
                 return existing_email_user
@@ -182,6 +207,34 @@ class AuthService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"No account found with this {provider_name} account. Please sign up first."
             )
+
+    def resolve_identifier(self, identifier: str) -> str:
+        clean_identifier = identifier.strip()
+        if "@" in clean_identifier:
+            return clean_identifier.lower()
+
+        user = self.repository.get_user_by_username(clean_identifier)
+        if user and user.email:
+            return user.email
+
+        # Generic message to avoid username enumeration
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid username or password."
+        )
+
+    def check_username(self, username: str) -> dict:
+        clean = username.strip()
+        if len(clean) < 3 or len(clean) > 30 or not re.match(r"^[a-zA-Z0-9_]{3,30}$", clean):
+            return {"available": False, "message": "Username must be 3-30 alphanumeric characters or underscores."}
+        if not any(c.isalpha() for c in clean):
+            return {"available": False, "message": "Username must contain at least one letter."}
+
+        existing = self.repository.get_user_by_username(clean)
+        if existing:
+            return {"available": False, "message": "This username is already taken."}
+        return {"available": True, "message": "Username is available."}
+
 
     def update_profile(self, user, request):
         if request.name is not None:

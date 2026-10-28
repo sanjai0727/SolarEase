@@ -238,8 +238,8 @@ object TnebBillStatusHtmlParser {
                 val rowHtml = rowMatch.groupValues[1]
                 val rowCells = tdRegex.findAll(rowHtml).map { cleanHtml(it.groupValues[1]).trim() }.toList()
 
-                // A valid billing record has at least 18 columns and starts with a date DD/MM/YYYY
-                if (rowCells.size >= 18) {
+                // A valid billing record has at least 8 columns and starts with a date DD/MM/YYYY
+                if (rowCells.size >= 8) {
                     val dateCandidate = rowCells[0]
                     if (dateCandidate.matches(Regex("\\d{2}[/\\-]\\d{2}[/\\-]\\d{4}"))) {
                         val assessmentDate = dateCandidate

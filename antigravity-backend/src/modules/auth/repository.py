@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -13,13 +13,19 @@ class AuthRepository:
         return self.db.scalar(select(User).where(User.mobile_number == mobile_number))
 
     def get_user_by_email(self, email: str) -> Optional[User]:
-        return self.db.scalar(select(User).where(User.email == email))
+        clean_email = email.strip().lower()
+        return self.db.scalar(select(User).where(func.lower(User.email) == clean_email))
+
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        clean_username = username.strip().lower()
+        return self.db.scalar(select(User).where(func.lower(User.username) == clean_username))
 
     def get_user_by_id(self, user_id) -> Optional[User]:
         return self.db.scalar(select(User).where(User.id == user_id))
 
     def get_user_by_firebase_uid(self, uid: str) -> Optional[User]:
         return self.db.scalar(select(User).where(User.firebase_uid == uid))
+
 
     def link_firebase_uid(self, user: User, uid: str) -> User:
         user.firebase_uid = uid

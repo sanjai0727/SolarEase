@@ -32,4 +32,15 @@ interface ApiService {
 
     @POST("auth/logout")
     suspend fun logout(): Response<Unit>
+
+    @POST("auth/resolve-identifier")
+    suspend fun resolveIdentifier(
+        @Body request: com.example.core.network.dto.ResolveIdentifierRequest
+    ): Response<com.example.core.network.dto.ResolveIdentifierResponse>
+
+    @retrofit2.http.GET("auth/check-username")
+    suspend fun checkUsername(
+        @retrofit2.http.Query("username") username: String
+    ): Response<com.example.core.network.dto.CheckUsernameResponse>
 }
+
