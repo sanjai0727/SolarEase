@@ -31,7 +31,9 @@ import com.example.feature.home.ui.modules.MeterGraphPoint
 import com.example.feature.home.ui.modules.MeterReadingCache
 import com.example.feature.home.ui.modules.MeterReadingRecord
 import com.example.feature.home.ui.modules.MeterValidationResult
+import com.example.feature.home.ui.modules.PendingBillUiState
 import com.example.feature.home.ui.modules.TariffResolver
+import com.example.feature.home.ui.modules.computePendingBillState
 import kotlinx.coroutines.flow.combine
 import java.util.Locale
 
@@ -159,6 +161,9 @@ data class HomeUiState(
     val isEditingReading: Boolean = false,
     val recordedReadingsCount: Int = 0,
     val isAuditCompleted: Boolean = false,
+    val isBillLoading: Boolean = false,
+    val billRetrievalError: String? = null,
+    val pendingBillState: PendingBillUiState = PendingBillUiState.None,
 
     // Dialogs for Meter Reading Correction
     val lowerThanPreviousDialog: LowerThanPreviousDialogData? = null,
@@ -300,6 +305,13 @@ class HomeViewModel(
             false
         }
 
+        val initialPendingState = computePendingBillState(
+            billData = billData,
+            userEbNumber = currentUser?.ebServiceNumber,
+            isLoading = false,
+            retrievalError = null
+        )
+
         return HomeUiState(
             userName = firstName,
             userInitial = initial,
@@ -327,23 +339,47 @@ class HomeViewModel(
             isTodayReadingEntered = metrics?.isTodayLogged ?: false,
             todayEnteredReading = metrics?.todayReading,
             recordedReadingsCount = readings.size,
-            isAuditCompleted = isAuditDone
+            isAuditCompleted = isAuditDone,
+            isBillLoading = false,
+            billRetrievalError = null,
+            pendingBillState = initialPendingState
         )
     }
 
     fun refresh() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true) }
+            _uiState.update { current ->
+                val updatedPending = computePendingBillState(
+                    billData = current.billData ?: TnebBillCache.billData.value,
+                    userEbNumber = UserSession.currentUser?.ebServiceNumber,
+                    isLoading = false,
+                    isRefreshing = true,
+                    retrievalError = null
+                )
+                current.copy(isRefreshing = true, pendingBillState = updatedPending)
+            }
             val isAuditDone = try {
                 com.example.feature.lens.data.LensRoomStorage.isAuditCompleted()
             } catch (e: Exception) {
                 false
             }
-            _uiState.update { it.copy(isAuditCompleted = isAuditDone) }
             loadUserProfile()
             loadAppliances()
             syncMeterDataWithBackend()
-            _uiState.update { it.copy(isRefreshing = false) }
+            _uiState.update { current ->
+                val updatedPending = computePendingBillState(
+                    billData = current.billData ?: TnebBillCache.billData.value,
+                    userEbNumber = UserSession.currentUser?.ebServiceNumber,
+                    isLoading = false,
+                    isRefreshing = false,
+                    retrievalError = current.billRetrievalError
+                )
+                current.copy(
+                    isRefreshing = false,
+                    isAuditCompleted = isAuditDone,
+                    pendingBillState = updatedPending
+                )
+            }
         }
     }
 
@@ -477,11 +513,19 @@ class HomeViewModel(
         if (billData == null || (billData.bills.isEmpty() && billData.consumerNumber.isBlank())) {
             val baseline = MeterReadingCache.baseline.value
             val user = UserSession.currentUser
+            val computedPending = computePendingBillState(
+                billData = null,
+                userEbNumber = user?.ebServiceNumber,
+                isLoading = _uiState.value.isBillLoading,
+                retrievalError = _uiState.value.billRetrievalError
+            )
+
             if ((baseline != null && baseline.serviceConnectionNumber?.isNotBlank() == true) || !user?.ebServiceNumber.isNullOrBlank()) {
                 _uiState.update { current ->
                     current.copy(
                         hasConnectedBill = true,
-                        meterBaseline = baseline
+                        meterBaseline = baseline,
+                        pendingBillState = computedPending
                     )
                 }
                 return
@@ -500,6 +544,7 @@ class HomeViewModel(
                     activeJourneyStage = if (current.hasCompletedAudit) 2 else 1,
                     recommendedSolarCapacityKw = null,
                     estimatedSolarSavingsPerCycle = null,
+                    pendingBillState = computedPending,
                     recentActivities = buildActivityList(null, current.appliances)
                 )
             }
@@ -558,6 +603,13 @@ class HomeViewModel(
             else -> 1 // Measure
         }
 
+        val computedPending = computePendingBillState(
+            billData = billData,
+            userEbNumber = UserSession.currentUser?.ebServiceNumber,
+            isLoading = _uiState.value.isBillLoading,
+            retrievalError = _uiState.value.billRetrievalError
+        )
+
         _uiState.update { current ->
             current.copy(
                 hasConnectedBill = true,
@@ -574,8 +626,36 @@ class HomeViewModel(
                 activeJourneyStage = journeyStage,
                 recommendedSolarCapacityKw = recommendedSolarKw,
                 estimatedSolarSavingsPerCycle = estimatedCycleSavings,
+                pendingBillState = computedPending,
                 recentActivities = buildActivityList(billData, currentAppliances)
             )
+        }
+    }
+
+    fun retryBillFetch() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBillLoading = true, billRetrievalError = null) }
+            val currentBill = TnebBillCache.billData.value
+            val ebNumber = UserSession.currentUser?.ebServiceNumber
+            val pendingState = computePendingBillState(
+                billData = currentBill,
+                userEbNumber = ebNumber,
+                isLoading = false,
+                retrievalError = null
+            )
+            _uiState.update { it.copy(isBillLoading = false, pendingBillState = pendingState) }
+        }
+    }
+
+    fun setBillRetrievalError(error: String?) {
+        _uiState.update { current ->
+            val pending = computePendingBillState(
+                billData = current.billData,
+                userEbNumber = UserSession.currentUser?.ebServiceNumber,
+                isLoading = false,
+                retrievalError = error
+            )
+            current.copy(billRetrievalError = error, pendingBillState = pending)
         }
     }
 
