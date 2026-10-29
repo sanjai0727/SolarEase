@@ -96,3 +96,4 @@ git push origin v1.2.0
      ```bash
      chmod +x .git/hooks/commit-msg
      ```
+

@@ -26,3 +26,4 @@
 ## Semantic Versioning (For Release PRs Only)
 - [ ] `versionName` and `versionCode` bumped in `app/build.gradle.kts`
 - [ ] Annotated release tag prepared (`vMAJOR.MINOR.PATCH`)
+
