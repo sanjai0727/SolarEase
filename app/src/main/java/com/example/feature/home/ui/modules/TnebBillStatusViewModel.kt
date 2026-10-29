@@ -59,6 +59,7 @@ class TnebBillStatusViewModel : ViewModel() {
 
     private var currentSubmissionId = 0
     private var captchaRefreshJob: kotlinx.coroutines.Job? = null
+    private var submissionTimeoutJob: kotlinx.coroutines.Job? = null
 
     init {
         // Pre-fill Service Number and actual TNEB Registered Mobile Number if securely stored
@@ -105,7 +106,8 @@ class TnebBillStatusViewModel : ViewModel() {
     }
 
     fun updateRegisteredMobileNumber(number: String) {
-        val filtered = number.filter { it.isDigit() }.take(10)
+        val cleaned = com.example.feature.ebservice.util.cleanIndianMobile(number)
+        val filtered = cleaned.filter { it.isDigit() }.take(10)
         _registeredMobileNumber.value = filtered
         validate()
         if (filtered.length == 10) {
@@ -114,7 +116,7 @@ class TnebBillStatusViewModel : ViewModel() {
     }
 
     fun updateCaptchaInput(input: String) {
-        _captchaInput.value = input
+        _captchaInput.value = input.filter { it.isLetterOrDigit() }.take(6)
     }
 
     private fun validate() {
@@ -155,12 +157,23 @@ class TnebBillStatusViewModel : ViewModel() {
                 _submitState.value = SubmitState.SUBMITTING
                 currentSubmissionId++
                 _submitTrigger.value = currentSubmissionId
+
+                submissionTimeoutJob?.cancel()
+                submissionTimeoutJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(25000)
+                    if (_submitState.value == SubmitState.SUBMITTING) {
+                        Log.e("TNEB", "[TNEB] Submission timed out waiting for portal response")
+                        _errorMessage.value = "The official TNPDCL utility portal is taking too long to respond. Please check your internet connection or try again."
+                        _submitState.value = SubmitState.ERROR
+                    }
+                }
             }
         }
     }
 
     fun resetValidationState() {
         captchaRefreshJob?.cancel()
+        submissionTimeoutJob?.cancel()
         _isChecking.value = false
         _captchaImageBase64.value = null
         _captchaInput.value = ""
@@ -184,6 +197,7 @@ class TnebBillStatusViewModel : ViewModel() {
         Log.e("TNEB", "[TNEB] Page load error occurred in WebView")
         android.util.Log.d("BillStatusDiagnostic", "ON_PAGE_LOAD_ERROR called")
         captchaRefreshJob?.cancel()
+        submissionTimeoutJob?.cancel()
         _pageLoadError.value = true
         _isChecking.value = true
         if (_submitState.value == SubmitState.SUBMITTING) {
@@ -223,6 +237,28 @@ class TnebBillStatusViewModel : ViewModel() {
             Log.d("TNEB", "[TNEB] Stale DOM callback ignored. Expected: $currentSubmissionId, Got: $submissionId")
             return
         }
+        submissionTimeoutJob?.cancel()
+
+        try {
+            val jsonObj = org.json.JSONObject(json)
+            if (jsonObj.optBoolean("isError", false)) {
+                val errorMsg = jsonObj.optString("errorMessage", "").trim()
+                if (errorMsg.isNotBlank()) {
+                    if (errorMsg.contains("captcha", ignoreCase = true)) {
+                        Log.e("TNEB", "[TNEB] Portal returned INVALID_CAPTCHA from DOM: $errorMsg")
+                        _errorMessage.value = "Invalid CAPTCHA code entered. Please try again."
+                        _submitState.value = SubmitState.INVALID_CAPTCHA
+                    } else {
+                        Log.e("TNEB", "[TNEB] Portal returned INVALID_DETAILS from DOM: $errorMsg")
+                        _errorMessage.value = errorMsg
+                        _submitState.value = SubmitState.INVALID_DETAILS
+                    }
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("TNEB", "[TNEB] Error checking isError in JSON: ${e.message}")
+        }
 
         val parsedData = TnebBillStatusHtmlParser.parseJson(json)
         if (parsedData != null && (parsedData.bills.isNotEmpty() || parsedData.consumerName.isNotBlank() || parsedData.tariffCode.isNotBlank())) {
@@ -260,6 +296,7 @@ class TnebBillStatusViewModel : ViewModel() {
             Log.d("TNEB", "[TNEB] Stale HTML callback ignored. Expected: $currentSubmissionId, Got: $submissionId")
             return
         }
+        submissionTimeoutJob?.cancel()
 
         // If JSON extraction already succeeded and populated billData, skip duplicate processing
         if (_billData.value != null && _submitState.value == SubmitState.SUCCESS) {
@@ -269,30 +306,23 @@ class TnebBillStatusViewModel : ViewModel() {
 
         val lowerHtml = html.lowercase()
 
-        // 1. Check for specific PrimeFaces error markers (invalid captcha, invalid details)
-        if (html.contains("ui-messages-error-summary") || html.contains("ui-messages-error-detail")) {
-            val errorTextStart = html.indexOf("ui-messages-error-summary")
-            val errorSnippet = if (errorTextStart != -1) {
-                html.substring(errorTextStart, minOf(errorTextStart + 300, html.length))
-            } else ""
+        // 1. Check for PrimeFaces error markers (invalid captcha, invalid/mismatched consumer details)
+        val hasPluralErrors = html.contains("ui-messages-error")
+        val hasSingularErrors = html.contains("ui-message-error")
+        if (hasPluralErrors || hasSingularErrors) {
+            val errorRegex = Regex("""class="ui-messages?-error-(?:summary|detail)"[^>]*>([^<]+)</span>""", RegexOption.IGNORE_CASE)
+            val extractedMessages = errorRegex.findAll(html).map { it.groupValues[1].trim() }.filter { it.isNotBlank() }.toList()
+            val primaryError = extractedMessages.firstOrNull() ?: ""
 
-            val detailTextStart = html.indexOf("ui-messages-error-detail")
-            val detailSnippet = if (detailTextStart != -1) {
-                html.substring(detailTextStart, minOf(detailTextStart + 300, html.length))
-            } else ""
-
-            val combinedSnippet = (errorSnippet + detailSnippet).lowercase()
-
-            if (combinedSnippet.contains("captcha")) {
+            val combined = (primaryError + " " + html).lowercase()
+            if (combined.contains("captcha")) {
                 Log.e("TNEB", "[TNEB] Portal returned INVALID_CAPTCHA")
                 _errorMessage.value = "Invalid CAPTCHA code entered. Please try again."
                 _submitState.value = SubmitState.INVALID_CAPTCHA
                 return
-            } else if (combinedSnippet.contains("invalid") || combinedSnippet.contains("mismatch") ||
-                combinedSnippet.contains("does not match") || combinedSnippet.contains("not found")
-            ) {
-                Log.e("TNEB", "[TNEB] Portal returned INVALID_DETAILS")
-                _errorMessage.value = "Invalid Service Connection Number or Registered Mobile Number."
+            } else {
+                Log.e("TNEB", "[TNEB] Portal returned INVALID_DETAILS: $primaryError")
+                _errorMessage.value = if (primaryError.isNotBlank()) primaryError else "Invalid Service Connection Number or Registered Mobile Number."
                 _submitState.value = SubmitState.INVALID_DETAILS
                 return
             }

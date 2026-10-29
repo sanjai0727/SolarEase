@@ -44,9 +44,9 @@ fun TnebBillStatusWebView(
     LaunchedEffect(submitTrigger) {
         if (submitTrigger > 0) {
             android.util.Log.d("BillStatusDiagnostic", "SUBMIT_TRIGGER_RECEIVED")
-            val safeScn = serviceConnectionNumber.replace("'", "\\'").replace("\"", "\\\"")
-            val safeMob = registeredMobileNumber.replace("'", "\\'").replace("\"", "\\\"")
-            val safeCap = captchaInput.replace("'", "\\'").replace("\"", "\\\"")
+            val jsonScn = org.json.JSONObject.quote(serviceConnectionNumber)
+            val jsonMob = org.json.JSONObject.quote(registeredMobileNumber)
+            val jsonCap = org.json.JSONObject.quote(captchaInput)
             
             android.util.Log.d("BillStatusDiagnostic", "SUBMIT_JS_STARTED")
             
@@ -96,9 +96,9 @@ fun TnebBillStatusWebView(
                         }
                         AndroidCaptchaBridge.onDiagnosticLog("--- PRE-SUBMISSION DIAGNOSTICS ---\n" + diag.join('\n'));
 
-                        document.getElementById('serviceno').value = '$safeScn';
-                        document.getElementById('mob').value = '$safeMob';
-                        document.getElementById('cap').value = '$safeCap';
+                        document.getElementById('serviceno').value = $jsonScn;
+                        document.getElementById('mob').value = $jsonMob;
+                        document.getElementById('cap').value = $jsonCap;
                         if (subBtn) {
                             console.log('BillStatusDiagnostic: SUBMIT_BUTTON_FOUND');
                             subBtn.click();
@@ -181,7 +181,11 @@ fun TnebBillStatusWebView(
                                             var bText = document.body ? (document.body.innerText || '') : '';
                                             
                                             // Check for CAPTCHA or details errors
-                                            if (bText.toLowerCase().includes('invalid captcha')) {
+                                            var errElem = document.querySelector('.ui-messages-error-summary, .ui-messages-error-detail, .ui-message-error-detail, .ui-message-error-summary');
+                                            if (errElem && errElem.innerText && errElem.innerText.trim()) {
+                                                result.isError = true;
+                                                result.errorMessage = errElem.innerText.trim();
+                                            } else if (bText.toLowerCase().includes('invalid captcha')) {
                                                 result.isError = true;
                                                 result.errorMessage = 'INVALID_CAPTCHA';
                                             }
@@ -242,7 +246,7 @@ fun TnebBillStatusWebView(
                                                     var rows = tbl.rows;
                                                     for (var r = 0; r < rows.length; r++) {
                                                         var cells = rows[r].cells;
-                                                        if (cells.length >= 18) {
+                                                        if (cells.length >= 8) {
                                                             var d = (cells[0].innerText || '').trim();
                                                             if (/\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(d)) {
                                                                 var getV = function(idx) { return (idx < cells.length) ? (cells[idx].innerText || '').trim() : ''; };

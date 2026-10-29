@@ -387,7 +387,6 @@ fun MonthlyConsumptionScreen(
                 title = "How is this used?",
                 description = "This helps us estimate the exact solar system capacity (kW) needed to reduce your bi-monthly bill to zero."
             )
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

@@ -37,7 +37,8 @@ fun AuthProfileRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         StepProgress(currentStep = 3, totalSteps = 11)
         
@@ -46,7 +47,7 @@ fun AuthProfileRoute(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -80,7 +81,7 @@ fun AuthProfileRoute(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(140.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
@@ -112,21 +113,21 @@ fun AuthProfileRoute(
             onClick = { viewModel.submitProfile(photoRef) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                .height(56.dp)
+                .padding(bottom = 8.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
             enabled = uiState !is AuthUiState.Loading && photoRef != null
         ) {
             if (uiState is AuthUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Continue", style = MaterialTheme.typography.titleMedium)
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }

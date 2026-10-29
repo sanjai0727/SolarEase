@@ -7,7 +7,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,8 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +58,7 @@ fun LensLandingScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val rooms by viewModel.rooms.collectAsState()
+    val selectedPhotos by viewModel.selectedRoomPhotos.collectAsState()
 
     var roomToRename by remember { mutableStateOf<Room?>(null) }
     var showAddRoomDialog by remember { mutableStateOf(false) }
@@ -94,7 +99,14 @@ fun LensLandingScreen(
         onResult = { success ->
             val capturedUri = currentCameraUri
             if (success && capturedUri != null && uiState is LensUiState.RoomOverview) {
-                viewModel.processUrisAsync(context, listOf(capturedUri), (uiState as LensUiState.RoomOverview).room)
+                val added = viewModel.addSelectedPhoto(capturedUri)
+                if (!added && viewModel.selectedRoomPhotos.value.size >= LensViewModel.MAX_ROOM_PHOTOS) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Maximum of 4 photos reached. Remove a photo to add another.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     )
@@ -258,6 +270,7 @@ fun LensLandingScreen(
                         room = room,
                         activeIdx = if (activeIdx > 0) activeIdx else 1,
                         total = total,
+                        selectedPhotos = selectedPhotos,
                         onRenameRoom = { roomToRename = room },
                         onLiveScanClicked = {
                             viewModel.startCamera(CameraMode.LIVE_SCAN)
@@ -277,12 +290,28 @@ fun LensLandingScreen(
                             )
                         },
                         onCapturePhotoClicked = {
-                            val uri = createCameraUri("jpg")
-                            cameraPhotoLauncher.launch(uri)
+                            if (selectedPhotos.size >= LensViewModel.MAX_ROOM_PHOTOS) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Maximum of 4 photos reached. Remove a photo to add another.",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                val uri = createCameraUri("jpg")
+                                cameraPhotoLauncher.launch(uri)
+                            }
                         },
                         onRecordVideoClicked = {
                             val uri = createCameraUri("mp4")
                             cameraVideoLauncher.launch(uri)
+                        },
+                        onRemovePhoto = { uri ->
+                            viewModel.removeSelectedPhoto(uri)
+                        },
+                        onAnalyzePhotos = { photos ->
+                            if (photos.isNotEmpty()) {
+                                viewModel.processUrisAsync(context, photos, room)
+                            }
                         },
                         onSkipRoom = {
                             viewModel.skipCurrentRoom()
@@ -639,7 +668,7 @@ fun IntroductionContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Welcoming Card with Delightful Native Vector Illustration
         Surface(
@@ -799,7 +828,7 @@ fun IntroductionContent(
                 onClick = onGoRoomByRoom,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
                 shape = RoundedCornerShape(12.dp),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
@@ -830,7 +859,7 @@ fun IntroductionContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -915,7 +944,7 @@ fun RoomSetupContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Friendly Header Banner
@@ -1299,7 +1328,7 @@ fun RoomSetupContent(
                 onClick = onProceed,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
                 shape = RoundedCornerShape(12.dp),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
@@ -1324,7 +1353,7 @@ fun RoomSetupContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -1335,12 +1364,15 @@ fun RoomOverviewContent(
     room: Room,
     activeIdx: Int,
     total: Int,
+    selectedPhotos: List<android.net.Uri> = emptyList(),
     onRenameRoom: (Room) -> Unit,
     onLiveScanClicked: () -> Unit,
     onUploadPhotosClicked: () -> Unit,
     onUploadVideoClicked: () -> Unit,
     onCapturePhotoClicked: () -> Unit,
     onRecordVideoClicked: () -> Unit,
+    onRemovePhoto: (android.net.Uri) -> Unit = {},
+    onAnalyzePhotos: (List<android.net.Uri>) -> Unit = {},
     onSkipRoom: () -> Unit
 ) {
     var showVideoOptions by remember { mutableStateOf(false) }
@@ -1351,7 +1383,7 @@ fun RoomOverviewContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Progress Header
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1420,7 +1452,7 @@ fun RoomOverviewContent(
                 color = LensColors.SlateText
             )
             Text(
-                "Add a photo of the room so we can help identify your appliances.",
+                "Take pictures of the appliances in the room",
                 style = LensTypography.bodyMd,
                 color = LensColors.SlateCaption,
                 lineHeight = 18.sp
@@ -1480,7 +1512,7 @@ fun RoomOverviewContent(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            "Take a picture of the room or upload from your gallery.",
+                            "Take pictures of the appliances in the room",
                             style = LensTypography.bodyMd,
                             color = LensColors.SlateCaption,
                             lineHeight = 16.sp
@@ -1488,17 +1520,116 @@ fun RoomOverviewContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Selected Photos Section (Thumbnail display, remove, count, and analyze button)
+                if (selectedPhotos.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                // Dual Action Buttons: Side-by-side [Take a Photo] & [Choose Gallery]
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.PhotoLibrary,
+                                contentDescription = null,
+                                tint = LensColors.Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "${selectedPhotos.size} of 4 photos selected",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                                color = LensColors.SlateText
+                            )
+                        }
+
+                        if (selectedPhotos.size >= 4) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = LensColors.PrimaryFixed
+                            ) {
+                                Text(
+                                    "MAX REACHED",
+                                    style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                                    color = LensColors.Primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 4-Slot Photo Grid
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        for (i in 0 until 4) {
+                            val photoUri = selectedPhotos.getOrNull(i)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(LensColors.SurfaceContainer)
+                                    .border(
+                                        BorderStroke(
+                                            1.dp,
+                                            if (photoUri != null) LensColors.Primary.copy(alpha = 0.5f) else LensColors.Outline.copy(alpha = 0.2f)
+                                        ),
+                                        RoundedCornerShape(10.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (photoUri != null) {
+                                    PhotoThumbnail(
+                                        uri = photoUri,
+                                        index = i + 1,
+                                        onRemove = { onRemovePhoto(photoUri) }
+                                    )
+                                } else if (i == selectedPhotos.size) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clickable(onClick = onCapturePhotoClicked),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.AddAPhoto,
+                                            contentDescription = "Add another photo",
+                                            tint = LensColors.Primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            "+ Add",
+                                            style = LensTypography.labelCaps.copy(fontSize = 10.sp),
+                                            color = LensColors.Primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        "#${i + 1}",
+                                        style = LensTypography.labelCaps.copy(fontSize = 11.sp),
+                                        color = LensColors.SlateCaption.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Primary Analyze Button when at least 1 photo is selected
                     Button(
-                        onClick = onCapturePhotoClicked,
+                        onClick = { onAnalyzePhotos(selectedPhotos) },
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LensColors.Primary),
@@ -1508,17 +1639,62 @@ fun RoomOverviewContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
+                            Text(
+                                "Analyze ${selectedPhotos.size} Photo${if (selectedPhotos.size > 1) "s" else ""}",
+                                style = LensTypography.labelSm.copy(fontWeight = FontWeight.Bold),
+                                color = LensColors.OnPrimary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Icon(
-                                Icons.Default.PhotoCamera,
+                                Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
                                 tint = LensColors.OnPrimary,
                                 modifier = Modifier.size(18.dp)
                             )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dual Action Buttons: Side-by-side [Take Photo] & [Choose Gallery]
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val isMaxPhotos = selectedPhotos.size >= 4
+                    Button(
+                        onClick = onCapturePhotoClicked,
+                        enabled = !isMaxPhotos,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LensColors.Primary,
+                            disabledContainerColor = LensColors.SurfaceContainerHigh
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.PhotoCamera,
+                                contentDescription = null,
+                                tint = if (!isMaxPhotos) LensColors.OnPrimary else LensColors.SlateCaption,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                "Take Photo",
+                                when {
+                                    selectedPhotos.isEmpty() -> "Take Photo"
+                                    isMaxPhotos -> "Max 4 Photos"
+                                    else -> "Add Photo (${selectedPhotos.size}/4)"
+                                },
                                 style = LensTypography.labelSm.copy(fontWeight = FontWeight.SemiBold),
-                                color = LensColors.OnPrimary
+                                color = if (!isMaxPhotos) LensColors.OnPrimary else LensColors.SlateCaption
                             )
                         }
                     }
@@ -1772,7 +1948,7 @@ fun ProcessingContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -1915,7 +2091,7 @@ fun RoomCompletedContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Progress Rail
         Surface(
@@ -2154,3 +2330,85 @@ private fun MetricBox(
         }
     }
 }
+
+@Composable
+private fun PhotoThumbnail(
+    uri: android.net.Uri,
+    index: Int,
+    onRemove: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val bitmap = remember(uri) {
+        try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val options = android.graphics.BitmapFactory.Options().apply {
+                    inSampleSize = 4
+                }
+                android.graphics.BitmapFactory.decodeStream(stream, null, options)?.asImageBitmap()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (bitmap != null) {
+            androidx.compose.foundation.Image(
+                bitmap = bitmap,
+                contentDescription = "Appliance photo $index",
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(LensColors.SurfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Photo,
+                    contentDescription = null,
+                    tint = LensColors.SlateCaption,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // Index badge (bottom-left)
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(4.dp),
+            shape = RoundedCornerShape(4.dp),
+            color = Color.Black.copy(alpha = 0.65f)
+        ) {
+            Text(
+                "#$index",
+                style = LensTypography.labelCaps.copy(fontSize = 9.sp),
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+            )
+        }
+
+        // Remove 'X' button (top-right)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable(onClick = onRemove),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove photo $index",
+                tint = Color.White,
+                modifier = Modifier.size(12.dp)
+            )
+        }
+    }
+}
+

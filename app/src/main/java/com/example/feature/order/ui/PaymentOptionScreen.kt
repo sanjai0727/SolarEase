@@ -24,6 +24,9 @@ import com.example.feature.assessment.util.SolarEstimateResult
 import java.text.NumberFormat
 import java.util.Locale
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun PaymentOptionRoute(
     estimateResult: SolarEstimateResult?,
@@ -44,6 +47,7 @@ fun PaymentOptionRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         StepProgress(currentStep = 11, totalSteps = 11)
@@ -120,6 +124,13 @@ fun PaymentOptionRoute(
                         Text("Net Payable", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(currencyFormat.format(result.netPayable), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "*Inclusive of GST. Government subsidy amount is an estimate governed by PM Surya Ghar Muft Bijli Yojana guidelines and requires DISCOM technical approval.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = androidx.compose.ui.unit.TextUnit(10.5f, androidx.compose.ui.unit.TextUnitType.Sp)
+                    )
                 }
             }
         }
@@ -140,7 +151,15 @@ fun PaymentOptionRoute(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "By proceeding with payment, you agree to our Terms of Service & Privacy Policy. 100% full refund is guaranteed if cancelled prior to hardware dispatch.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = androidx.compose.ui.unit.TextUnit(11f, androidx.compose.ui.unit.TextUnitType.Sp),
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
 
         Button(
             onClick = { uiState.selectedPaymentMethod?.let { onNavigateNext(it) } },

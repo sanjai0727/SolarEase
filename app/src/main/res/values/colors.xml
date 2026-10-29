@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- SolarEase Brand & Theme Colors -->
+    <color name="color_primary">#FF386A20</color>
+    <color name="color_on_primary">#FFFFFFFF</color>
+    <color name="color_primary_container">#FFE5F2D9</color>
+    <color name="color_on_primary_container">#FF19380A</color>
+    
+    <color name="color_secondary">#FFEAF3FF</color>
+    <color name="color_on_secondary">#FF18324B</color>
+    
+    <color name="color_background">#FFFBFCF3</color>
+    <color name="color_on_background">#FF191C18</color>
+    
+    <color name="color_surface">#FFFFFFFF</color>
+    <color name="color_on_surface">#FF191C18</color>
+    <color name="color_surface_variant">#FFF1F5E9</color>
+    <color name="color_outline">#FFDDE4D5</color>
+
+    <!-- Legacy / Compatibility Colors -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

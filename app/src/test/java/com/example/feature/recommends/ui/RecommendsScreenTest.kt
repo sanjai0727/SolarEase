@@ -503,9 +503,9 @@ class RecommendsScreenTest {
         // 4. 9 Energy-Saving Mantras section exists below
         composeTestRule.onNodeWithText("9 Energy-Saving Mantras").assertExists()
 
-        // 5. Solar Vendor card exists after Mantras
-        composeTestRule.onNodeWithText("How much could your home reduce its carbon footprint?").assertExists()
-        composeTestRule.onNodeWithText("Explore Solar").assertExists()
+        // 5. In Version 1 scope: Solar Vendor card must NOT exist
+        composeTestRule.onNodeWithText("How much could your home reduce its carbon footprint?").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Explore Solar").assertDoesNotExist()
     }
 
     @Test
@@ -571,8 +571,7 @@ class RecommendsScreenTest {
     }
 
     @Test
-    fun testSolarVendorCardNavigationAndAccent() {
-        var exploredSolarClicked = false
+    fun testSolarVendorDiscoveryRemovedFromRecommendsScreen() {
         val testState = com.example.feature.recommends.model.RecommendsUiState()
 
         composeTestRule.setContent {
@@ -581,14 +580,13 @@ class RecommendsScreenTest {
                 onMantraClick = {},
                 onNavigateToHome = {},
                 onNavigateToProfile = {},
-                onNavigateToSolarVendor = { exploredSolarClicked = true }
+                onNavigateToSolarEstimate = {}
             )
         }
 
-        // Click Explore Solar button on SolarVendorCard
-        composeTestRule.onNodeWithText("Explore Solar").performScrollTo().performClick()
-        composeTestRule.waitForIdle()
-
-        assertTrue(exploredSolarClicked)
+        // Solar vendor discovery and connection UI must not be displayed in Version 1
+        composeTestRule.onNodeWithText("Explore Solar").assertDoesNotExist()
+        composeTestRule.onNodeWithText("How much could your home reduce its carbon footprint?").assertDoesNotExist()
+        composeTestRule.onNodeWithText("connect with trusted solar vendors near you", substring = true).assertDoesNotExist()
     }
 }

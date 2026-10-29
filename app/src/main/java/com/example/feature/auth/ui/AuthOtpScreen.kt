@@ -2,6 +2,8 @@ package com.example.feature.auth.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LockOpen
@@ -40,7 +42,8 @@ fun AuthOtpRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
     ) {
         StepProgress(currentStep = 2, totalSteps = 11)
         
@@ -49,7 +52,7 @@ fun AuthOtpRoute(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -83,7 +86,7 @@ fun AuthOtpRoute(
             onValueChange = { otp = it },
             label = { Text("Enter OTP") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth(),
             isError = uiState is AuthUiState.Error,
             supportingText = {
@@ -93,37 +96,35 @@ fun AuthOtpRoute(
             }
         )
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Button(
             onClick = { viewModel.verifyOtp(otp, fullName, phoneNumber) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                .height(56.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
             enabled = uiState !is AuthUiState.Loading && otp.isNotBlank()
         ) {
             if (uiState is AuthUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text("Verify", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Verify", style = MaterialTheme.typography.titleMedium)
             }
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
-
         TextButton(
             onClick = onNavigateBack, 
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 12.dp)
+                .padding(top = 8.dp, bottom = 8.dp)
         ) {
-            Text("Change Phone Number", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("Change Phone Number", style = MaterialTheme.typography.titleSmall)
         }
     }
 }

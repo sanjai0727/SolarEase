@@ -55,6 +55,7 @@ import com.example.feature.assessment.ui.RequestConfirmationRoute
 import com.example.feature.assessment.ui.SolarVendorViewModel
 import com.example.feature.assessment.ui.AssessmentInputRoute
 import com.example.feature.assessment.ui.CostEstimationRoute
+import com.example.feature.assessment.util.SolarEstimateResult
 import com.example.feature.order.ui.PaymentOptionRoute
 import com.example.feature.order.ui.OrderSummaryRoute
 import com.example.feature.order.ui.SiteSurveyStatusRoute
@@ -201,7 +202,8 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 onNavigateToBillHistory = { navController.navigate(Screen.BillHistory) },
                 onNavigateToSolarPanel = { navController.navigate(Screen.SolarPanel) },
                 onNavigateToProfile = { navController.navigateToTopLevel(Screen.Profile) },
-                onNavigateToRecommends = { navController.navigateToTopLevel(Screen.Recommends) }
+                onNavigateToRecommends = { navController.navigateToTopLevel(Screen.Recommends) },
+                onNavigateToMeterScanner = { navController.navigate(Screen.MeterScanner) }
             )
         }
 
@@ -236,7 +238,7 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 onNavigateToSolarLens = {
                     navController.navigate(Screen.SolarEaseLens)
                 },
-                onNavigateToSolarVendor = {
+                onNavigateToSolarEstimate = {
                     navController.navigate(Screen.EbServiceNumber)
                 }
             )
@@ -350,6 +352,15 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
                 }
             )
         }
+
+        composable<Screen.MeterScanner> {
+            com.example.feature.meterreading.ui.MeterScannerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onReadingConfirmed = {
+                    navController.popBackStack()
+                }
+            )
+        }
         
         composable<Screen.BillHistory> {
             BillHistoryRoute(
@@ -426,49 +437,140 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
             )
         }
 
-        // Step 8: DCR or Non-DCR Panel Selection
+        // Step 8: DCR or Non-DCR Panel Selection -> Proceeds to Cost Estimation
         composable<Screen.PanelSelection> {
             PanelSelectionRoute(
                 vendorViewModel = solarVendorViewModel,
-                onNavigateNext = { navController.navigate(Screen.NearbyVendors) },
+                onNavigateNext = {
+                    val s = solarVendorViewModel.state.value
+                    navController.navigate(
+                        Screen.CostEstimation(
+                            monthlyConsumption = s.monthlyConsumptionKwh,
+                            availableArea = s.availableAreaSqM,
+                            mountType = s.mountType,
+                            systemType = s.systemType,
+                            panelType = s.panelType,
+                            customerType = s.propertyType
+                        )
+                    )
+                },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        // Step 9: Nearby Solar Vendors
-        composable<Screen.NearbyVendors> {
-            NearbyVendorsRoute(
-                vendorViewModel = solarVendorViewModel,
-                onNavigateNext = { vendorId -> navController.navigate(Screen.VendorProfile(vendorId)) },
+        // Step 9: Cost Estimation Breakdown
+        composable<Screen.CostEstimation> { backStackEntry ->
+            val route = backStackEntry.toRoute<Screen.CostEstimation>()
+            CostEstimationRoute(
+                monthlyConsumption = route.monthlyConsumption,
+                availableArea = route.availableArea,
+                mountType = route.mountType,
+                systemType = route.systemType,
+                panelType = route.panelType,
+                customerType = route.customerType,
+                onNavigateNext = { result ->
+                    navController.navigate(
+                        Screen.PaymentOption(
+                            recommendedCapacityKW = result.recommendedCapacityKW,
+                            requiredArea = result.requiredArea,
+                            availableArea = result.availableArea,
+                            areaStatus = result.areaStatus,
+                            systemType = result.systemType,
+                            mountType = result.mountType,
+                            panelType = result.panelType,
+                            customerType = result.customerType,
+                            baseRatePerKW = result.baseRatePerKW,
+                            panelsCost = result.panelsCost,
+                            mountingCost = result.mountingCost,
+                            labourCost = result.labourCost,
+                            foundationCost = result.foundationCost,
+                            grossTotal = result.grossTotal,
+                            subsidyEligible = result.subsidyEligible,
+                            subsidyReason = result.subsidyReason,
+                            subsidyAmount = result.subsidyAmount,
+                            netPayable = result.netPayable,
+                            annualSavings = result.annualSavings,
+                            estimatedPaybackYears = result.estimatedPaybackYears
+                        )
+                    )
+                },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        // Step 10: Vendor Profile
-        composable<Screen.VendorProfile> {
-            VendorProfileRoute(
-                vendorViewModel = solarVendorViewModel,
-                onNavigateNext = { navController.navigate(Screen.EstimateRequest) },
-                onNavigateBack = { navController.popBackStack() }
+        // Step 10: Payment & Financing Options
+        composable<Screen.PaymentOption> { backStackEntry ->
+            val route = backStackEntry.toRoute<Screen.PaymentOption>()
+            val estimateResult = remember(route) {
+                SolarEstimateResult(
+                    availableArea = route.availableArea,
+                    mountType = route.mountType,
+                    systemType = route.systemType,
+                    panelType = route.panelType,
+                    customerType = route.customerType,
+                    recommendedCapacityKW = route.recommendedCapacityKW,
+                    requiredArea = route.requiredArea,
+                    areaStatus = route.areaStatus,
+                    baseRatePerKW = route.baseRatePerKW,
+                    panelsCost = route.panelsCost,
+                    mountingCost = route.mountingCost,
+                    labourCost = route.labourCost,
+                    foundationCost = route.foundationCost,
+                    grossTotal = route.grossTotal,
+                    subsidyEligible = route.subsidyEligible,
+                    subsidyReason = route.subsidyReason,
+                    subsidyAmount = route.subsidyAmount,
+                    netPayable = route.netPayable,
+                    annualSavings = route.annualSavings,
+                    estimatedPaybackYears = route.estimatedPaybackYears
+                )
+            }
+            PaymentOptionRoute(
+                estimateResult = estimateResult,
+                onNavigateNext = { paymentMethod ->
+                    navController.navigate(
+                        Screen.OrderSummary(
+                            recommendedCapacityKW = route.recommendedCapacityKW,
+                            systemType = route.systemType,
+                            mountType = route.mountType,
+                            panelType = route.panelType,
+                            paymentMethod = paymentMethod,
+                            grossTotal = route.grossTotal,
+                            subsidyAmount = route.subsidyAmount,
+                            netPayable = route.netPayable
+                        )
+                    )
+                }
             )
         }
 
-        // Step 11: Estimate Request
-        composable<Screen.EstimateRequest> {
-            EstimateRequestRoute(
-                vendorViewModel = solarVendorViewModel,
-                onNavigateNext = { navController.navigate(Screen.RequestConfirmation) },
-                onNavigateBack = { navController.popBackStack() }
+        // Step 11: Order Summary
+        composable<Screen.OrderSummary> { backStackEntry ->
+            val route = backStackEntry.toRoute<Screen.OrderSummary>()
+            OrderSummaryRoute(
+                recommendedCapacityKW = route.recommendedCapacityKW,
+                systemType = route.systemType,
+                mountType = route.mountType,
+                panelType = route.panelType,
+                paymentMethod = route.paymentMethod,
+                grossTotal = route.grossTotal,
+                subsidyAmount = route.subsidyAmount,
+                netPayable = route.netPayable,
+                onNavigateNext = {
+                    navController.navigate(Screen.InstallationTracking(systemType = route.systemType))
+                }
             )
         }
 
-        // Step 12: Request Confirmation
-        composable<Screen.RequestConfirmation> {
-            RequestConfirmationRoute(
-                vendorViewModel = solarVendorViewModel,
-                onNavigateHome = {
+        // Step 12: Installation Tracking
+        composable<Screen.InstallationTracking> { backStackEntry ->
+            val route = backStackEntry.toRoute<Screen.InstallationTracking>()
+            InstallationTrackingRoute(
+                systemType = route.systemType,
+                onNavigateNext = {
                     navController.navigate(Screen.Home) {
                         popUpTo(Screen.Home) { inclusive = false }
+                        launchSingleTop = true
                     }
                 }
             )

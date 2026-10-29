@@ -125,7 +125,6 @@ fun CustomerCategoryScreen(
                 title = "Why we ask this?",
                 description = "Tariff rates, sanction loads, and government subsidies (like PM Surya Ghar) depend on whether your setup is residential or commercial."
             )
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

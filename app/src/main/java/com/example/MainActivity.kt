@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
   private fun resolveDestination(destStr: String?): Any? {
     return when (destStr) {
       "SOLAR_VENDOR" -> com.example.navigation.Screen.EbServiceNumber
+      "SOLAR_ESTIMATE" -> com.example.navigation.Screen.EbServiceNumber
       "CUSTOMER_CATEGORY" -> com.example.navigation.Screen.CustomerCategory
       "SYSTEM_TYPE" -> com.example.navigation.Screen.SystemType
       "MONTHLY_CONSUMPTION" -> com.example.navigation.Screen.MonthlyConsumption
@@ -26,10 +27,10 @@ class MainActivity : ComponentActivity() {
       "AVAILABLE_AREA" -> com.example.navigation.Screen.AvailableArea
       "RECOMMENDATION" -> com.example.navigation.Screen.Recommendation
       "PANEL_SELECTION" -> com.example.navigation.Screen.PanelSelection
-      "NEARBY_VENDORS" -> com.example.navigation.Screen.NearbyVendors
-      "VENDOR_PROFILE" -> com.example.navigation.Screen.VendorProfile("abc_solar")
-      "ESTIMATE_REQUEST" -> com.example.navigation.Screen.EstimateRequest
-      "REQUEST_CONFIRMATION" -> com.example.navigation.Screen.RequestConfirmation
+      "NEARBY_VENDORS" -> com.example.navigation.Screen.PanelSelection
+      "VENDOR_PROFILE" -> com.example.navigation.Screen.PanelSelection
+      "ESTIMATE_REQUEST" -> com.example.navigation.Screen.PanelSelection
+      "REQUEST_CONFIRMATION" -> com.example.navigation.Screen.Home
       "HOME" -> com.example.navigation.Screen.Home
       "RECOMMENDS" -> com.example.navigation.Screen.Recommends
       else -> null

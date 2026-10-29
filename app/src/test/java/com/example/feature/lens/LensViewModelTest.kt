@@ -88,7 +88,7 @@ class FakeLensApi : LensApi {
 }
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [34])
 class LensViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
@@ -1000,4 +1000,103 @@ class LensViewModelTest {
         assertTrue("State should transition to RoomOverview for Room 1", state is LensUiState.RoomOverview)
         assertEquals(room1.id, (state as LensUiState.RoomOverview).room.id)
     }
+
+    @Test
+    fun `addSelectedPhoto allows adding up to 4 photos and prevents adding a 5th photo`() {
+        val testVm = LensViewModel(repository, testDispatcher)
+        val uri1 = android.net.Uri.parse("file:///test/appliance1.jpg")
+        val uri2 = android.net.Uri.parse("file:///test/appliance2.jpg")
+        val uri3 = android.net.Uri.parse("file:///test/appliance3.jpg")
+        val uri4 = android.net.Uri.parse("file:///test/appliance4.jpg")
+        val uri5 = android.net.Uri.parse("file:///test/appliance5.jpg")
+
+        assertTrue("Photo 1 must be added successfully", testVm.addSelectedPhoto(uri1))
+        assertEquals(1, testVm.selectedRoomPhotos.value.size)
+
+        assertTrue("Photo 2 must be added successfully", testVm.addSelectedPhoto(uri2))
+        assertEquals(2, testVm.selectedRoomPhotos.value.size)
+
+        assertTrue("Photo 3 must be added successfully", testVm.addSelectedPhoto(uri3))
+        assertEquals(3, testVm.selectedRoomPhotos.value.size)
+
+        assertTrue("Photo 4 must be added successfully", testVm.addSelectedPhoto(uri4))
+        assertEquals(4, testVm.selectedRoomPhotos.value.size)
+
+        assertFalse("Photo 5 must be rejected (limit is 4 total)", testVm.addSelectedPhoto(uri5))
+        assertEquals(4, testVm.selectedRoomPhotos.value.size)
+    }
+
+    @Test
+    fun `addSelectedPhoto prevents duplicate additions of the exact same photo Uri`() {
+        val testVm = LensViewModel(repository, testDispatcher)
+        val uri1 = android.net.Uri.parse("file:///test/duplicate.jpg")
+
+        assertTrue("First addition of uri1 must succeed", testVm.addSelectedPhoto(uri1))
+        assertEquals(1, testVm.selectedRoomPhotos.value.size)
+
+        assertFalse("Duplicate addition of uri1 must be rejected", testVm.addSelectedPhoto(uri1))
+        assertEquals(1, testVm.selectedRoomPhotos.value.size)
+    }
+
+    @Test
+    fun `removeSelectedPhoto allows removing a photo and adding another up to the limit`() {
+        val testVm = LensViewModel(repository, testDispatcher)
+        val uri1 = android.net.Uri.parse("file:///test/photo1.jpg")
+        val uri2 = android.net.Uri.parse("file:///test/photo2.jpg")
+        val uri3 = android.net.Uri.parse("file:///test/photo3.jpg")
+        val uri4 = android.net.Uri.parse("file:///test/photo4.jpg")
+        val replacementUri = android.net.Uri.parse("file:///test/replacement.jpg")
+
+        testVm.addSelectedPhoto(uri1)
+        testVm.addSelectedPhoto(uri2)
+        testVm.addSelectedPhoto(uri3)
+        testVm.addSelectedPhoto(uri4)
+        assertEquals(4, testVm.selectedRoomPhotos.value.size)
+
+        testVm.removeSelectedPhoto(uri2)
+        assertEquals(3, testVm.selectedRoomPhotos.value.size)
+        assertFalse("Removed photo should no longer be present", testVm.selectedRoomPhotos.value.contains(uri2))
+
+        assertTrue("Adding replacement photo after removal must succeed", testVm.addSelectedPhoto(replacementUri))
+        assertEquals(4, testVm.selectedRoomPhotos.value.size)
+        assertTrue(testVm.selectedRoomPhotos.value.contains(replacementUri))
+    }
+
+    @Test
+    fun `processImagesAsync with 4 photos aggregates detections from all 4 photos`() = runTest(testDispatcher) {
+        val testVm = LensViewModel(repository, testDispatcher)
+        val room = testVm.rooms.value.first()
+
+        fakeApi.analyzeResult = DetectionResult(
+            detections = listOf(
+                com.example.feature.lens.data.Detection(
+                    id = "det_multi_fan",
+                    label = "Ceiling Fan",
+                    confidence = 0.95f,
+                    source = "UPLOAD",
+                    boundingBox = com.example.feature.lens.data.BoundingBox(0f, 0f, 1f, 1f),
+                    powerRatingWatts = 75f,
+                    quantity = 1,
+                    evidence = "Ceiling Fan detected.",
+                    applianceType = "Ceiling Fan",
+                    applianceName = "Ceiling Fan"
+                )
+            )
+        )
+
+        testVm.processImagesAsync(
+            listOf(byteArrayOf(1), byteArrayOf(2), byteArrayOf(3), byteArrayOf(4)),
+            "UPLOAD_IMAGE",
+            room
+        )
+        testScheduler.advanceUntilIdle()
+
+        val state = testVm.uiState.value
+        assertTrue("State should transition to Review", state is LensUiState.Review)
+        val review = state as LensUiState.Review
+        val fan = review.newAppliances.find { it.label == "Ceiling Fan" }
+        assertNotNull("Ceiling Fan must be present", fan)
+        assertEquals("Total quantity should be 4 (1 from each of the 4 images)", 4, fan!!.quantity)
+    }
 }
+

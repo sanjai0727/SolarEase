@@ -1,0 +1,19 @@
+# SolarEase Reverse Proxy Configuration for Static IP with Auto-SSL
+# Replace 'solarease.app' with your purchased domain
+
+api.solarease.app {
+    reverse_proxy backend:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+storage.solarease.app {
+    # Allow large uploads for high-resolution meter crops and appliance audits
+    request_body {
+        max_size 500MB
+    }
+    reverse_proxy minio:9000
+}

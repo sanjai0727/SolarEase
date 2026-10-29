@@ -52,7 +52,7 @@ fun PanelSelectionScreen(
         topBar = {
             Column {
                 StitchVendorTopBar(
-                    title = "Vendor Discovery",
+                    title = "Solar Estimation",
                     onNavigateBack = onNavigateBack
                 )
                 StitchStepProgressBar(
@@ -71,7 +71,7 @@ fun PanelSelectionScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StitchPrimaryButton(
-                    text = "Continue to Find Vendors",
+                    text = "Proceed to Cost Estimate",
                     onClick = onNavigateNext
                 )
 
@@ -86,7 +86,7 @@ fun PanelSelectionScreen(
                         modifier = Modifier.size(13.dp)
                     )
                     Text(
-                        text = "Preference saved to vendor quote generator",
+                        text = "Configuration saved for customized generation & savings",
                         fontSize = 11.5.sp,
                         color = StitchSecondary
                     )
@@ -270,7 +270,6 @@ fun PanelSelectionScreen(
                 title = "Why does panel type matter?",
                 description = "Government subsidies under PM Surya Ghar require DCR (Made in India) cells and modules. Non-DCR panels can be imported and might offer different pricing."
             )
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

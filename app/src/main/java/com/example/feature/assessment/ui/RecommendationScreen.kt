@@ -77,7 +77,7 @@ fun RecommendationScreen(
                 )
 
                 Text(
-                    text = "ZERO COMMITMENT • VENDOR DISCOVERY STAGE",
+                    text = "ZERO COMMITMENT • SYSTEM DESIGN STAGE",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = StitchSecondary,
@@ -288,7 +288,6 @@ fun RecommendationScreen(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

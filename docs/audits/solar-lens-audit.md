@@ -56,9 +56,9 @@ app/src/main/java/com/example/feature/lens/
     └── VideoFrameExtractor.kt       # @Deprecated MediaMetadataRetriever video frame extractor
 ```
 
-### Connected Backend (`antigravity-backend/src/modules/lens/`)
+### Connected Backend (`backend/src/modules/lens/`)
 ```
-antigravity-backend/src/modules/lens/
+backend/src/modules/lens/
 ├── models.py                        # SQLAlchemy Appliance ORM model (table: 'appliances')
 ├── router.py                        # FastAPI router: CRUD /lens/appliances, POST /lens/analyze
 ├── schemas.py                       # Pydantic schemas: ApplianceCreate, ApplianceUpdate, DetectionResult
@@ -73,7 +73,7 @@ app/src/test/java/com/example/feature/lens/
 ├── LensRoomStorageTest.kt           # Tests room storage serialization, reordering, persistence
 └── LensViewModelTest.kt             # Robolectric test suite for Lens state machine
 
-antigravity-backend/
+backend/
 ├── test_lens_auth.py                # Tests Firebase token validation on /lens/analyze
 └── test_lens_gemini.py              # Tests mocked Gemini response parsing and null power ratings
 ```
@@ -271,7 +271,7 @@ val top = rel.top * size.height
 | `/lens/appliances/{id}` | `DELETE`| User Access Token (`get_current_user`)| None | Status 204 | Backend only |
 
 ### 7.2 Backend Schema Mismatch
-In `antigravity-backend/src/modules/lens/schemas.py`:
+In `backend/src/modules/lens/schemas.py`:
 ```python
 class ApplianceBase(BaseModel):
     appliance_name: str = Field(..., max_length=255)
@@ -386,9 +386,9 @@ If a household has 20 appliances across 4 rooms:
 | Finding ID | Severity | Category | File Path & Line | Description / Evidence | Confidence |
 |---|---|---|---|---|---|
 | **LENS-NAV-001** | **High** | Navigation | `ApplianceReviewScreen.kt:45-51`<br>`ApplianceResultScreen.kt:50`<br>`LensLandingScreen.kt:132-140` | **Inescapable Back-Navigation Loop Trap:** Back-press on Review or Results screen pops the backstack to `LensMain` while `uiState` remains `Review` or `WholeHouseAnalytics`. `LensLandingScreen`'s `LaunchedEffect(uiState)` instantly re-triggers forward navigation, trapping the user. | **Confirmed** |
-| **LENS-AI-001** | **High** | Vision / AI | `antigravity-backend/src/modules/lens/service.py:25`<br>`LensViewModel.kt:609,679,894` | **Non-Existent Vision Model (`gemini-3.8-flash`):** Google Vertex AI/GenAI has no model named `gemini-3.8-flash`. Calling the live backend endpoint results in an immediate 404/502 error. | **Confirmed** |
+| **LENS-AI-001** | **High** | Vision / AI | `backend/src/modules/lens/service.py:25`<br>`LensViewModel.kt:609,679,894` | **Non-Existent Vision Model (`gemini-3.8-flash`):** Google Vertex AI/GenAI has no model named `gemini-3.8-flash`. Calling the live backend endpoint results in an immediate 404/502 error. | **Confirmed** |
 | **LENS-SCOPE-001** | **High** | Scope / Code Contradiction | `LensLandingScreen.kt:95-103, 262-276, 937-982`<br>`LensViewModel.kt:676-762` | **Video Recording & Upload Present in Image-Only Module:** The local codebase exposes video recording (`CaptureVideo`) and video upload (`PickVisualMedia.VideoOnly`) in direct contradiction to the image-only mandate. | **Confirmed** |
-| **LENS-API-001** | **High** | Backend / Contract | `antigravity-backend/src/modules/lens/schemas.py:9`<br>`LensViewModel.kt:487-495` | **Custom Appliance Backend Validation Rejection (`gt=0`):** Adding a custom appliance defaults to 0W. Backend schema rejects `power_rating_watts <= 0` with HTTP 422 Unprocessable Entity. | **Confirmed** |
+| **LENS-API-001** | **High** | Backend / Contract | `backend/src/modules/lens/schemas.py:9`<br>`LensViewModel.kt:487-495` | **Custom Appliance Backend Validation Rejection (`gt=0`):** Adding a custom appliance defaults to 0W. Backend schema rejects `power_rating_watts <= 0` with HTTP 422 Unprocessable Entity. | **Confirmed** |
 | **LENS-API-002** | **High** | Data Persistence | `LensViewModel.kt:588-601`<br>`ApplianceResultScreen.kt:38-725` | **Silently Swallowed Save Failures:** `finishWholeHouse()` saves appliances asynchronously and tracks `saveStatus`, but `ApplianceResultScreen` never reads or displays errors to the user. | **Confirmed** |
 | **LENS-AI-002** | **Medium** | Camera / Vision | `LensScreen.kt:296-300, 334-335`<br>`MlKitApplianceDetector.kt:54-58` | **Viewfinder Bounding Box Coordinate Misalignment:** Canvas overlay maps raw sensor bounds to screen size without compensating for `PreviewView.ScaleType.FILL_CENTER` aspect ratio crop, causing boxes to drift from physical appliances. | **Confirmed** |
 | **LENS-DATA-001** | **Medium** | Calculation | `ApplianceMaster.kt:387` | **Brittle Appliance Lookup by Wattage:** `calculateMonthlyKwh` searches appliances by `ratedWattage == powerWatts`. Microwave (1200W, duty 1.0) collides with AC (1200W, duty 0.60), causing distorted energy calculations. | **Confirmed** |

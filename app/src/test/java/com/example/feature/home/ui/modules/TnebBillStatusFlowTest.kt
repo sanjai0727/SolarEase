@@ -402,4 +402,52 @@ class TnebBillStatusFlowTest {
         assertEquals(10, viewModel.serviceConnectionNumber.value.length)
         assertFalse("10-digit SCN must be invalid", viewModel.isValid.value)
     }
+
+    @Test
+    fun test15_mobileMismatchPortalError_extractedAndDisplayedAccurately() {
+        val viewModel = TnebBillStatusViewModel()
+        viewModel.updateServiceConnectionNumber("090551322448")
+        viewModel.updateRegisteredMobileNumber("9840442845")
+        viewModel.checkBillStatus()
+
+        // Simulate live TNEB response for mobile number mismatch
+        val portalErrorHtml = """
+            <!DOCTYPE html>
+            <html>
+            <body>
+                <div id="messages" class="ui-messages ui-widget" aria-live="polite">
+                    <div class="ui-messages-error ui-corner-all">
+                        <span class="ui-messages-error-summary">Kindly enter correct registered mobile number for the entered service connection number</span>
+                    </div>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val subId = viewModel.submitTrigger.value
+        viewModel.analyzeSubmissionResponse(portalErrorHtml, subId)
+
+        assertEquals(SubmitState.INVALID_DETAILS, viewModel.submitState.value)
+        assertEquals(
+            "Kindly enter correct registered mobile number for the entered service connection number",
+            viewModel.errorMessage.value
+        )
+    }
+
+    @Test
+    fun test16_pastingMobileWithCountryCodeOrZero_normalizesCorrectly() {
+        val viewModel = TnebBillStatusViewModel()
+
+        // Pasted with +91 prefix
+        viewModel.updateRegisteredMobileNumber("+91 9840442845")
+        assertEquals("9840442845", viewModel.registeredMobileNumber.value)
+
+        // Pasted with 91 prefix without plus
+        viewModel.updateRegisteredMobileNumber("919840442845")
+        assertEquals("9840442845", viewModel.registeredMobileNumber.value)
+
+        // Pasted with leading zero
+        viewModel.updateRegisteredMobileNumber("09840442845")
+        assertEquals("9840442845", viewModel.registeredMobileNumber.value)
+    }
 }

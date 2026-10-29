@@ -8,14 +8,14 @@
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
-2. [Project Vision & AntiGravity Integration](#2-project-vision--antigravity-integration)
+2. [Project Vision & Operations Platform Integration](#2-project-vision--SolarEase Platform-integration)
 3. [Application Modules](#3-application-modules)
 4. [Complete User Journey](#4-complete-user-journey)
 5. [Solar Calculation Engine](#5-solar-calculation-engine)
 6. [Installation Workflows](#6-installation-workflows)
 7. [Current Project Status](#7-current-project-status)
 8. [Application Architecture](#8-application-architecture)
-9. [AntiGravity Integration Plan](#9-antigravity-integration-plan)
+9. [Operations Platform Integration Plan](#9-SolarEase Platform-integration-plan)
 10. [Database Design](#10-database-design)
 11. [Admin Panel Modules](#11-admin-panel-modules)
 12. [Project Folder Structure](#12-project-folder-structure)
@@ -59,7 +59,7 @@ The solar installation industry in India suffers from several critical pain poin
 2. Automate solar system sizing, cost estimation, and government subsidy calculation
 3. Provide real-time installation milestone tracking
 4. Deliver post-installation performance, financial ROI, and environmental impact monitoring
-5. Establish a scalable foundation for integration with the AntiGravity backend management platform
+5. Establish a scalable foundation for integration with the SolarEase Platform backend management platform
 
 ### Value Proposition
 
@@ -69,23 +69,23 @@ Customers get instant system recommendations, transparent cost breakdowns, autom
 
 ---
 
-## 2. Project Vision & AntiGravity Integration
+## 2. Project Vision & Operations Platform Integration
 
 ### Long-Term Vision
 
 SolarEase is designed to be one half of a two-platform ecosystem. The long-term vision is:
 
 ```
-Customer App (SolarEase) ←→ REST APIs ←→ AntiGravity Backend Platform
+Customer App (SolarEase) ←→ REST APIs ←→ SolarEase Operations Platform
 ```
 
 **SolarEase** handles the customer-facing journey: registration, assessment, ordering, tracking, and monitoring.
 
-**AntiGravity** is the internal operations and management platform — a web-based admin application used by the solar installation company's operations team, sales team, engineers, surveyors, and management.
+**SolarEase Platform** is the internal operations and management platform — a web-based admin application used by the solar installation company's operations team, sales team, engineers, surveyors, and management.
 
 ### Platform Responsibilities
 
-| Concern | SolarEase (Customer App) | AntiGravity (Admin Platform) |
+| Concern | SolarEase (Customer App) | SolarEase Admin Platform |
 |---|---|---|
 | Customer registration | ✅ Customer self-registers | ✅ Admin views/manages customers |
 | System assessment | ✅ Customer performs self-assessment | ✅ Admin reviews and approves |
@@ -114,7 +114,7 @@ graph TB
         F[SMS/OTP Gateway]
     end
 
-    subgraph AntiGravity Platform
+    subgraph SolarEase Platform Platform
         G[Admin Web Panel]
         H[Operations Dashboard]
         I[Installer Management]
@@ -911,7 +911,7 @@ flowchart LR
 | Module | Priority | Dependency |
 |---|---|---|
 | Real OTP delivery | High | Firebase Auth / SMS Gateway |
-| Real API integration (all modules) | High | AntiGravity backend |
+| Real API integration (all modules) | High | SolarEase Platform backend |
 | Payment gateway integration | High | Razorpay / PayU / bank transfer |
 | Document upload and download | High | File storage backend |
 | GeoTag photo capture | Medium | Camera permission + GPS |
@@ -1047,11 +1047,11 @@ data class User(
 
 ---
 
-## 9. AntiGravity Integration Plan
+## 9. Operations Platform Integration Plan
 
 ### Overview
 
-All current mock data implementations must be replaced with real API calls to the AntiGravity backend. The integration follows a standard REST architecture with JWT authentication.
+All current mock data implementations must be replaced with real API calls to the SolarEase Platform backend. The integration follows a standard REST architecture with JWT authentication.
 
 ### Integration Architecture
 
@@ -1060,7 +1060,7 @@ sequenceDiagram
     participant App as SolarEase App
     participant GW as API Gateway
     participant Auth as Auth Service
-    participant BE as AntiGravity Backend
+    participant BE as SolarEase Platform Backend
     participant DB as Database
     participant FCM as FCM (Push)
 
@@ -1089,7 +1089,7 @@ sequenceDiagram
 
 #### Base URL Pattern
 ```
-https://api.antigravity.in/v1/
+https://api.solarease.in/v1/
 ```
 
 ---
@@ -1273,7 +1273,7 @@ https://api.antigravity.in/v1/
 
 ## 10. Database Design
 
-The following tables describe the complete data model required for the AntiGravity backend database.
+The following tables describe the complete data model required for the SolarEase Platform backend database.
 
 ---
 
@@ -1528,7 +1528,7 @@ For push notification delivery.
 
 ## 11. Admin Panel Modules
 
-The AntiGravity admin panel is a web application (planned) that provides the company's operations, sales, and technical teams with full visibility and control over all customer accounts, orders, installations, and system performance.
+The SolarEase Platform admin panel is a web application (planned) that provides the company's operations, sales, and technical teams with full visibility and control over all customer accounts, orders, installations, and system performance.
 
 ### 11.1 Dashboard
 
@@ -1757,7 +1757,7 @@ SolarEase/
 │       │       └── AppModule.kt                    # Dependency injection (Hilt)
 │       └── feature/
 │           └── [same feature structure as above]
-├── antigravity-backend/                            # Backend (separate repo or module)
+├── backend/                            # Backend (separate repo or module)
 │   ├── src/
 │   │   ├── routes/
 │   │   ├── controllers/
@@ -1767,7 +1767,7 @@ SolarEase/
 │   │   └── utils/
 │   ├── prisma/schema.prisma                        # Database schema
 │   └── package.json
-├── antigravity-admin/                              # Admin web panel (separate repo)
+├── admin-panel/                              # Admin web panel (separate repo)
 │   ├── src/
 │   │   ├── pages/
 │   │   ├── components/
@@ -1823,7 +1823,7 @@ SolarEase/
 | **Accompanist Permissions** | Runtime permission handling |
 | **Firebase Credentials / Google Sign-In** | Google OAuth |
 
-### 13.3 Planned Backend Tech Stack (AntiGravity)
+### 13.3 Planned Backend Tech Stack (SolarEase Platform)
 
 | Technology | Purpose |
 |---|---|
@@ -1840,7 +1840,7 @@ SolarEase/
 | **Docker** | Containerized deployment |
 | **Nginx** | Reverse proxy |
 
-### 13.4 Planned Admin Panel Tech Stack (AntiGravity Admin)
+### 13.4 Planned Admin Panel Tech Stack (SolarEase Platform Admin)
 
 | Technology | Purpose |
 |---|---|
@@ -1944,8 +1944,8 @@ All inputs are validated both client-side and server-side:
 - 🔲 Multilingual support (Tamil, Hindi)
 - 🔲 Offline mode with Room database caching
 
-### Version 2.0 — AntiGravity Admin Panel Launch
-- 🔲 AntiGravity web admin panel (customer management, order processing, survey management, installation management)
+### Version 2.0 — SolarEase Platform Admin Panel Launch
+- 🔲 SolarEase Platform web admin panel (customer management, order processing, survey management, installation management)
 - 🔲 Admin-driven milestone update flow (replaces simulation)
 - 🔲 Surveyor mobile workflow (survey form, photo upload, report submission)
 - 🔲 Installer mobile workflow (milestone updates from field)
@@ -2069,3 +2069,47 @@ Environment variables are exposed as `BuildConfig` fields in the app.
 > **Document Maintained By:** SolarEase Development Team
 > **Last Updated:** August 2026
 > **Version:** 1.0
+
+---
+
+## 17. Developer Quickstart & Build Operations
+
+### 17.1 SDK & Build Environment Matrix
+- **Min SDK:** 24 (Android 7.0 Nougat)
+- **Target SDK:** 35 (Android 15)
+- **Compile SDK:** 36 (Android 16 preview)
+- **JDK Requirement:** OpenJDK 17 or 21 (Temurin / Microsoft HotSpot)
+- **Gradle Version:** 9.6.1 (managed by Gradle Wrapper)
+- **AGP (Android Gradle Plugin):** 9.3.2
+
+### 17.2 Local Environment Setup
+1. **Clone Repository:**
+   `ash
+   git clone https://github.com/sanjai0727/SolarEase.git
+   cd SolarEase
+   `
+2. **SDK Configuration:**
+   Create local.properties in root with your local Android SDK location:
+   `properties
+   sdk.dir=C\:\\Users\\<username>\\android-sdk
+   `
+3. **Environment & Signing Setup:**
+   `ash
+   cp .env.example .env
+   cp keystore.properties.example keystore.properties
+   `
+
+### 17.3 Essential Gradle Commands
+| Task | Command | Description |
+|---|---|---|
+| **Run Unit Tests** | ./gradlew testDebugUnitTest | Executes all 260+ JVM & Robolectric unit tests |
+| **Run Android Lint** | ./gradlew lintDebug | Analyzes code quality, security, and resource hygiene |
+| **Build Debug APK** | ./gradlew assembleDebug | Builds installable debug APK signed with debug keystore |
+| **Build Release APK** | ./gradlew assembleRelease | Builds minified, R8-shrunk release APK with upload signing |
+| **Check Dependencies** | ./gradlew app:dependencies | Inspects full dependency tree resolved via Version Catalog |
+
+### 17.4 CI/CD Pipeline
+Continuous Integration runs on every pull request to main via .github/workflows/android-ci.yml, enforcing:
+- Clean build with JDK 17
+- 100% test pass on 	estDebugUnitTest
+- Android Lint validation without critical/fatal errors

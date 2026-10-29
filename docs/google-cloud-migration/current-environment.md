@@ -4,7 +4,7 @@
 - **Framework:** FastAPI (`>=0.111.0`)
 - **Python Version:** 3.11.9 (active virtualenv), 3.13+ (compatible / target)
 - **ASGI Server:** Uvicorn (`uvicorn[standard]>=0.30.0`)
-- **Entry Point:** `antigravity-backend/src/main.py` (`app = create_app()`)
+- **Entry Point:** `backend/src/main.py` (`app = create_app()`)
 - **Deployment Platform:** Render Web Service
 - **Production Base URL:** `https://solarease-backend.onrender.com/`
 - **Active Routers:**

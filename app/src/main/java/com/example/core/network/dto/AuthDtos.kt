@@ -47,3 +47,20 @@ data class UserUpdateRequest(
     @Json(name = "latitude") val latitude: Double? = null,
     @Json(name = "longitude") val longitude: Double? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class ResolveIdentifierRequest(
+    @Json(name = "identifier") val identifier: String
+)
+
+@JsonClass(generateAdapter = true)
+data class ResolveIdentifierResponse(
+    @Json(name = "email") val email: String
+)
+
+@JsonClass(generateAdapter = true)
+data class CheckUsernameResponse(
+    @Json(name = "available") val available: Boolean,
+    @Json(name = "message") val message: String
+)
+
