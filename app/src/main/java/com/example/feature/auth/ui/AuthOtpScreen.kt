@@ -2,6 +2,8 @@ package com.example.feature.auth.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LockOpen
@@ -40,6 +42,7 @@ fun AuthOtpRoute(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         StepProgress(currentStep = 2, totalSteps = 11)
@@ -93,7 +96,7 @@ fun AuthOtpRoute(
             }
         )
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Button(
             onClick = { viewModel.verifyOtp(otp, fullName, phoneNumber) },

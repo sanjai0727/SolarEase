@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Treat critical issues as fatal to stop build -->
+    <issue id="HardcodedText" severity="warning" />
+    <issue id="MissingTranslation" severity="warning" />
+    <issue id="IconMissingDensityFolder" severity="warning" />
+    <issue id="VectorRaster" severity="warning" />
+    
+    <!-- Security rules -->
+    <issue id="SetJavaScriptEnabled" severity="warning" />
+    <issue id="ExportedReceiver" severity="error" />
+    <issue id="ExportedService" severity="error" />
+    <issue id="HardcodedDebugMode" severity="fatal" />
+
+    <!-- Performance -->
+    <issue id="UnusedResources" severity="warning" />
+    <issue id="Overdraw" severity="warning" />
+</lint>
+

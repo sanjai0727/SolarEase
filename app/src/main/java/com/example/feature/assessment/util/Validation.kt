@@ -1,6 +1,9 @@
 package com.example.feature.assessment.util
 
-object Validation {
+/**
+ * Validates consumer input metrics for solar site assessment and feasibility calculations.
+ */
+object AssessmentValidator {
     fun isValidConsumption(consumption: String): Boolean {
         val value = consumption.toDoubleOrNull() ?: return false
         return value > 0 && consumption.length <= 5
@@ -11,3 +14,9 @@ object Validation {
         return value > 0 && value <= 100000.0
     }
 }
+
+/**
+ * Backward-compatible alias for existing callers.
+ */
+@Deprecated("Use AssessmentValidator instead", ReplaceWith("AssessmentValidator"))
+typealias Validation = AssessmentValidator

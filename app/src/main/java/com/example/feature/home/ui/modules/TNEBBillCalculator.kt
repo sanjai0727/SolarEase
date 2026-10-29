@@ -120,4 +120,11 @@ object TNEBBillCalculator {
             breakdown = breakdown
         )
     }
+
+    fun calculateTnebBill(units: Double): BillResult = calculateTNEBBill(units)
 }
+
+/**
+ * Standard PascalCase alias.
+ */
+val TnebBillCalculator = TNEBBillCalculator

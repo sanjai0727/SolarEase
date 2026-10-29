@@ -44,9 +44,9 @@ fun TnebBillStatusWebView(
     LaunchedEffect(submitTrigger) {
         if (submitTrigger > 0) {
             android.util.Log.d("BillStatusDiagnostic", "SUBMIT_TRIGGER_RECEIVED")
-            val safeScn = serviceConnectionNumber.replace("'", "\\'").replace("\"", "\\\"")
-            val safeMob = registeredMobileNumber.replace("'", "\\'").replace("\"", "\\\"")
-            val safeCap = captchaInput.replace("'", "\\'").replace("\"", "\\\"")
+            val jsonScn = org.json.JSONObject.quote(serviceConnectionNumber)
+            val jsonMob = org.json.JSONObject.quote(registeredMobileNumber)
+            val jsonCap = org.json.JSONObject.quote(captchaInput)
             
             android.util.Log.d("BillStatusDiagnostic", "SUBMIT_JS_STARTED")
             
@@ -96,9 +96,9 @@ fun TnebBillStatusWebView(
                         }
                         AndroidCaptchaBridge.onDiagnosticLog("--- PRE-SUBMISSION DIAGNOSTICS ---\n" + diag.join('\n'));
 
-                        document.getElementById('serviceno').value = '$safeScn';
-                        document.getElementById('mob').value = '$safeMob';
-                        document.getElementById('cap').value = '$safeCap';
+                        document.getElementById('serviceno').value = $jsonScn;
+                        document.getElementById('mob').value = $jsonMob;
+                        document.getElementById('cap').value = $jsonCap;
                         if (subBtn) {
                             console.log('BillStatusDiagnostic: SUBMIT_BUTTON_FOUND');
                             subBtn.click();

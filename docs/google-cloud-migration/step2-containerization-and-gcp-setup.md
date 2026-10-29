@@ -6,7 +6,7 @@ This document details the containerization and Google Cloud target architecture 
 
 ## 1. Containerization Architecture
 
-### Dockerfile (`antigravity-backend/Dockerfile`)
+### Dockerfile (`backend/Dockerfile`)
 The backend is packaged into a slim, secure, multi-stage production container:
 - **Base Image:** `python:3.11-slim`
 - **System Packages:** `ca-certificates` (secure TLS trust bundle) and `curl` (for container healthcheck probes).
@@ -15,7 +15,7 @@ The backend is packaged into a slim, secure, multi-stage production container:
 - **Healthcheck Probe:** Built-in `HEALTHCHECK` pinging `http://localhost:${PORT:-8080}/healthz`.
 - **Startup Command:** `exec uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1`
 
-### Docker Security (`antigravity-backend/.dockerignore`)
+### Docker Security (`backend/.dockerignore`)
 Guarantees that sensitive and unnecessary files never enter the build context:
 - `.env` and `.env.*`
 - `firebase-adminsdk.json` and all `*service-account*.json` files
@@ -92,22 +92,22 @@ Google Cloud Run automatically provides a built-in proxy daemon when Cloud SQL i
    ```
 
 ### Option A: Automated One-Step Deploy (Recommended)
-Run the PowerShell or Bash script from `antigravity-backend/`:
+Run the PowerShell or Bash script from `backend/`:
 - **Windows (PowerShell):**
   ```powershell
-  cd antigravity-backend
+  cd backend
   .\scripts\deploy_cloud_run.ps1
   ```
 - **Linux / macOS / Cloud Shell:**
   ```bash
-  cd antigravity-backend
+  cd backend
   chmod +x scripts/deploy_cloud_run.sh
   ./scripts/deploy_cloud_run.sh
   ```
 
 ### Option B: Cloud Build Direct Trigger
 ```bash
-cd antigravity-backend
+cd backend
 gcloud builds submit --config cloudbuild.yaml .
 ```
 

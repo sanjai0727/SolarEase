@@ -52,7 +52,7 @@ fun PanelSelectionScreen(
         topBar = {
             Column {
                 StitchVendorTopBar(
-                    title = "Vendor Discovery",
+                    title = "Solar Estimation",
                     onNavigateBack = onNavigateBack
                 )
                 StitchStepProgressBar(
@@ -71,7 +71,7 @@ fun PanelSelectionScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StitchPrimaryButton(
-                    text = "Continue to Find Vendors",
+                    text = "Proceed to Cost Estimate",
                     onClick = onNavigateNext
                 )
 
@@ -86,7 +86,7 @@ fun PanelSelectionScreen(
                         modifier = Modifier.size(13.dp)
                     )
                     Text(
-                        text = "Preference saved to vendor quote generator",
+                        text = "Configuration saved for customized generation & savings",
                         fontSize = 11.5.sp,
                         color = StitchSecondary
                     )

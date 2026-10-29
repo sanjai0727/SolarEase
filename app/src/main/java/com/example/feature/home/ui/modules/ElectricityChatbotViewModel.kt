@@ -247,7 +247,7 @@ class ElectricityChatbotViewModel : ViewModel() {
                     _uiState.update { state ->
                         val updatedMessages = state.messages.toMutableList()
                         if (updatedMessages.isNotEmpty() && updatedMessages.last().isLoading) {
-                            updatedMessages.removeLast() // Remove loading indicator on error
+                            updatedMessages.removeAt(updatedMessages.lastIndex) // Remove loading indicator on error
                         }
                         val finalState = state.copy(
                             messages = updatedMessages,

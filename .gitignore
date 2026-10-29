@@ -7,25 +7,44 @@
 local.properties
 
 /build/
+/app/build/
 /captures/
 .externalNativeBuild/
 .cxx/
-app/build/
 
-# Android Studio
+# Build artifacts
+*.apk
+*.aab
+*.ap_
+
+# Android Studio & IDEs
 .idea/
 *.iws
+.vscode/
+
+# Agent & tooling metadata
+.agents/
+skills-lock.json
+ui-ux-pro-max/
 
 # =========================
-# Environment / Secrets
+# Environment / Secrets (CRITICAL)
 # =========================
+*.jks
+*.keystore
+*.p12
+debug.keystore
+keystore.properties
+signing-config.properties
+secrets/
+credentials/
+
 .env
 .env.*
 *.env
 *.env.*
 !.env.example
 
-debug.keystore
 firebase-adminsdk.json
 *service-account*.json
 *service_account*.json
@@ -54,16 +73,21 @@ env/
 # =========================
 .DS_Store
 Thumbs.db
+*.swp
+*~
 
 # =========================
-# Local artifacts & temp
+# Local artifacts, temp & binary documents
 # =========================
 .artifacts/
-.idea/
-antigravity-backend/alembic_out.txt
+backend/alembic_out.txt
 tmp/
+temp/
 output/
 lib/
 *.zip
-WhatsApp*
-stitch_*/
+
+# Large binary documentation & datasets (belong in Cloud Storage / Team Drive)
+/*.pdf
+/*.docx
+/processed_solar_qa.json

@@ -72,8 +72,8 @@ class TNEBBillCalculatorTest {
             assertEquals(expectedChargeable, result.chargeableUnits, 0.001)
 
             val sumBreakdown = result.breakdown.sumOf { it.amount }
-            // Float precision can be tricky, so use a small delta
             assertEquals(result.totalEnergyCharge, sumBreakdown, 0.001)
         }
     }
 }
+

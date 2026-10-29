@@ -580,7 +580,7 @@ class RecommendsScreenTest {
                 onMantraClick = {},
                 onNavigateToHome = {},
                 onNavigateToProfile = {},
-                onNavigateToSolarVendor = {}
+                onNavigateToSolarEstimate = {}
             )
         }
 

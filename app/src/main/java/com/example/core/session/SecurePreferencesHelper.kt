@@ -6,8 +6,12 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-object SecurePreferencesHelper {
-    private const val TAG = "SecurePrefsHelper"
+/**
+ * Enterprise secure session and encrypted storage factory.
+ * Provides hardware-backed AES256-GCM / AES256-SIV encrypted shared preferences with graceful fallback.
+ */
+object SecureSessionPreferences {
+    private const val TAG = "SecureSessionPrefs"
 
     fun getEncryptedPrefs(context: Context, name: String): SharedPreferences {
         val appContext = context.applicationContext ?: context
@@ -29,3 +33,9 @@ object SecurePreferencesHelper {
         }
     }
 }
+
+/**
+ * Backward-compatible alias for existing callers.
+ */
+@Deprecated("Use SecureSessionPreferences instead", ReplaceWith("SecureSessionPreferences"))
+typealias SecurePreferencesHelper = SecureSessionPreferences

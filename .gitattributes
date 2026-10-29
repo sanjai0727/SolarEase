@@ -1,0 +1,27 @@
+# Set default behavior to automatically normalize line endings to LF
+* text=auto eol=lf
+
+# Explicit binary files (never normalize line endings, do not diff as text)
+*.png binary
+*.webp binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.jar binary
+*.aar binary
+*.keystore binary
+*.jks binary
+*.p12 binary
+*.tflite binary
+
+# Shell scripts must have LF
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Windows batch files must have CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+

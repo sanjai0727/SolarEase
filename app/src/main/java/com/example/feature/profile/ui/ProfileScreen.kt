@@ -2150,8 +2150,8 @@ private fun NotificationPreferencesSheet(
                         showDivider = true
                     )
                     PreferenceToggleRow(
-                        title = "Reward & Credit Alerts",
-                        description = "Milestone notifications when unlocking new eco-vouchers",
+                        title = "Energy Savings & Milestone Alerts",
+                        description = "Milestone notifications when achieving verified energy reductions",
                         checked = preferences.rewardReminders,
                         onCheckedChange = { onToggle("reward_reminders", it) },
                         showDivider = true
@@ -2756,8 +2756,9 @@ private fun AboutSolarEaseSheet(onDismiss: () -> Unit) {
                     )
                     HorizontalDivider(thickness = 0.5.dp, color = StitchSurfaceContainer)
                     Text(
-                        text = "Certified Standards: TNEB Smart Grid Compliance • REAP Telemetry v2.4",
+                        text = "Statutory Disclaimer: SolarEase is an independent analytical software developed to assist consumers. It is not affiliated with, authorized, or endorsed by TANGEDCO, TNEB, or any governmental authority. Tariff estimates are based on public LT-1A tariff schedules.",
                         fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         color = StitchOnSurfaceVariant
                     )
                 }
@@ -2767,8 +2768,9 @@ private fun AboutSolarEaseSheet(onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text("• Terms & Conditions: Licensed for consumer energy telemetry.", fontSize = 11.5.sp, color = StitchOnSurfaceVariant)
-                Text("• Privacy Policy: Zero third-party tracker policy.", fontSize = 11.5.sp, color = StitchOnSurfaceVariant)
+                Text("• Terms of Service: Governed by the Indian Contract Act, 1872.", fontSize = 11.5.sp, color = StitchOnSurfaceVariant)
+                Text("• Privacy Policy: DPDP Act 2023 compliant. Grievance Officer: privacy@solarease.app.", fontSize = 11.5.sp, color = StitchOnSurfaceVariant)
+                Text("• Refund & Cancellation: Transparent cancellation prior to site dispatch.", fontSize = 11.5.sp, color = StitchOnSurfaceVariant)
             }
 
             Button(

@@ -88,7 +88,7 @@ class FakeLensApi : LensApi {
 }
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [34])
 class LensViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()

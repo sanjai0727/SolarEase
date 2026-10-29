@@ -42,7 +42,7 @@ fun RecommendsRoute(
     onNavigateToProfile: () -> Unit,
     onNavigateToAnalytics: () -> Unit = {},
     onNavigateToSolarLens: () -> Unit = {},
-    onNavigateToSolarVendor: () -> Unit = {},
+    onNavigateToSolarEstimate: () -> Unit = {},
     viewModel: RecommendsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,7 +60,7 @@ fun RecommendsRoute(
         onNavigateToProfile = onNavigateToProfile,
         onPreviousCycle = { viewModel.selectPreviousCycle() },
         onNextCycle = { viewModel.selectNextCycle() },
-        onNavigateToSolarVendor = onNavigateToSolarVendor
+        onNavigateToSolarEstimate = onNavigateToSolarEstimate
     )
 }
 
@@ -73,7 +73,7 @@ fun RecommendsScreen(
     onNavigateToProfile: () -> Unit,
     onPreviousCycle: () -> Unit = {},
     onNextCycle: () -> Unit = {},
-    onNavigateToSolarVendor: () -> Unit = {}
+    onNavigateToSolarEstimate: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = StitchSurface,

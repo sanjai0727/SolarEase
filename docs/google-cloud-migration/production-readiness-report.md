@@ -70,7 +70,7 @@ During initial testing, `POST /chatbot/query` failed with `google.genai.errors.C
 ### Resolution
 1. **Enabled Vertex AI API:** `aiplatform.googleapis.com` on project `solarease-bf39c`.
 2. **Assigned IAM Role:** `roles/aiplatform.user` to `612667385200-compute@developer.gserviceaccount.com`.
-3. **Re-indexed Knowledge Base:** Vectorized all 203 SolarEase concepts in `antigravity-backend/src/modules/chatbot/embeddings_index.json` using Vertex AI `text-embedding-005` (768 dimensions).
+3. **Re-indexed Knowledge Base:** Vectorized all 203 SolarEase concepts in `backend/src/modules/chatbot/embeddings_index.json` using Vertex AI `text-embedding-005` (768 dimensions).
 4. **Updated Query Retrieval (`retrieval.py`):** Configured query vectorization via Vertex AI `text-embedding-005` in `asia-south1`.
 5. **Updated Generation (`service.py`):** Configured text generation with `gemini-2.5-flash` in `asia-south1` via Vertex AI using ADC.
 6. **Performance:** Query retrieval completes in ~80ms; full response generation completes in ~3.2s.
