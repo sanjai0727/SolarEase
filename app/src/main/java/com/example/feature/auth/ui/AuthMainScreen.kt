@@ -312,9 +312,80 @@ fun AuthMainRoute(
                         }
                     }
 
-                    // ---------------------------------------------------------
+                    // =========================================================
+                    // A. CONTINUE WITH GOOGLE — FIRST
+                    // =========================================================
+                    OutlinedButton(
+                        onClick = submitGoogleAuth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.White,
+                            contentColor = textPrimary
+                        ),
+                        border = BorderStroke(1.dp, outlineBorder),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 1.dp,
+                            pressedElevation = 2.dp
+                        ),
+                        enabled = uiState !is AuthUiState.Loading
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_google),
+                                contentDescription = "Google Logo",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Continue with Google",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textPrimary,
+                                fontSize = 14.5.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // =========================================================
+                    // B. OR DIVIDER
+                    // =========================================================
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = outlineBorder,
+                            thickness = 1.dp
+                        )
+                        Text(
+                            text = "or",
+                            color = textSecondary,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 14.dp)
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = outlineBorder,
+                            thickness = 1.dp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // =========================================================
+                    // C. USERNAME/EMAIL AND PASSWORD — ALTERNATIVE
                     // DYNAMIC ANIMATED FORM CONTENT
-                    // ---------------------------------------------------------
+                    // =========================================================
                     AnimatedContent(
                         targetState = authMode,
                         transitionSpec = {
@@ -474,59 +545,6 @@ fun AuthMainRoute(
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
                                             fontSize = 15.sp
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Subtle "or" Divider
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    HorizontalDivider(modifier = Modifier.weight(1f), color = outlineBorder, thickness = 1.dp)
-                                    Text(
-                                        text = "or",
-                                        color = textSecondary,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.padding(horizontal = 12.dp)
-                                    )
-                                    HorizontalDivider(modifier = Modifier.weight(1f), color = outlineBorder, thickness = 1.dp)
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Continue with Google Button
-                                OutlinedButton(
-                                    onClick = submitGoogleAuth,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = Color.White,
-                                        contentColor = textPrimary
-                                    ),
-                                    border = BorderStroke(1.dp, outlineBorder),
-                                    enabled = uiState !is AuthUiState.Loading
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.ic_google),
-                                            contentDescription = "Google Logo",
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = "Continue with Google",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = textPrimary,
-                                            fontSize = 14.sp
                                         )
                                     }
                                 }
@@ -727,59 +745,6 @@ fun AuthMainRoute(
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
                                             fontSize = 15.sp
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Subtle "or" Divider
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    HorizontalDivider(modifier = Modifier.weight(1f), color = outlineBorder, thickness = 1.dp)
-                                    Text(
-                                        text = "or",
-                                        color = textSecondary,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.padding(horizontal = 12.dp)
-                                    )
-                                    HorizontalDivider(modifier = Modifier.weight(1f), color = outlineBorder, thickness = 1.dp)
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Continue with Google Button
-                                OutlinedButton(
-                                    onClick = submitGoogleAuth,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = Color.White,
-                                        contentColor = textPrimary
-                                    ),
-                                    border = BorderStroke(1.dp, outlineBorder),
-                                    enabled = uiState !is AuthUiState.Loading
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.ic_google),
-                                            contentDescription = "Google Logo",
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = "Continue with Google",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = textPrimary,
-                                            fontSize = 14.sp
                                         )
                                     }
                                 }
