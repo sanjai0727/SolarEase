@@ -116,7 +116,7 @@ fun VendorProfileScreen(
                                 .heightIn(min = 48.dp),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = StitchPrimaryContainer,
+                                containerColor = StitchPrimary,
                                 contentColor = StitchOnPrimary
                             ),
                             contentPadding = PaddingValues(0.dp)

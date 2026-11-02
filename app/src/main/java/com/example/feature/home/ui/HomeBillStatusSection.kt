@@ -41,6 +41,7 @@ import com.example.ui.theme.StitchOnPrimaryFixedVariant
 import com.example.ui.theme.StitchOnSurface
 import com.example.ui.theme.StitchOnSurfaceVariant
 import com.example.ui.theme.StitchOutline
+import com.example.ui.theme.StitchPrimary
 import com.example.ui.theme.StitchPrimaryContainer
 import com.example.ui.theme.StitchPrimaryFixed
 import com.example.ui.theme.StitchSurfaceContainerLow
@@ -1027,13 +1028,13 @@ fun ReapJourneyStepper(
                                 .clip(CircleShape)
                                 .background(
                                     when {
-                                        isDone -> StitchPrimaryContainer
+                                        isDone -> StitchPrimary
                                         isActive -> StitchPrimaryFixed
                                         else -> StitchSurfaceContainerLow
                                     }
                                 )
                                 .then(
-                                    if (isActive) Modifier.border(2.dp, StitchPrimaryContainer, CircleShape) else Modifier
+                                    if (isActive) Modifier.border(2.dp, StitchPrimary, CircleShape) else Modifier
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -1041,7 +1042,7 @@ fun ReapJourneyStepper(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = StitchOnPrimary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             } else {
@@ -1059,7 +1060,7 @@ fun ReapJourneyStepper(
                             text = label.substringAfter(" "),
                             fontSize = 9.sp,
                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isActive) StitchPrimaryContainer else StitchOnSurfaceVariant,
+                            color = if (isActive) StitchPrimary else StitchOnSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

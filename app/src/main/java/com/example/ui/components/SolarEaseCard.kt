@@ -120,7 +120,7 @@ fun SolarEaseSelectableCard(
         color = if (selected) StitchSurfaceContainerLow else StitchSurfaceContainerLowest,
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
-            color = if (selected) StitchPrimaryContainer else StitchOutline.copy(alpha = 0.5f)
+            color = if (selected) StitchPrimary else StitchOutline.copy(alpha = 0.5f)
         ),
         shadowElevation = if (selected) 2.dp else 0.dp
     ) {
@@ -150,7 +150,7 @@ fun SolarEaseSelectableCard(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = if (selected) StitchPrimaryContainer else StitchSecondary,
+                            tint = if (selected) StitchPrimary else StitchSecondary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -167,7 +167,7 @@ fun SolarEaseSelectableCard(
                                 text = badgeText,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchPrimaryContainer,
+                                color = StitchPrimary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -177,7 +177,7 @@ fun SolarEaseSelectableCard(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (selected) StitchPrimaryContainer else StitchOnSurface
+                        color = if (selected) StitchPrimary else StitchOnSurface
                     )
 
                     if (subtitle != null) {
@@ -197,7 +197,7 @@ fun SolarEaseSelectableCard(
                     checked = selected,
                     onCheckedChange = null,
                     colors = CheckboxDefaults.colors(
-                        checkedColor = StitchPrimaryContainer,
+                        checkedColor = StitchPrimary,
                         uncheckedColor = StitchOutline
                     )
                 )
@@ -206,7 +206,7 @@ fun SolarEaseSelectableCard(
                     selected = selected,
                     onClick = null,
                     colors = RadioButtonDefaults.colors(
-                        selectedColor = StitchPrimaryContainer,
+                        selectedColor = StitchPrimary,
                         unselectedColor = StitchOutline
                     )
                 )

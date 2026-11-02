@@ -276,13 +276,13 @@ private fun EmptyAnalyticsView(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(StitchPrimaryContainer)
+                        .background(StitchPrimary)
                 )
                 Text(
                     text = "TNEB PORTAL SYNC • READY",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = StitchPrimaryContainer,
+                    color = StitchPrimary,
                     letterSpacing = 0.5.sp
                 )
             }
@@ -342,13 +342,13 @@ private fun EmptyAnalyticsView(
                             .align(Alignment.BottomEnd)
                             .offset(x = 2.dp, y = 2.dp)
                             .clip(CircleShape)
-                            .background(StitchPrimaryContainer),
+                            .background(StitchPrimary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Bolt,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = StitchOnPrimary,
                             modifier = Modifier.size(15.dp)
                         )
                     }
@@ -379,7 +379,10 @@ private fun EmptyAnalyticsView(
                         .fillMaxWidth()
                         .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = StitchPrimary,
+                        contentColor = StitchOnPrimary
+                    )
                 ) {
                     Text("Connect Electricity Bill", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.width(6.dp))
@@ -395,7 +398,7 @@ private fun EmptyAnalyticsView(
                     border = BorderStroke(1.dp, StitchOutline),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = StitchOnSurface)
                 ) {
-                    Icon(Icons.Default.Speed, contentDescription = null, tint = StitchPrimaryContainer, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Speed, contentDescription = null, tint = StitchPrimary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Log First Meter Reading", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
@@ -405,7 +408,7 @@ private fun EmptyAnalyticsView(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
-                    Icon(Icons.Default.Verified, contentDescription = null, tint = StitchPrimaryContainer, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Verified, contentDescription = null, tint = StitchPrimary, modifier = Modifier.size(14.dp))
                     Text(
                         text = "Standard Tamil Nadu (TNEB) Tariff Format Supported",
                         fontSize = 11.sp,
@@ -488,7 +491,7 @@ private fun EmptyAnalyticsView(
                         modifier = Modifier.padding(8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = StitchPrimaryContainer, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = StitchPrimary, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("12-Month Consumer Archive", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = StitchOnSurface)
                         }
@@ -512,7 +515,7 @@ private fun EmptyAnalyticsView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("What you'll see here", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = StitchOnSurface)
-                Text("ZERO OVERHEAD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StitchPrimaryContainer, letterSpacing = 0.8.sp)
+                Text("ZERO OVERHEAD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StitchPrimary, letterSpacing = 0.8.sp)
             }
 
             EmptyBenefitCard(

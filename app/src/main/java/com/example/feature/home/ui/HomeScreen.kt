@@ -101,7 +101,7 @@ fun HomeRoute(
                     currentUser?.id?.let { UserSession.setProfilePromptDismissed(context, it) }
                     onNavigateToProfile()
                 }) {
-                    Text("Complete Now", color = StitchPrimaryContainer, fontWeight = FontWeight.Bold)
+                    Text("Complete Now", color = StitchPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -129,7 +129,7 @@ fun HomeRoute(
                         Text(text = "Address: ${currentUser?.houseAddress}", color = StitchOnSurfaceVariant, fontSize = 13.sp)
                     }
                     if (!currentUser?.ebServiceNumber.isNullOrBlank()) {
-                        Text(text = "EB Service Number: ${currentUser?.ebServiceNumber}", color = StitchPrimaryContainer, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(text = "EB Service Number: ${currentUser?.ebServiceNumber}", color = StitchPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
                 }
             },
@@ -138,7 +138,7 @@ fun HomeRoute(
                     showAccountPreview = false
                     onNavigateToProfile()
                 }) {
-                    Text("Manage Profile", color = StitchPrimaryContainer, fontWeight = FontWeight.Bold)
+                    Text("Manage Profile", color = StitchPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -463,7 +463,7 @@ fun HomeRoute(
                                     RadioButton(
                                         selected = confirmData.selectedReason == reason,
                                         onClick = { viewModel.onHistoricalReasonSelected(reason) },
-                                        colors = RadioButtonDefaults.colors(selectedColor = StitchPrimaryContainer)
+                                        colors = RadioButtonDefaults.colors(selectedColor = StitchPrimary)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
@@ -535,7 +535,7 @@ fun HomeRoute(
                             text = rangeHint,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = StitchPrimaryContainer
+                            color = StitchPrimary
                         )
 
                         OutlinedTextField(

@@ -50,8 +50,8 @@ fun SolarEaseButton(
 
     when (variant) {
         SolarEaseButtonVariant.PRIMARY -> {
-            containerColor = StitchPrimaryContainer
-            contentColor = StitchOnPrimaryContainer
+            containerColor = StitchPrimary
+            contentColor = StitchOnPrimary
             disabledContainerColor = StitchSurfaceContainerHigh
             disabledContentColor = StitchOnSurfaceVariant.copy(alpha = 0.38f)
             border = null
@@ -65,24 +65,24 @@ fun SolarEaseButton(
         }
         SolarEaseButtonVariant.OUTLINED -> {
             containerColor = Color.Transparent
-            contentColor = StitchPrimaryContainer
+            contentColor = StitchPrimary
             disabledContainerColor = Color.Transparent
             disabledContentColor = StitchOnSurfaceVariant.copy(alpha = 0.38f)
             border = BorderStroke(
                 1.dp,
-                if (isClickable) StitchOutlineVariant else StitchOutline.copy(alpha = 0.38f)
+                if (isClickable) StitchPrimary else StitchOutline.copy(alpha = 0.38f)
             )
         }
         SolarEaseButtonVariant.TEXT -> {
             containerColor = Color.Transparent
-            contentColor = StitchPrimaryContainer
+            contentColor = StitchPrimary
             disabledContainerColor = Color.Transparent
             disabledContentColor = StitchOnSurfaceVariant.copy(alpha = 0.38f)
             border = null
         }
         SolarEaseButtonVariant.TONAL -> {
-            containerColor = StitchPrimaryFixed.copy(alpha = 0.45f)
-            contentColor = StitchPrimaryContainer
+            containerColor = StitchPrimaryContainer
+            contentColor = StitchOnPrimaryContainer
             disabledContainerColor = StitchSurfaceContainerHigh
             disabledContentColor = StitchOnSurfaceVariant.copy(alpha = 0.38f)
             border = null

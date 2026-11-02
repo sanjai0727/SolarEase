@@ -152,7 +152,7 @@ fun RecommendationScreen(
                                 text = String.format("%.1f", recommendedCapacityKw),
                                 fontSize = 34.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = StitchPrimaryContainer,
+                                color = StitchPrimary,
                                 letterSpacing = 0.sp
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -160,7 +160,7 @@ fun RecommendationScreen(
                                 text = "kW",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = StitchPrimaryContainer,
+                                color = StitchPrimary,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
                         }
@@ -177,14 +177,14 @@ fun RecommendationScreen(
                                 Icon(
                                     imageVector = Icons.Default.Verified,
                                     contentDescription = null,
-                                    tint = StitchPrimaryContainer,
+                                    tint = StitchPrimary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = "Optimal $systemType System",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StitchPrimaryContainer
+                                    color = StitchPrimary
                                 )
                             }
                         }
@@ -329,7 +329,7 @@ private fun FlowStepItem(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = StitchPrimaryContainer,
+                tint = StitchPrimary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -382,7 +382,7 @@ private fun SummaryInputRow(
                 text = value,
                 fontSize = 13.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isHighlight) StitchPrimaryContainer else StitchOnSurface
+                color = if (isHighlight) StitchPrimary else StitchOnSurface
             )
         }
     }

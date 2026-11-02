@@ -185,8 +185,8 @@ fun StitchPrimaryButton(
             .heightIn(min = 56.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = StitchPrimaryContainer,
-            contentColor = Color.White,
+            containerColor = StitchPrimary,
+            contentColor = StitchOnPrimary,
             disabledContainerColor = StitchSurfaceContainerHighest,
             disabledContentColor = StitchOnSurfaceVariant
         ),

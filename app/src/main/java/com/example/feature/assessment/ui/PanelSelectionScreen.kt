@@ -152,7 +152,7 @@ fun PanelSelectionScreen(
                     color = if (isDcr) StitchSurfaceContainerLowest else StitchSurfaceContainerLow,
                     border = BorderStroke(
                         width = if (isDcr) 1.5.dp else 1.dp,
-                        color = if (isDcr) StitchPrimaryContainer else StitchOutline.copy(alpha = 0.4f)
+                        color = if (isDcr) StitchPrimary else StitchOutline.copy(alpha = 0.4f)
                     ),
                     shadowElevation = if (isDcr) 1.dp else 0.dp
                 ) {
@@ -173,7 +173,7 @@ fun PanelSelectionScreen(
                                     modifier = Modifier
                                         .size(20.dp)
                                         .clip(CircleShape)
-                                        .background(if (isDcr) StitchPrimaryContainer else StitchSurfaceContainerHighest),
+                                        .background(if (isDcr) StitchPrimary else StitchSurfaceContainerHighest),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (isDcr) {
@@ -203,13 +203,13 @@ fun PanelSelectionScreen(
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = StitchPrimaryContainer.copy(alpha = 0.12f)
+                                color = StitchPrimary.copy(alpha = 0.12f)
                             ) {
                                 Text(
                                     text = "Subsidy Eligible",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StitchPrimaryContainer,
+                                    color = StitchPrimary,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
@@ -239,7 +239,7 @@ fun PanelSelectionScreen(
                     color = if (!isDcr) StitchSurfaceContainerLowest else StitchSurfaceContainerLow,
                     border = BorderStroke(
                         width = if (!isDcr) 1.5.dp else 1.dp,
-                        color = if (!isDcr) StitchPrimaryContainer else StitchOutline.copy(alpha = 0.4f)
+                        color = if (!isDcr) StitchPrimary else StitchOutline.copy(alpha = 0.4f)
                     ),
                     shadowElevation = if (!isDcr) 1.dp else 0.dp
                 ) {
@@ -256,7 +256,7 @@ fun PanelSelectionScreen(
                                 modifier = Modifier
                                     .size(20.dp)
                                     .clip(CircleShape)
-                                    .background(if (!isDcr) StitchPrimaryContainer else StitchSurfaceContainerHighest),
+                                    .background(if (!isDcr) StitchPrimary else StitchSurfaceContainerHighest),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (!isDcr) {

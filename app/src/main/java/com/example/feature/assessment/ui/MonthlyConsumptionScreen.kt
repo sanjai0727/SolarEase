@@ -144,7 +144,7 @@ fun MonthlyConsumptionScreen(
                         Icon(
                             imageVector = Icons.Default.ReceiptLong,
                             contentDescription = null,
-                            tint = StitchPrimaryContainer,
+                            tint = StitchPrimary,
                             modifier = Modifier.size(44.dp)
                         )
 
@@ -161,7 +161,7 @@ fun MonthlyConsumptionScreen(
                             Icon(
                                 imageVector = Icons.Default.Speed,
                                 contentDescription = null,
-                                tint = StitchPrimaryContainer,
+                                tint = StitchPrimary,
                                 modifier = Modifier.size(14.dp)
                             )
                         }
@@ -173,7 +173,7 @@ fun MonthlyConsumptionScreen(
                                 .offset(x = 4.dp, y = 4.dp)
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(StitchPrimaryContainer),
+                                .background(StitchPrimary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -384,10 +384,10 @@ fun MonthlyConsumptionScreen(
                                                 onConsumptionChange(opt)
                                             },
                                         shape = RoundedCornerShape(8.dp),
-                                        color = if (isSelected) StitchPrimaryContainer else StitchSurfaceContainerLow,
+                                        color = if (isSelected) StitchPrimary else StitchSurfaceContainerLow,
                                         border = BorderStroke(
                                             width = 1.dp,
-                                            color = if (isSelected) StitchPrimaryContainer else StitchOutline.copy(alpha = 0.4f)
+                                            color = if (isSelected) StitchPrimary else StitchOutline.copy(alpha = 0.4f)
                                         )
                                     ) {
                                         Box(

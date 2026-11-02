@@ -153,7 +153,7 @@ fun AvailableAreaScreen(
                                 Icon(
                                     imageVector = Icons.Default.Roofing,
                                     contentDescription = null,
-                                    tint = StitchPrimaryContainer,
+                                    tint = StitchPrimary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
@@ -177,7 +177,7 @@ fun AvailableAreaScreen(
                                     Icon(
                                         imageVector = Icons.Default.WbSunny,
                                         contentDescription = null,
-                                        tint = StitchPrimaryContainer,
+                                        tint = StitchPrimary,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
@@ -210,7 +210,7 @@ fun AvailableAreaScreen(
                                 text = "6.0m × 5.0m ≈ 30.0 sq. m",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchPrimaryContainer
+                                color = StitchPrimary
                             )
                         }
                     }
@@ -245,7 +245,7 @@ fun AvailableAreaScreen(
                                 text = "RECOMMENDED: ≥ 20 SQ. M",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchPrimaryContainer,
+                                color = StitchPrimary,
                                 letterSpacing = 0.8.sp
                             )
                         }
@@ -280,7 +280,7 @@ fun AvailableAreaScreen(
                                         color = StitchOnSurface,
                                         letterSpacing = 0.sp
                                     ),
-                                    cursorBrush = SolidColor(StitchPrimaryContainer),
+                                    cursorBrush = SolidColor(StitchPrimary),
                                     modifier = Modifier.weight(1f)
                                 )
 
@@ -353,7 +353,7 @@ fun AvailableAreaScreen(
                         Icon(
                             imageVector = Icons.Default.Lightbulb,
                             contentDescription = null,
-                            tint = StitchPrimaryContainer,
+                            tint = StitchPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -361,7 +361,7 @@ fun AvailableAreaScreen(
                                 text = "HELPFUL TIP",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchPrimaryContainer,
+                                color = StitchPrimary,
                                 letterSpacing = 0.8.sp
                             )
                             Text(

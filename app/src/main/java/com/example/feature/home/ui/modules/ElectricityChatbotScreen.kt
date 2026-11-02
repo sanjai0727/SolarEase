@@ -146,7 +146,7 @@ fun ElectricityChatbotRoute(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "New Chat",
-                                tint = StitchPrimaryContainer
+                                tint = StitchPrimary
                             )
                         }
                     } else {
@@ -160,7 +160,7 @@ fun ElectricityChatbotRoute(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "New Chat",
-                                tint = StitchPrimaryContainer
+                                tint = StitchPrimary
                             )
                         }
                     }
@@ -315,7 +315,7 @@ private fun RealContextRibbon() {
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = null,
-                    tint = StitchPrimaryContainer,
+                    tint = StitchPrimary,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
@@ -347,7 +347,7 @@ private fun RealContextRibbon() {
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(StitchPrimaryContainer.copy(alpha = pulseAlpha))
+                        .background(StitchPrimary.copy(alpha = pulseAlpha))
                 )
                 Text(
                     text = "LIVE",
@@ -467,7 +467,7 @@ private fun LanguageTab(
 ) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = if (isSelected) StitchPrimaryContainer else Color.Transparent,
+        color = if (isSelected) StitchPrimary else Color.Transparent,
         modifier = Modifier.clickable { onClick() }
     ) {
         Text(
@@ -491,7 +491,7 @@ private fun PersonaChip(
 ) {
     val backgroundColor = when {
         isSelected && modeKey == "engineering" -> StitchInverseSurface
-        isSelected -> StitchPrimaryContainer
+        isSelected -> StitchPrimary
         else -> StitchSurfaceContainerLow
     }
 
@@ -611,7 +611,7 @@ private fun EmptyWelcomeStateStitch(
                                 Icon(
                                     imageVector = Icons.Default.SolarPower,
                                     contentDescription = null,
-                                    tint = StitchPrimaryContainer,
+                                    tint = StitchPrimary,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -768,7 +768,7 @@ private fun UserMessageBubbleStitch(message: ChatMessage) {
             Icon(
                 imageVector = Icons.Default.DoneAll,
                 contentDescription = null,
-                tint = StitchPrimaryContainer,
+                tint = StitchPrimary,
                 modifier = Modifier.size(13.dp)
             )
         }
@@ -907,7 +907,7 @@ private fun AssistantMessageCardStitch(
                         Icon(
                             imageVector = Icons.Default.ThumbUp,
                             contentDescription = "Helpful",
-                            tint = if (feedbackSelected == true) StitchPrimaryContainer else StitchSecondary,
+                            tint = if (feedbackSelected == true) StitchPrimary else StitchSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -972,9 +972,9 @@ private fun AssistantLoadingCardStitch(currentMode: String) {
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(StitchPrimaryContainer.copy(alpha = dot1)))
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(StitchPrimaryContainer.copy(alpha = dot2)))
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(StitchPrimaryContainer.copy(alpha = dot3)))
+                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(StitchPrimary.copy(alpha = dot1)))
+                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(StitchPrimary.copy(alpha = dot2)))
+                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(StitchPrimary.copy(alpha = dot3)))
                 }
             }
 
@@ -1045,7 +1045,7 @@ private fun ErrorRetryCardStitch(
                 onClick = onRetry,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = StitchPrimaryContainer,
+                    containerColor = StitchPrimary,
                     contentColor = StitchOnPrimary
                 ),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -1267,7 +1267,7 @@ private fun ChatHistoryView(
                         onClick = onNewChat,
                         shape = RoundedCornerShape(6.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchPrimaryContainer,
+                            containerColor = StitchPrimary,
                             contentColor = StitchOnPrimary
                         ),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -1357,7 +1357,7 @@ private fun ChatHistoryView(
                         val isSelected = uiState.selectedHistoryCategory == catKey
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) StitchPrimaryContainer else StitchSurfaceContainer,
+                            color = if (isSelected) StitchPrimary else StitchSurfaceContainer,
                             modifier = Modifier.clickable { onCategoryChange(catKey) }
                         ) {
                             Text(
@@ -1457,7 +1457,7 @@ private fun SessionCard(
                     Icon(
                         imageVector = Icons.Default.SolarPower,
                         contentDescription = null,
-                        tint = StitchPrimaryContainer,
+                        tint = StitchPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(

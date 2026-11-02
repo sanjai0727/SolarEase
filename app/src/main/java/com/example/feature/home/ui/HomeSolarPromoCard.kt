@@ -28,6 +28,7 @@ import com.example.ui.theme.StitchOnPrimary
 import com.example.ui.theme.StitchOnSurface
 import com.example.ui.theme.StitchOnSurfaceVariant
 import com.example.ui.theme.StitchOutline
+import com.example.ui.theme.StitchPrimary
 import com.example.ui.theme.StitchPrimaryContainer
 import com.example.ui.theme.StitchSurfaceContainerLow
 import com.example.ui.theme.StitchSurfaceContainerLowest
@@ -382,13 +383,13 @@ fun SolarLensHeroCard(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(StitchPrimaryContainer.copy(alpha = 0.12f)),
+                            .background(StitchPrimary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.CameraOutdoor,
                             contentDescription = null,
-                            tint = StitchPrimaryContainer,
+                            tint = StitchPrimary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -397,7 +398,7 @@ fun SolarLensHeroCard(
                             text = "INTELLIGENT AUDIT",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = StitchPrimaryContainer,
+                            color = StitchPrimary,
                             letterSpacing = 0.6.sp
                         )
                         Text(
@@ -412,14 +413,14 @@ fun SolarLensHeroCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(StitchPrimaryContainer)
+                        .background(StitchPrimary)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "v2.4 CV",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = StitchOnPrimary
                     )
                 }
             }
@@ -456,7 +457,7 @@ fun SolarLensHeroCard(
                                 text = String.format(Locale.getDefault(), "%.2f kW", uiState.totalConnectedLoadKw),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchPrimaryContainer
+                                color = StitchPrimary
                             )
                             Text(
                                 text = "Connected Load",
@@ -490,7 +491,7 @@ fun SolarLensHeroCard(
                     .heightIn(min = 48.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = StitchPrimaryContainer,
+                    containerColor = StitchPrimary,
                     contentColor = StitchOnPrimary
                 )
             ) {
@@ -528,7 +529,7 @@ fun FeatureBullet(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = StitchPrimaryContainer,
+            tint = StitchPrimary,
             modifier = Modifier.size(16.dp)
         )
         Text(

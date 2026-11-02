@@ -83,7 +83,7 @@ fun RequestConfirmationScreen(
                             .heightIn(min = 48.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = StitchPrimaryContainer,
+                            containerColor = StitchPrimary,
                             contentColor = StitchOnPrimary
                         )
                     ) {

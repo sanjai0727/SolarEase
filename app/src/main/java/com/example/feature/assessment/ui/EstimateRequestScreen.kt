@@ -128,13 +128,13 @@ fun EstimateRequestScreen(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(StitchPrimaryContainer)
+                                .background(StitchPrimary)
                         )
                         Text(
                             text = "STEP 3 OF 3 • FINAL REVIEW",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = StitchPrimaryContainer,
+                            color = StitchPrimary,
                             letterSpacing = 0.8.sp
                         )
                     }
@@ -169,7 +169,7 @@ fun EstimateRequestScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_stitch_request_estimate),
                                 contentDescription = null,
-                                tint = StitchPrimaryContainer,
+                                tint = StitchPrimary,
                                 modifier = Modifier.size(36.dp)
                             )
                         }
@@ -258,14 +258,14 @@ fun EstimateRequestScreen(
                                 Icon(
                                     imageVector = Icons.Default.Verified,
                                     contentDescription = null,
-                                    tint = StitchPrimaryContainer,
+                                    tint = StitchPrimary,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Text(
                                     text = "Tier 1",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StitchPrimaryContainer
+                                    color = StitchPrimary
                                 )
                             }
                         }
@@ -329,7 +329,7 @@ fun EstimateRequestScreen(
                             Icon(
                                 imageVector = Icons.Default.Assignment,
                                 contentDescription = null,
-                                tint = StitchPrimaryContainer,
+                                tint = StitchPrimary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
@@ -349,7 +349,7 @@ fun EstimateRequestScreen(
                                 text = "Auto-calibrated",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StitchPrimaryContainer,
+                                color = StitchPrimary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
@@ -397,14 +397,14 @@ fun EstimateRequestScreen(
                                         text = String.format("%.1f", state.recommendedCapacityKw),
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = StitchPrimaryContainer
+                                        color = StitchPrimary
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
                                         text = "kW",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = StitchPrimaryContainer,
+                                        color = StitchPrimary,
                                         modifier = Modifier.padding(bottom = 1.dp)
                                     )
                                 }
@@ -469,7 +469,7 @@ fun EstimateRequestScreen(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = StitchPrimaryContainer,
+                        tint = StitchPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -537,7 +537,7 @@ private fun RequirementDetailRow(
                     text = value,
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = StitchPrimaryContainer,
+                    color = StitchPrimary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                 )
             }
@@ -551,7 +551,7 @@ private fun RequirementDetailRow(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(StitchPrimaryContainer)
+                            .background(StitchPrimary)
                     )
                 }
                 Text(
