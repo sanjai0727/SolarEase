@@ -146,14 +146,27 @@ fun AuthMainRoute(
                         }
                     } catch (e: GetCredentialCancellationException) {
                         viewModel.resetState()
-                    } catch (e: GetCredentialException) {
+                    } catch (e: androidx.credentials.exceptions.NoCredentialException) {
+                        android.util.Log.w("AuthMainScreen", "No credentials available for Google Sign-In", e)
                         viewModel.setError(
-                            e.errorMessage?.toString() ?: (e.message ?: "Google Sign-In failed")
+                            "No Google account credentials available on this device. Please check your Google account in Device Settings or sign in with email and password below."
                         )
+                    } catch (e: GetCredentialException) {
+                        val msg = e.errorMessage?.toString() ?: (e.message ?: "Google Sign-In failed")
+                        android.util.Log.e("AuthMainScreen", "GetCredentialException: $msg", e)
+                        if (msg.contains("28444") || msg.contains("Developer console")) {
+                            viewModel.setError(
+                                "Google Sign-In setup error (10: [28444]): The signing key (SHA-1) of this build must be registered in the Firebase Console."
+                            )
+                        } else {
+                            viewModel.setError(msg)
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        viewModel.setError(e.message ?: "An error occurred during Google Sign-In")
+                        val msg = e.message ?: "An error occurred during Google Sign-In"
+                        android.util.Log.e("AuthMainScreen", "Google Sign-In general exception", e)
+                        viewModel.setError(msg)
                     }
                 }
             }

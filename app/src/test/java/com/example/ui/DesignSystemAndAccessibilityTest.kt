@@ -313,7 +313,7 @@ class DesignSystemAndAccessibilityTest {
         composeTestRule.onNodeWithText("❄️").assertDoesNotExist()
         composeTestRule.onNodeWithText("💡").assertDoesNotExist()
 
-        val screenshotDir = File("C:/Users/yashv/.gemini/antigravity/brain/c3854eed-6e35-4b56-a424-c0fb9584dac4/screenshots")
+        val screenshotDir = File("build/outputs/roborazzi")
         screenshotDir.mkdirs()
         val recordOptions = com.github.takahirom.roborazzi.RoborazziOptions(
             taskType = com.github.takahirom.roborazzi.RoborazziTaskType.Record
@@ -363,7 +363,7 @@ class DesignSystemAndAccessibilityTest {
         composeTestRule.waitForIdle()
         pillNode.assertIsSelected()
 
-        val screenshotDir = File("C:/Users/yashv/.gemini/antigravity/brain/c3854eed-6e35-4b56-a424-c0fb9584dac4/screenshots")
+        val screenshotDir = File("build/outputs/roborazzi")
         screenshotDir.mkdirs()
         val recordOptions = com.github.takahirom.roborazzi.RoborazziOptions(
             taskType = com.github.takahirom.roborazzi.RoborazziTaskType.Record
@@ -377,7 +377,7 @@ class DesignSystemAndAccessibilityTest {
     @Test
     @Config(sdk = [34], qualifiers = "w411dp-h915dp")
     fun verifyVendorProfileAndEstimateRequestAccessibilitySemanticsAndScreenshots() {
-        val screenshotDir = File("C:/Users/yashv/.gemini/antigravity/brain/c3854eed-6e35-4b56-a424-c0fb9584dac4/screenshots")
+        val screenshotDir = File("build/outputs/roborazzi")
         screenshotDir.mkdirs()
         val recordOptions = com.github.takahirom.roborazzi.RoborazziOptions(
             taskType = com.github.takahirom.roborazzi.RoborazziTaskType.Record
@@ -428,7 +428,7 @@ class DesignSystemAndAccessibilityTest {
     @Test
     @Config(sdk = [34], qualifiers = "w960dp-h720dp")
     fun verifyNearbyVendorsAndEstimateRequestOnExpandedTabletViewportAndCaptureScreenshots() {
-        val screenshotDir = File("C:/Users/yashv/.gemini/antigravity/brain/c3854eed-6e35-4b56-a424-c0fb9584dac4/screenshots")
+        val screenshotDir = File("build/outputs/roborazzi")
         screenshotDir.mkdirs()
         val recordOptions = com.github.takahirom.roborazzi.RoborazziOptions(
             taskType = com.github.takahirom.roborazzi.RoborazziTaskType.Record
@@ -466,7 +466,7 @@ class DesignSystemAndAccessibilityTest {
     @Test
     @Config(sdk = [34], qualifiers = "w411dp-h915dp")
     fun verifyEstimateRequestScreenCancelTargetAndCaptureScreenshot() {
-        val screenshotDir = File("C:/Users/yashv/.gemini/antigravity/brain/c3854eed-6e35-4b56-a424-c0fb9584dac4/screenshots")
+        val screenshotDir = File("build/outputs/roborazzi")
         screenshotDir.mkdirs()
         val recordOptions = com.github.takahirom.roborazzi.RoborazziOptions(
             taskType = com.github.takahirom.roborazzi.RoborazziTaskType.Record

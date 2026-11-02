@@ -1110,8 +1110,9 @@ private fun ChatInputBarStitch(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                        .fillMaxWidth()
+                        .heightIn(min = 44.dp, max = 100.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (isTyping) {
