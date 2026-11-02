@@ -59,10 +59,10 @@ fun PendingElectricityBillHeroCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.5.dp, SolarEaseSemanticColors.WarningBorder),
-        shadowElevation = 1.dp
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
@@ -78,8 +78,8 @@ fun PendingElectricityBillHeroCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = SolarEaseSemanticColors.WarningContainer,
-                    border = BorderStroke(1.dp, SolarEaseSemanticColors.WarningBorder)
+                    color = Color(0xFFFDFDD0),
+                    border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.6f))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
@@ -89,14 +89,14 @@ fun PendingElectricityBillHeroCard(
                         Icon(
                             imageVector = Icons.Default.Bolt,
                             contentDescription = null,
-                            tint = SolarEaseSemanticColors.WarningText,
+                            tint = Color(0xFF9A7B0A),
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = "PENDING ELECTRICITY BILL",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = SolarEaseSemanticColors.WarningText,
+                            color = Color(0xFF9A7B0A),
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -144,7 +144,7 @@ fun PendingElectricityBillHeroCard(
                     Icon(
                         imageVector = Icons.Default.Alarm,
                         contentDescription = null,
-                        tint = SolarEaseSemanticColors.WarningText,
+                        tint = Color(0xFFD4AF37),
                         modifier = Modifier.size(16.dp)
                     )
                     Text(

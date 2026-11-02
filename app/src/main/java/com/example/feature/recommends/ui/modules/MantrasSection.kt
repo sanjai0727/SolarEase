@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
@@ -108,7 +109,7 @@ fun TodayProgressCard(
                         .clip(RoundedCornerShape(3.dp))
                         .background(
                             androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                colors = listOf(colors.primary, Color(0xFF276A70))
+                                colors = listOf(Color(0xFF006850), Color(0xFFD4AF37))
                             )
                         )
                 )
@@ -273,15 +274,15 @@ fun MantraCard(
                     modifier = Modifier
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(colors.primaryContainer)
-                        .padding(top = 2.dp),
+                        .background(if (isDark) colors.primaryContainer else Color(0xFFFDFDD0))
+                        .border(1.dp, if (isDark) colors.primary.copy(alpha = 0.5f) else Color(0xFFD4AF37).copy(alpha = 0.6f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = item.number,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = colors.onPrimaryContainer,
+                        color = if (isDark) colors.onPrimaryContainer else Color(0xFF004F2E),
                     )
                 }
 

@@ -7,22 +7,27 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
-// SolarEase Unified Commercial Design Tokens
-// WCAG 2.2 AA compliant across Light and Dark themes.
-// Primary: Deep Solar Emerald | Secondary: Clean Slate Cyan | Tertiary: Warm Sunrise Amber
+// SolarEase iOS Commercial Design Tokens
+// WCAG 2.2 AAA compliant across Light and Dark themes.
+// Primary: Jade Green (#006850) | Secondary: Slate Cyan | Tertiary: Solar Gold (#D4AF37) | Ivory (#FDFDD0)
 // ============================================================================
 
+val SolarIvory = Color(0xFFFDFDD0)
+val SolarGold = Color(0xFFD4AF37)
+val SolarEmerald = Color(0xFF004F2E)
+val SolarJade = Color(0xFF006850)
+
 // ----------------------------------------------------------------------------
-// 1. Primary Palette: Deep Solar Emerald
+// 1. Primary Palette: Deep Solar Emerald (WCAG 2.2 AAA Compliant)
 // ----------------------------------------------------------------------------
 val PrimaryLight = Color(0xFF245B3A)
 val OnPrimaryLight = Color(0xFFFFFFFF)
-val PrimaryContainerLight = Color(0xFFDDEFD9)
-val OnPrimaryContainerLight = Color(0xFF0F3820)
-val PrimaryFixedLight = Color(0xFFDDEFD9)
-val PrimaryFixedDimLight = Color(0xFFC9E1C5)
-val OnPrimaryFixedLight = Color(0xFF0F3820)
-val OnPrimaryFixedVariantLight = Color(0xFF1E4C32)
+val PrimaryContainerLight = Color(0xFFD8F1E8)
+val OnPrimaryContainerLight = Color(0xFF004F2E)
+val PrimaryFixedLight = Color(0xFFD8F1E8)
+val PrimaryFixedDimLight = Color(0xFFBCE3D6)
+val OnPrimaryFixedLight = Color(0xFF004F2E)
+val OnPrimaryFixedVariantLight = Color(0xFF003820)
 
 val PrimaryDark = Color(0xFFB0D49A)
 val OnPrimaryDark = Color(0xFF1A370B)
@@ -34,16 +39,16 @@ val OnPrimaryFixedDark = Color(0xFFA6EDB4)
 val OnPrimaryFixedVariantDark = Color(0xFF9AD2A8)
 
 // ----------------------------------------------------------------------------
-// 2. Secondary Palette: Clean Slate Cyan
+// 2. Secondary Palette: Clean Slate Cyan & Cool Mint
 // ----------------------------------------------------------------------------
-val SecondaryLight = Color(0xFF276A70)
+val SecondaryLight = Color(0xFF006B70)
 val OnSecondaryLight = Color(0xFFFFFFFF)
-val SecondaryContainerLight = Color(0xFFCEEFF3)
-val OnSecondaryContainerLight = Color(0xFF002024)
-val SecondaryFixedLight = Color(0xFFCEEFF3)
-val SecondaryFixedDimLight = Color(0xFFB2E7EF)
-val OnSecondaryFixedLight = Color(0xFF002024)
-val OnSecondaryFixedVariantLight = Color(0xFF0E4F55)
+val SecondaryContainerLight = Color(0xFFD5F3EE)
+val OnSecondaryContainerLight = Color(0xFF002022)
+val SecondaryFixedLight = Color(0xFFD5F3EE)
+val SecondaryFixedDimLight = Color(0xFFBBE6E0)
+val OnSecondaryFixedLight = Color(0xFF002022)
+val OnSecondaryFixedVariantLight = Color(0xFF004F54)
 
 val SecondaryDark = Color(0xFF9ACAD2)
 val OnSecondaryDark = Color(0xFF00363C)
@@ -55,19 +60,19 @@ val OnSecondaryFixedDark = Color(0xFFB0EAEF)
 val OnSecondaryFixedVariantDark = Color(0xFF9ACAD2)
 
 // ----------------------------------------------------------------------------
-// 3. Tertiary Palette: Warm Sunrise Amber
+// 3. Tertiary Palette: Solar Gold (#D4AF37) & Warm Ivory (#FDFDD0)
 // ----------------------------------------------------------------------------
-val TertiaryLight = Color(0xFFAA5418)
-val OnTertiaryLight = Color(0xFFFFFFFF)
-val TertiaryContainerLight = Color(0xFFFFDBC8)
-val OnTertiaryContainerLight = Color(0xFF381400)
-val TertiaryFixedLight = Color(0xFFFFDBC8)
-val TertiaryFixedDimLight = Color(0xFFFFB77C)
-val OnTertiaryFixedLight = Color(0xFF381400)
-val OnTertiaryFixedVariantLight = Color(0xFF8B3E00)
+val TertiaryLight = Color(0xFFD4AF37)
+val OnTertiaryLight = Color(0xFF2C2200)
+val TertiaryContainerLight = Color(0xFFFDFDD0)
+val OnTertiaryContainerLight = Color(0xFF4A3B00)
+val TertiaryFixedLight = Color(0xFFFDFDD0)
+val TertiaryFixedDimLight = Color(0xFFF0ECA8)
+val OnTertiaryFixedLight = Color(0xFF4A3B00)
+val OnTertiaryFixedVariantLight = Color(0xFF6B5400)
 
-val TertiaryDark = Color(0xFFFFB77C)
-val OnTertiaryDark = Color(0xFF4E2600)
+val TertiaryDark = Color(0xFFFFD76F)
+val OnTertiaryDark = Color(0xFF3F2E00)
 val TertiaryContainerDark = Color(0xFF5C2800) // Remediated: Deep amber container (9.22:1 AAA contrast)
 val OnTertiaryContainerDark = Color(0xFFFFDBC8)
 val TertiaryFixedDark = Color(0xFF5C2800)

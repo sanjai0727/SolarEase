@@ -145,8 +145,8 @@ private fun SolarEaseBottomNavigationInternal(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = StitchSurface.copy(alpha = 0.96f),
-        border = BorderStroke(1.dp, StitchOutline)
+        color = StitchSurface.copy(alpha = 0.98f),
+        border = BorderStroke(0.8.dp, StitchOutlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -304,6 +304,10 @@ private fun SolarEaseNavItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
+    val isDark = LocalIsDarkTheme.current
+    val activeBrandColor = if (isDark) StitchPrimary else SolarJade
+    val activeContentColor = if (isDark) StitchOnPrimary else Color.White
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -325,16 +329,16 @@ private fun SolarEaseNavItem(
     ) {
         Box(
             modifier = Modifier
-                .size(width = 56.dp, height = 30.dp)
+                .size(width = 54.dp, height = 30.dp)
                 .clip(RoundedCornerShape(15.dp))
-                .background(if (isSelected) StitchPrimaryContainer else Color.Transparent),
+                .background(if (isSelected) activeBrandColor else Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) StitchOnPrimaryContainer else StitchOnSurfaceVariant,
-                modifier = Modifier.size(22.dp)
+                tint = if (isSelected) activeContentColor else StitchOnSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
         Spacer(modifier = Modifier.height(3.dp))
@@ -342,7 +346,7 @@ private fun SolarEaseNavItem(
             text = label,
             fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) StitchOnPrimaryContainer else StitchOnSurfaceVariant,
+            color = if (isSelected) activeBrandColor else StitchOnSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center

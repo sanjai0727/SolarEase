@@ -286,7 +286,7 @@ fun KnowYourConsumptionCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.4f)),
+        border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.5f)),
         shadowElevation = 0.dp
     ) {
         Column(
@@ -299,7 +299,7 @@ fun KnowYourConsumptionCard(
                 text = "KNOW YOUR CONSUMPTION",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFB45309),
+                color = Color(0xFF9A7B0A),
                 letterSpacing = 0.8.sp
             )
 

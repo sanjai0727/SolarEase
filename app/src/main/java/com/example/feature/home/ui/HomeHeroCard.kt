@@ -87,8 +87,8 @@ fun ModernHomeHeader(
 
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            color = Color(0xFFFDFDD0),
+            border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.5f))
         ) {
             Box(
                 modifier = Modifier.size(38.dp),
@@ -97,8 +97,8 @@ fun ModernHomeHeader(
                 Icon(
                     imageVector = Icons.Default.WbSunny,
                     contentDescription = "Peak solar hours",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    tint = Color(0xFFD4AF37),
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }

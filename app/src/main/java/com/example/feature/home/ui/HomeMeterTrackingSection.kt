@@ -593,7 +593,7 @@ fun PrimaryEnergyCard(
                                 text = if (estBill > 0.0) "₹${String.format(Locale.getDefault(), "%,.0f", estBill)}" else "₹0",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = SolarEaseSemanticColors.WarningText
+                                color = Color(0xFFB8860B)
                             )
                             Text(
                                 text = "Estimated Bill",

@@ -112,14 +112,14 @@ fun SolarEaseCoinsCard(
                         modifier = Modifier
                             .size(if (isExpanded) 40.dp else 36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isDark) Color(0xFF3E2D00) else Color(0xFFFDF6E2))
-                            .border(1.dp, if (isDark) Color(0xFF664D00) else Color(0xFFE5D5A5), RoundedCornerShape(10.dp)),
+                            .background(if (isDark) Color(0xFF3E2D00) else Color(0xFFFDFDD0))
+                            .border(1.dp, if (isDark) Color(0xFF664D00) else Color(0xFFD4AF37), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MonetizationOn,
                             contentDescription = null,
-                            tint = if (isDark) Color(0xFFFFD54F) else Color(0xFFB45309),
+                            tint = if (isDark) Color(0xFFFFD54F) else Color(0xFFD4AF37),
                             modifier = Modifier.size(if (isExpanded) 22.dp else 18.dp)
                         )
                     }

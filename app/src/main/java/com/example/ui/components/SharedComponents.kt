@@ -77,7 +77,7 @@ fun SelectableCard(
 @Composable
 fun Modifier.subtleTopRightGradient(
     shape: Shape = RoundedCornerShape(16.dp),
-    tint: Color = if (LocalIsDarkTheme.current) Color(0xFFB0D49A).copy(alpha = 0.14f) else Color(0xFF245B3A).copy(alpha = 0.12f),
+    tint: Color = if (LocalIsDarkTheme.current) Color(0xFF5ED8B0).copy(alpha = 0.14f) else Color(0xFF006850).copy(alpha = 0.12f),
     radiusMultiplier: Float = 0.75f
 ): Modifier = this
     .clip(shape)
