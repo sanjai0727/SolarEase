@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.subtleTopRightGradient
+import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.SolarEaseSemanticColors
 
 /**
@@ -67,6 +68,8 @@ fun QuickToolsSection(
             )
         }
 
+        val isDark = LocalIsDarkTheme.current
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -76,8 +79,8 @@ fun QuickToolsSection(
                 title = "Bill Status",
                 subtitle = if (hasConnectedBill) "TNEB $tariffCode" else "Check dues & units",
                 icon = Icons.Default.ReceiptLong,
-                containerBg = MaterialTheme.colorScheme.primaryContainer,
-                iconTint = MaterialTheme.colorScheme.primary,
+                containerBg = if (isDark) Color(0xFF1E3A5F) else Color(0xFFDCEEFF),
+                iconTint = if (isDark) Color(0xFF7BBFFF) else Color(0xFF1565C0),
                 onClick = onBillStatus
             )
             QuickToolCard(
@@ -85,8 +88,8 @@ fun QuickToolsSection(
                 title = "Chatbot",
                 subtitle = "Ask Energy AI",
                 icon = Icons.Default.SmartToy,
-                containerBg = MaterialTheme.colorScheme.secondaryContainer,
-                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerBg = if (isDark) Color(0xFF2E1A4E) else Color(0xFFEDE7FF),
+                iconTint = if (isDark) Color(0xFFCB9BFF) else Color(0xFF6A1B9A),
                 onClick = onChatbot
             )
         }
@@ -100,8 +103,8 @@ fun QuickToolsSection(
                 title = "Solar Lens",
                 subtitle = "AI load & audit",
                 icon = Icons.Default.CameraOutdoor,
-                containerBg = MaterialTheme.colorScheme.primaryContainer,
-                iconTint = SolarEaseSemanticColors.SuccessText,
+                containerBg = if (isDark) Color(0xFF1A3A1A) else Color(0xFFDCF0DC),
+                iconTint = if (isDark) Color(0xFF7FD47F) else Color(0xFF2E7D32),
                 onClick = onSolarLens
             )
             QuickToolCard(
@@ -109,8 +112,8 @@ fun QuickToolsSection(
                 title = "Calculator",
                 subtitle = "Solar sizing & savings",
                 icon = Icons.Default.Calculate,
-                containerBg = SolarEaseSemanticColors.WarningContainer,
-                iconTint = SolarEaseSemanticColors.WarningText,
+                containerBg = if (isDark) Color(0xFF3D2700) else Color(0xFFFFF3D9),
+                iconTint = if (isDark) Color(0xFFFFD06B) else Color(0xFFB45309),
                 onClick = onCalculator
             )
         }

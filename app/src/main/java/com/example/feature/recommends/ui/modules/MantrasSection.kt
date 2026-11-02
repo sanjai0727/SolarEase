@@ -106,7 +106,11 @@ fun TodayProgressCard(
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(3.dp))
-                        .background(colors.primary)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                colors = listOf(colors.primary, Color(0xFF276A70))
+                            )
+                        )
                 )
             }
         }
@@ -264,14 +268,22 @@ fun MantraCard(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Number index
-                Text(
-                    text = item.number,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+                // Number index badge
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(colors.primaryContainer)
+                        .padding(top = 2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = item.number,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colors.onPrimaryContainer,
+                    )
+                }
 
                 // Icon Circle
                 Box(

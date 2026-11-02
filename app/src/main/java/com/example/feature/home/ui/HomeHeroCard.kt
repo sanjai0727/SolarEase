@@ -270,8 +270,8 @@ private fun BenefitChip(label: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        color = MaterialTheme.colorScheme.primaryContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier
@@ -291,7 +291,7 @@ private fun BenefitChip(label: String, modifier: Modifier = Modifier) {
                 text = label,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 maxLines = 1
             )
         }

@@ -535,22 +535,22 @@ fun PrimaryEnergyCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                .background(if (uiState.isTodayReadingEntered) Color(0xFF16A34A) else Color(0xFF245B3A))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(SolarEaseSemanticColors.SuccessText)
+                                        .background(Color.White.copy(alpha = 0.9f))
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (uiState.isTodayReadingEntered) "TODAY SAVED ✓" else "LIVE TRACKING",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = Color.White,
                                     letterSpacing = 0.5.sp
                                 )
                             }

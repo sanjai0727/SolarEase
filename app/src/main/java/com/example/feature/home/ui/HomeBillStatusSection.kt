@@ -398,9 +398,10 @@ fun SyncedBillSummaryStrip(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(10.dp)
                         .clip(CircleShape)
-                        .background(SolarEaseSemanticColors.SuccessText)
+                        .background(Color(0xFF16A34A))
+                        .border(2.dp, Color(0xFF16A34A).copy(alpha = 0.3f), CircleShape)
                 )
                 Column {
                     Row(
@@ -411,7 +412,7 @@ fun SyncedBillSummaryStrip(
                             text = "TNEB Bill Linked",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color(0xFF15803D)
                         )
                         Surface(
                             shape = RoundedCornerShape(4.dp),
