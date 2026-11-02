@@ -91,7 +91,7 @@ fun SolarLensPriorityHeroCard(
                     color = Color.White.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "Step 3 of 3",
+                        text = "Recommended",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White.copy(alpha = 0.9f),

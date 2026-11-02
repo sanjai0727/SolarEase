@@ -288,14 +288,6 @@ fun HomeRoute(
                             onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
                             onScanMeterReading = onNavigateToMeterScanner
                         )
-
-                        if (!uiState.hasSufficientReadings) {
-                            MeterCalibrationProgressCard(
-                                recordedCount = uiState.recordedReadingsCount,
-                                todayEnteredReading = uiState.todayEnteredReading,
-                                baselineKwh = uiState.meterBaseline?.baselineReading ?: 0.0
-                            )
-                        }
                     }
 
                     // ── Core Utility Bento Grid (Always Accessible to All Users) ───
