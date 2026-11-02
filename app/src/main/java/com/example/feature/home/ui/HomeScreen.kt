@@ -198,19 +198,11 @@ fun HomeRoute(
                         .padding(horizontal = layoutInfo.horizontalPadding, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    val step = uiState.currentOnboardingStep
-
-                    // ── Onboarding Progress Stepper Banner ───────────────────
-                    OnboardingProgressBanner(
-                        currentStep = step,
-                        isAuditCompleted = uiState.hasCompletedAudit
-                    )
-
-                    // ── Greeting Header ──────────────────────────────────────
-                    GreetingHeader(
-                        greeting = uiState.greeting,
+                    // ── Modern Clean Welcoming Header ────────────────────────
+                    ModernHomeHeader(
                         userName = uiState.userName,
-                        onboardingStep = step
+                        hasConnectedBill = uiState.hasConnectedBill,
+                        consumerNumber = uiState.consumerNumberFormatted.ifBlank { currentUser?.ebServiceNumber }
                     )
 
                     // ── Financial Action: Pending Electricity Bill / Status ───
@@ -236,19 +228,11 @@ fun HomeRoute(
                         }
                     }
 
-                    if (step == 1) {
-                        // ── STEP 1: Connect TNEB Bill ────────────────────────────
-                        PrimaryEnergyCard(
-                            uiState = uiState,
+                    // ── Hero Section (Bill Not Connected vs Active Energy Tracker) ──
+                    if (!uiState.hasConnectedBill) {
+                        ConnectBillHeroCard(
                             onConnectBill = onNavigateToTnebBillStatus,
-                            onViewBillHistory = onNavigateToBillHistory,
-                            onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
-                            onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
-                            onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
-                            onStartEditingReading = { viewModel.startEditingReading() },
-                            onCancelEditingReading = { viewModel.cancelEditingReading() },
-                            onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
-                            onScanMeterReading = onNavigateToMeterScanner
+                            onLearnMore = { showBillHelp = !showBillHelp }
                         )
 
                         Surface(
@@ -260,14 +244,16 @@ fun HomeRoute(
                             onClick = { showBillHelp = !showBillHelp }
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Icon(Icons.Default.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text("Need help with your electricity bill?", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(if (showBillHelp) "Hide bill help" else "Find your service number and learn how it works", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(if (showBillHelp) "Hide bill help" else "Find your service number and learn how TNEB slabs work", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Icon(if (showBillHelp) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showBillHelp) "Hide bill help" else "Show bill help", tint = MaterialTheme.colorScheme.primary)
                             }
@@ -280,8 +266,8 @@ fun HomeRoute(
                                 ReapClassificationCard(uiState = uiState, onLearnMore = onNavigateToTnebBillStatus)
                             }
                         }
-                    } else if (step == 2) {
-                        // ── STEP 2: Track Usage / Baseline Calibration ───────────
+                    } else {
+                        // Bill Connected: Synced Bill Summary + Primary Energy Meter Tracker
                         if (uiState.pendingBillState !is PendingBillUiState.Pending) {
                             SyncedBillSummaryStrip(
                                 uiState = uiState,
@@ -303,40 +289,53 @@ fun HomeRoute(
                             onScanMeterReading = onNavigateToMeterScanner
                         )
 
-                        MeterCalibrationProgressCard(
-                            recordedCount = uiState.recordedReadingsCount,
-                            todayEnteredReading = uiState.todayEnteredReading,
-                            baselineKwh = uiState.meterBaseline?.baselineReading ?: 0.0
-                        )
-
-                        LockedStep3PreviewCard()
-                    } else {
-                        // ── STEP 3: Audit Loads & Full Dashboard ─────────────────
-                        if (!uiState.hasCompletedAudit) {
-                            SolarLensPriorityHeroCard(
-                                uiState = uiState,
-                                onOpenSolarLens = onNavigateToSolarEaseLens
-                            )
-                        } else {
-                            CompletedAuditSummaryCard(
-                                uiState = uiState,
-                                onOpenSolarLens = onNavigateToSolarEaseLens
+                        if (!uiState.hasSufficientReadings) {
+                            MeterCalibrationProgressCard(
+                                recordedCount = uiState.recordedReadingsCount,
+                                todayEnteredReading = uiState.todayEnteredReading,
+                                baselineKwh = uiState.meterBaseline?.baselineReading ?: 0.0
                             )
                         }
+                    }
 
-                        PrimaryEnergyCard(
+                    // ── Core Utility Bento Grid (Always Accessible to All Users) ───
+                    QuickToolsSection(
+                        onBillStatus = onNavigateToTnebBillStatus,
+                        onChatbot = onNavigateToElectricityChatbot,
+                        onSolarLens = onNavigateToSolarEaseLens,
+                        onCalculator = onNavigateToBillCalculator,
+                        hasConnectedBill = uiState.hasConnectedBill,
+                        tariffCode = uiState.tariffCode
+                    )
+
+                    // ── Solar Lens & Appliance Audit Feature Showcase ────────
+                    if (uiState.hasCompletedAudit) {
+                        CompletedAuditSummaryCard(
                             uiState = uiState,
-                            onConnectBill = onNavigateToTnebBillStatus,
-                            onViewBillHistory = onNavigateToBillHistory,
-                            onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
-                            onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
-                            onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
-                            onStartEditingReading = { viewModel.startEditingReading() },
-                            onCancelEditingReading = { viewModel.cancelEditingReading() },
-                            onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
-                            onScanMeterReading = onNavigateToMeterScanner
+                            onOpenSolarLens = onNavigateToSolarEaseLens
                         )
+                    } else if (uiState.currentBillingCycleKwh > 0.0) {
+                        KnowYourConsumptionCard(
+                            uiState = uiState,
+                            onOpenSolarLens = onNavigateToSolarEaseLens
+                        )
+                    } else {
+                        SolarLensShowcaseCard(
+                            onOpenSolarLens = onNavigateToSolarEaseLens
+                        )
+                    }
 
+                    // ── Meter Progression Graph (When Readings Are Available) ─
+                    if (uiState.hasConnectedBill && uiState.meterGraphPoints.isNotEmpty()) {
+                        MeterReadingProgressionGraph(
+                            points = uiState.meterGraphPoints,
+                            billData = uiState.billData,
+                            onEditReading = { viewModel.onInitiateEditReading(it) }
+                        )
+                    }
+
+                    // ── Connected User Extra Actions & Activity ──────────────
+                    if (uiState.hasConnectedBill) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -358,20 +357,20 @@ fun HomeRoute(
                                     Icon(Icons.Default.Analytics, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                                 }
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Usage insights & tools", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(if (showInsightsAndTools) "Hide extra details" else "View usage trends, bills and helpful tools", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Usage insights & billing history", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(if (showInsightsAndTools) "Hide details" else "View tariff classification, past bills, and activity", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                Icon(if (showInsightsAndTools) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showInsightsAndTools) "Collapse insights and tools" else "Expand insights and tools", tint = MaterialTheme.colorScheme.primary)
+                                Icon(if (showInsightsAndTools) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showInsightsAndTools) "Collapse insights" else "Expand insights", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
 
                         AnimatedVisibility(visible = showInsightsAndTools, enter = fadeIn(animationSpec = tween(180)), exit = fadeOut(animationSpec = tween(120))) {
                             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                MeterReadingProgressionGraph(points = uiState.meterGraphPoints, billData = uiState.billData, onEditReading = { viewModel.onInitiateEditReading(it) })
                                 ReapClassificationCard(uiState = uiState, onLearnMore = onNavigateToTnebBillStatus)
                                 BillActionsSection(onViewBillHistory = onNavigateToBillHistory, onCheckDues = onNavigateToTnebBillStatus)
-                                QuickToolsSection(onBillStatus = onNavigateToTnebBillStatus, onChatbot = onNavigateToElectricityChatbot, onSolarLens = onNavigateToSolarEaseLens, onCalculator = onNavigateToBillCalculator, hasConnectedBill = true, tariffCode = uiState.tariffCode)
-                                RecentActivitySection(activities = uiState.recentActivities)
+                                if (uiState.recentActivities.isNotEmpty()) {
+                                    RecentActivitySection(activities = uiState.recentActivities)
+                                }
                             }
                         }
                     }
