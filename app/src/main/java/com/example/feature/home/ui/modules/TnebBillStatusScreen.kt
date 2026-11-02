@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -221,7 +221,7 @@ fun TnebBillStatusEntryScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Input Container Card
-            val inputBg = if (isSystemInDarkTheme()) Color(0xFF20251D) else Color(0xFFF9FBF8)
+            val inputBg = if (LocalIsDarkTheme.current) Color(0xFF20251D) else Color(0xFFF9FBF8)
             val inputBorder = MaterialTheme.colorScheme.outlineVariant
             val inputFocusedBorder = MaterialTheme.colorScheme.primary
             val inputPlaceholder = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -667,7 +667,7 @@ fun TnebCaptchaVerificationScreen(
             }
 
             // Main CAPTCHA Card
-            val captchaInputBg = if (isSystemInDarkTheme()) Color(0xFF20251D) else Color(0xFFF9FBF8)
+            val captchaInputBg = if (LocalIsDarkTheme.current) Color(0xFF20251D) else Color(0xFFF9FBF8)
             val captchaInputBorder = MaterialTheme.colorScheme.outlineVariant
 
             Card(
@@ -718,7 +718,7 @@ fun TnebCaptchaVerificationScreen(
                                 .width(200.dp)
                                 .height(60.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSystemInDarkTheme()) Color(0xFF20251D) else Color(0xFFE8F0FE))
+                                .background(if (LocalIsDarkTheme.current) Color(0xFF20251D) else Color(0xFFE8F0FE))
                                 .border(1.dp, captchaInputBorder, RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {

@@ -77,21 +77,21 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.example.ui.theme.*
 
 // Blue accent theme for Consumption Analytics as required (WCAG 2.2 AA >= 4.5:1 verified)
-private val BluePrimary: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-private val BluePrimaryLight: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF60A5FA) else Color(0xFF3B82F6)
-private val BlueContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
-private val BlueBorder: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
-private val TextDark: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OnBackgroundDark else Color(0xFF1E222D)
-private val TextMuted: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OnSurfaceVariantDark else Color(0xFF475569)
-private val GridLineColor: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OutlineDark else Color(0xFFE2E8F0)
-private val GraphCardBg: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) SurfaceDark else Color(0xFFF8FAFC)
+private val BluePrimary: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
+private val BluePrimaryLight: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+private val BlueContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
+private val BlueBorder: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
+private val TextDark: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnBackgroundDark else Color(0xFF1E222D)
+private val TextMuted: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnSurfaceVariantDark else Color(0xFF475569)
+private val GridLineColor: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OutlineDark else Color(0xFFE2E8F0)
+private val GraphCardBg: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) SurfaceDark else Color(0xFFF8FAFC)
 
 enum class ConsumptionRange(val label: String, val days: Int) {
     D7("7D", 7),
@@ -572,13 +572,13 @@ private fun parseIsoDate(iso: String): Date? {
     }
 }
 // SolarEase Energy Blue Palette for Weekly Meter Consumption Graph with dark mode responsiveness
-private val GraphBluePrimary: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-private val GraphBluePrimaryDark: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF60A5FA) else Color(0xFF1E40AF)
-private val GraphBlueContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
-private val GraphBlueBorder: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
-private val AmberWarning: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFFFFB77C) else Color(0xFF9A3412)
-private val AmberContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF451A03) else Color(0xFFFFFBEB)
-private val BorderColor: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OutlineDark else Color(0xFFE2E8F0)
+private val GraphBluePrimary: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
+private val GraphBluePrimaryDark: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF60A5FA) else Color(0xFF1E40AF)
+private val GraphBlueContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
+private val GraphBlueBorder: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
+private val AmberWarning: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFFFFB77C) else Color(0xFF9A3412)
+private val AmberContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF451A03) else Color(0xFFFFFBEB)
+private val BorderColor: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OutlineDark else Color(0xFFE2E8F0)
 
 /**
  * Compact Modern Sunday–Saturday Weekly Meter Reading Bar Chart for the Home screen.
@@ -1211,7 +1211,7 @@ fun MeterReadingProgressionGraph(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp)),
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSystemInDarkTheme()) SurfaceVariantDark else Color(0xFFF1F5F9),
+                        color = if (LocalIsDarkTheme.current) SurfaceVariantDark else Color(0xFFF1F5F9),
                         border = BorderStroke(1.dp, BorderColor)
                     ) {
                         Row(

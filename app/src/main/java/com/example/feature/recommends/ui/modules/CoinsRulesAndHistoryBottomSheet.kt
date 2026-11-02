@@ -2,7 +2,7 @@ package com.example.feature.recommends.ui.modules
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -39,7 +39,7 @@ fun CoinsRulesAndHistoryBottomSheet(
     onDismiss: () -> Unit
 ) {
     val colors = SolarEaseTheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 

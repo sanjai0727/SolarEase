@@ -5,7 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -148,7 +148,7 @@ fun StitchHeroIllustration(
                 .fillMaxWidth(0.85f)
                 .height(height),
             shape = RoundedCornerShape(16.dp),
-            color = if (isSystemInDarkTheme()) SurfaceVariantDark else Color(0xFFF1F8F5),
+            color = if (LocalIsDarkTheme.current) SurfaceVariantDark else Color(0xFFF1F8F5),
             border = BorderStroke(1.dp, StitchOutline.copy(alpha = 0.3f)),
             shadowElevation = 0.5.dp
         ) {

@@ -8,7 +8,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -121,7 +121,7 @@ fun MantrasSection(
     onMantraClick: (Int) -> Unit
 ) {
     val colors = SolarEaseTheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     val checkedCount = mantras.count { it.isCheckedIn }
     val totalCount = mantras.size
 
@@ -236,7 +236,7 @@ fun MantraCard(
     onClick: () -> Unit
 ) {
     val colors = SolarEaseTheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     val mantraVectorIcon = when (item.id) {
         1 -> Icons.Outlined.PowerSettingsNew

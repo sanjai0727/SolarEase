@@ -57,7 +57,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.ReadOnlyComposable
 import com.example.feature.meterreading.model.MeterOcrStatus
@@ -66,14 +66,14 @@ import com.example.feature.meterreading.parser.ReadingPlausibilityStatus
 import com.example.ui.theme.*
 import java.util.Locale
 
-private val BrandGreen: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) PrimaryDark else Color(0xFF386A20)
-private val BrandGreenLight: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) PrimaryContainerDark else Color(0xFFE5F2D9)
+private val BrandGreen: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) PrimaryDark else Color(0xFF386A20)
+private val BrandGreenLight: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) PrimaryContainerDark else Color(0xFFE5F2D9)
 private val WarningAmber = SolarEaseSemanticColors.WarningText
 private val WarningAmberBg = SolarEaseSemanticColors.WarningContainer
 private val ErrorRed = SolarEaseSemanticColors.ErrorText
 private val ErrorRedBg = SolarEaseSemanticColors.ErrorContainer
-private val SlateText: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OnBackgroundDark else Color(0xFF1E293B)
-private val SlateMuted: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OnSurfaceVariantDark else Color(0xFF475569)
+private val SlateText: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnBackgroundDark else Color(0xFF1E293B)
+private val SlateMuted: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnSurfaceVariantDark else Color(0xFF475569)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

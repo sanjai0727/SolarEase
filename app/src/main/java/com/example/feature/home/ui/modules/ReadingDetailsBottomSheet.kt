@@ -58,22 +58,22 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.example.ui.theme.*
 
-private val PrimaryBlue: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-private val BlueLightContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
-private val BlueBorder: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
-private val TextDark: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OnBackgroundDark else Color(0xFF0F172A)
-private val TextMuted: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OnSurfaceVariantDark else Color(0xFF475569)
-private val WarningAmber: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFFFFB77C) else Color(0xFF9A3412)
-private val WarningBg: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF451A03) else Color(0xFFFFFBEB)
-private val BorderColor: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) OutlineDark else Color(0xFFE2E8F0)
-private val CardBg: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) SurfaceVariantDark else Color(0xFFF8FAFC)
-private val TrackBg: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) SurfaceVariantDark else Color(0xFFF1F5F9)
+private val PrimaryBlue: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
+private val BlueLightContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
+private val BlueBorder: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
+private val TextDark: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnBackgroundDark else Color(0xFF0F172A)
+private val TextMuted: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnSurfaceVariantDark else Color(0xFF475569)
+private val WarningAmber: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFFFFB77C) else Color(0xFF9A3412)
+private val WarningBg: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF451A03) else Color(0xFFFFFBEB)
+private val BorderColor: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OutlineDark else Color(0xFFE2E8F0)
+private val CardBg: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) SurfaceVariantDark else Color(0xFFF8FAFC)
+private val TrackBg: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) SurfaceVariantDark else Color(0xFFF1F5F9)
 
 /**
  * Reading Details Modal Bottom Sheet.
@@ -227,7 +227,7 @@ fun ReadingDetailsBottomSheet(
                             text = filter.label,
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) (if (isSystemInDarkTheme()) Color(0xFF0B192C) else Color.White) else TextMuted
+                            color = if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF0B192C) else Color.White) else TextMuted
                         )
                     }
                 }

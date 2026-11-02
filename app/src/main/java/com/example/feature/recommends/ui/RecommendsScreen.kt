@@ -169,7 +169,7 @@ fun RecommendsScreen(
                                 onToggleExpand = onToggleMantrasExpanded,
                                 onMantraClick = onMantraClick
                             )
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(48.dp))
                         }
                     }
                 } else {
@@ -217,7 +217,7 @@ fun RecommendsScreen(
                             onToggleExpand = onToggleMantrasExpanded,
                             onMantraClick = onMantraClick
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(48.dp))
                     }
                 }
             }

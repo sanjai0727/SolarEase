@@ -35,19 +35,18 @@ import com.example.ui.components.SolarEaseBottomNavigation
 import com.example.ui.components.SolarEaseNavTab
 import com.example.ui.components.SolarEaseNavigationRail
 import com.example.ui.theme.*
-import androidx.compose.foundation.isSystemInDarkTheme
 import java.util.Locale
 import kotlin.math.max
 
 // Stitch Color Palette Accents with dark mode responsiveness
-private val StitchBlueAccent: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-private val StitchBlueContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF1E3A8A) else Color(0xFFEFF4FF)
-private val StitchEmeraldGreen: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF6EE7B7) else Color(0xFF047857)
-private val StitchEmeraldContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF064E3B) else Color(0xFFECFDF5)
-private val StitchAmberAccent: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFFFFB77C) else Color(0xFF9A3412)
-private val StitchAmberContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF451A03) else Color(0xFFFFFBEB)
-private val StitchPurpleAccent: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFFC4B5FD) else Color(0xFF6D28D9)
-private val StitchPurpleContainer: Color @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF4C1D95) else Color(0xFFF5F3FF)
+private val StitchBlueAccent: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
+private val StitchBlueContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E3A8A) else Color(0xFFEFF4FF)
+private val StitchEmeraldGreen: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF6EE7B7) else Color(0xFF047857)
+private val StitchEmeraldContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF064E3B) else Color(0xFFECFDF5)
+private val StitchAmberAccent: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFFFFB77C) else Color(0xFF9A3412)
+private val StitchAmberContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF451A03) else Color(0xFFFFFBEB)
+private val StitchPurpleAccent: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFFC4B5FD) else Color(0xFF6D28D9)
+private val StitchPurpleContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF4C1D95) else Color(0xFFF5F3FF)
 
 @Composable
 fun AnalyticsRoute(
@@ -1579,9 +1578,9 @@ private fun DailyConsumptionCanvas(
     onPointSelected: (DailyUsagePoint) -> Unit
 ) {
     val maxVal = max(20.0, points.maxOfOrNull { it.dailyKwh }?.let { it * 1.25 } ?: 20.0)
-    val gridColor = if (isSystemInDarkTheme()) OutlineDark else Color(0xFFE5EEFF)
+    val gridColor = if (LocalIsDarkTheme.current) OutlineDark else Color(0xFFE5EEFF)
     val blueAccent = StitchBlueAccent
-    val whitePointColor = if (isSystemInDarkTheme()) SurfaceDark else Color.White
+    val whitePointColor = if (LocalIsDarkTheme.current) SurfaceDark else Color.White
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -1784,9 +1783,9 @@ private fun ConsumptionHistoryBarChart(
             }
         }
 
-        val gridColor = if (isSystemInDarkTheme()) OutlineDark else Color(0xFFE5EEFF)
+        val gridColor = if (LocalIsDarkTheme.current) OutlineDark else Color(0xFFE5EEFF)
         val blueAccent = StitchBlueAccent
-        val previousCycleColor = if (isSystemInDarkTheme()) Color(0xFF60A5FA) else Color(0xFF93C5FD)
+        val previousCycleColor = if (LocalIsDarkTheme.current) Color(0xFF60A5FA) else Color(0xFF93C5FD)
 
         Box(
             modifier = Modifier

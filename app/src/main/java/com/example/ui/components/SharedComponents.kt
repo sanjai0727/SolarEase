@@ -2,7 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -77,7 +77,7 @@ fun SelectableCard(
 @Composable
 fun Modifier.subtleTopRightGradient(
     shape: Shape = RoundedCornerShape(16.dp),
-    tint: Color = if (isSystemInDarkTheme()) Color(0xFFB0D49A).copy(alpha = 0.14f) else Color(0xFF245B3A).copy(alpha = 0.12f),
+    tint: Color = if (LocalIsDarkTheme.current) Color(0xFFB0D49A).copy(alpha = 0.14f) else Color(0xFF245B3A).copy(alpha = 0.12f),
     radiusMultiplier: Float = 0.75f
 ): Modifier = this
     .clip(shape)

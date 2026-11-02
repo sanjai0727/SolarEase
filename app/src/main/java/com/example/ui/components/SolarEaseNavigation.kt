@@ -325,24 +325,24 @@ private fun SolarEaseNavItem(
     ) {
         Box(
             modifier = Modifier
-                .size(width = 52.dp, height = 28.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (isSelected) StitchPrimaryFixed.copy(alpha = 0.7f) else Color.Transparent),
+                .size(width = 56.dp, height = 30.dp)
+                .clip(RoundedCornerShape(15.dp))
+                .background(if (isSelected) StitchPrimaryContainer else Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) StitchPrimaryContainer else StitchOnSurfaceVariant,
+                tint = if (isSelected) StitchOnPrimaryContainer else StitchOnSurfaceVariant,
                 modifier = Modifier.size(22.dp)
             )
         }
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = label,
             fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) StitchPrimaryContainer else StitchOnSurfaceVariant,
+            color = if (isSelected) StitchOnPrimaryContainer else StitchOnSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center

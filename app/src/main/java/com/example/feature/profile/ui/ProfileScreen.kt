@@ -316,7 +316,7 @@ fun ProfileContent(
                     )
 
                     SignOutSection(onSignOutClick = onSignOutClick)
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
                 }
             }
         } else {
@@ -360,7 +360,7 @@ fun ProfileContent(
 
                 // 5. Sign Out Section
                 SignOutSection(onSignOutClick = onSignOutClick)
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
     }

@@ -367,7 +367,7 @@ fun HomeRoute(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
                 }
             }
         }
@@ -397,7 +397,10 @@ fun HomeRoute(
                 confirmButton = {
                     Button(
                         onClick = { viewModel.onConfirmCorrectPreviousReading() },
-                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StitchPrimary,
+                            contentColor = StitchOnPrimary
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("Correct Previous Reading", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -476,7 +479,10 @@ fun HomeRoute(
                 confirmButton = {
                     Button(
                         onClick = { viewModel.onContinueHistoricalEdit() },
-                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StitchPrimary,
+                            contentColor = StitchOnPrimary
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("Continue", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -563,7 +569,10 @@ fun HomeRoute(
                 confirmButton = {
                     Button(
                         onClick = { viewModel.saveHistoricalCorrection() },
-                        colors = ButtonDefaults.buttonColors(containerColor = StitchPrimaryContainer),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StitchPrimary,
+                            contentColor = StitchOnPrimary
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("Save", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)

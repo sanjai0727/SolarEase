@@ -10,7 +10,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,7 +73,7 @@ fun SolarEaseCoinsCard(
     onViewHistoryClick: () -> Unit
 ) {
     val colors = SolarEaseTheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     var isExpanded by remember { mutableStateOf(false) }
 
     Surface(
@@ -313,7 +313,7 @@ private data class StatusPillConfig(
 @Composable
 fun BillVerificationStatusPill(verificationResult: BillVerificationResult?) {
     val status = verificationResult?.status ?: BillVerificationStatus.WAITING_FOR_BILL
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     val config = when (status) {
         BillVerificationStatus.WAITING_FOR_BILL -> StatusPillConfig(
@@ -412,7 +412,7 @@ fun BillVerificationStatusPill(verificationResult: BillVerificationResult?) {
 @Composable
 fun SevenDayStreakTracker(streakState: StreakState) {
     val colors = SolarEaseTheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -522,7 +522,7 @@ fun SevenDayStreakTracker(streakState: StreakState) {
 @Composable
 fun MiniTransactionRow(tx: CoinTransaction) {
     val colors = SolarEaseTheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
