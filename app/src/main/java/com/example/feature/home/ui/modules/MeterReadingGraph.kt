@@ -571,14 +571,14 @@ private fun parseIsoDate(iso: String): Date? {
         null
     }
 }
-// SolarEase Energy Blue Palette for Weekly Meter Consumption Graph with dark mode responsiveness
-private val GraphBluePrimary: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-private val GraphBluePrimaryDark: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF60A5FA) else Color(0xFF1E40AF)
-private val GraphBlueContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E3A8A) else Color(0xFFEFF6FF)
-private val GraphBlueBorder: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E40AF) else Color(0xFFDBEAFE)
+// SolarEase Green Brand Palette for Weekly Meter Consumption Graph with dark mode responsiveness
+private val GraphBluePrimary: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF5ED8B0) else SolarBrandGreen
+private val GraphBluePrimaryDark: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFFA6EDB4) else SolarBrandGreenSecondary
+private val GraphBlueContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1E4E30) else SolarBrandGreenLight
+private val GraphBlueBorder: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF2E6347) else SolarBrandGlassCardBorder
 private val AmberWarning: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFFFFB77C) else Color(0xFF9A3412)
 private val AmberContainer: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF451A03) else Color(0xFFFFFBEB)
-private val BorderColor: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OutlineDark else Color(0xFFE2E8F0)
+private val BorderColor: Color @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OutlineDark else SolarBrandGlassCardBorder
 
 /**
  * Compact Modern Sunday–Saturday Weekly Meter Reading Bar Chart for the Home screen.
@@ -643,9 +643,10 @@ fun MeterReadingProgressionGraph(
                     }
                 )
             },
-        shape = RoundedCornerShape(16.dp),
-        color = GraphCardBg,
-        border = BorderStroke(1.dp, GraphBlueBorder)
+        shape = RoundedCornerShape(20.dp),
+        color = SolarBrandGlassCardBg,
+        border = BorderStroke(1.dp, SolarBrandGlassCardBorder),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier

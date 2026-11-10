@@ -38,6 +38,7 @@ import com.example.feature.home.ui.modules.PendingBillUiState
 import com.example.ui.theme.SolarEaseSemanticColors
 import com.example.ui.theme.StitchOnPrimary
 import com.example.ui.theme.StitchOnPrimaryFixedVariant
+import com.example.ui.theme.*
 import com.example.ui.theme.StitchOnSurface
 import com.example.ui.theme.StitchOnSurfaceVariant
 import com.example.ui.theme.StitchOutline
@@ -455,6 +456,7 @@ fun SyncedBillSummaryStrip(
 
 /**
  * Bill History and Check Dues quick action buttons.
+ * Translucent glass styling with equal, clear action buttons.
  */
 @Composable
 fun BillActionsSection(
@@ -464,39 +466,46 @@ fun BillActionsSection(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(20.dp),
+        color = OceanGlassCardBg,
+        border = BorderStroke(1.dp, OceanGlassCardBorder),
         shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = OceanAquaContainer,
+                    border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ReceiptLong,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "BILL & PAYMENT ACTIONS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.6.sp
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = null,
+                            tint = OceanTeal,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "BILL & PAYMENT ACTIONS",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OceanTeal,
+                            letterSpacing = 0.8.sp
+                        )
+                    }
                 }
             }
 
@@ -509,14 +518,17 @@ fun BillActionsSection(
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.5.dp, SolarBrandGreen),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = SolarBrandGreen
+                    )
                 ) {
                     Text(
                         text = "View Bill History",
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = SolarBrandGreen
                     )
                 }
 
@@ -525,16 +537,16 @@ fun BillActionsSection(
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = SolarEaseSemanticColors.WarningText,
+                        containerColor = SolarBrandGreen,
                         contentColor = Color.White
                     )
                 ) {
                     Text(
                         text = "Check Dues",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

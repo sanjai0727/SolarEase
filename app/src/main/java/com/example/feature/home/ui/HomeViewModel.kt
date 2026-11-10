@@ -179,6 +179,17 @@ data class HomeUiState(
     val hasCompletedAudit: Boolean
         get() = isAuditCompleted
 
+    val previousBillConsumptionKwh: Double?
+        get() = billData?.latestBill?.units?.toDoubleOrNull()
+            ?: billData?.latestBill?.kwh?.toDoubleOrNull()
+            ?: meterBaseline?.previousBilledUnits
+
+    val previousBillingPeriodLabel: String
+        get() = billData?.latestBill?.period?.takeIf { it.isNotBlank() }
+            ?: billData?.latestBill?.assessmentDate?.takeIf { it.isNotBlank() }
+            ?: meterBaseline?.baselineDate?.takeIf { it.isNotBlank() }
+            ?: "Previous Billing Cycle"
+
     val currentBillingCycleKwh: Double
         get() = if (hasCurrentReading && currentEnergyMetrics != null) {
             currentEnergyMetrics.unitsConsumed

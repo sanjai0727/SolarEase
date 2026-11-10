@@ -2,8 +2,10 @@ package com.example.feature.home.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -152,7 +154,7 @@ fun HomeRoute(
     val layoutInfo = rememberSolarEaseWindowLayoutInfo()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.background else SolarBrandBackground,
         topBar = {
             StitchTopBar(
                 userInitial = uiState.userInitial,
@@ -205,166 +207,167 @@ fun HomeRoute(
                         consumerNumber = uiState.consumerNumberFormatted.ifBlank { currentUser?.ebServiceNumber }
                     )
 
-                    // ── Financial Action: Pending Electricity Bill / Status ───
-                    when (val billState = uiState.pendingBillState) {
-                        is PendingBillUiState.Pending -> {
-                            PendingElectricityBillHeroCard(
-                                state = billState,
-                                onViewBillDetails = onNavigateToBillHistory
-                            )
-                        }
-                        is PendingBillUiState.Loading -> {
-                            BillStatusLoadingCard()
-                        }
-                        is PendingBillUiState.RetrievalFailed -> {
+                    val currentPendingState = uiState.pendingBillState
+
+                    if (!uiState.hasConnectedBill) {
+                        // ════════════════════════════════════════════════════════════
+                        // ── 1. FIRST-TIME USER — BILL NOT CONNECTED ──────────────────
+                        // ════════════════════════════════════════════════════════════
+
+                        // Optional connection / retrieval failure alert
+                        if (currentPendingState is PendingBillUiState.RetrievalFailed) {
                             BillRetrievalFailedCard(
-                                state = billState,
+                                state = currentPendingState,
                                 onCheckBillStatus = onNavigateToTnebBillStatus,
                                 onRetry = { viewModel.retryBillFetch() }
                             )
                         }
-                        is PendingBillUiState.Paid, PendingBillUiState.None -> {
-                            // No warning displayed
-                        }
-                    }
 
-                    // ── Hero Section (Bill Not Connected vs Active Energy Tracker) ──
-                    if (!uiState.hasConnectedBill) {
+                        // ── 3. Connect Your Electricity Bill Hero Card ──────────────
                         ConnectBillHeroCard(
                             onConnectBill = onNavigateToTnebBillStatus,
                             onLearnMore = { showBillHelp = !showBillHelp }
                         )
 
+                        // ── 4. Need Help With Your Electricity Bill (Expandable) ─────
                         Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics {
+                                    stateDescription = if (showBillHelp) "Expanded" else "Collapsed"
+                                },
+                            shape = RoundedCornerShape(20.dp),
+                            color = OceanGlassCardBg,
+                            border = BorderStroke(1.dp, OceanGlassCardBorder),
                             shadowElevation = 0.dp,
                             onClick = { showBillHelp = !showBillHelp }
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    .padding(horizontal = 18.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(Icons.Default.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Need help with your electricity bill?", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(if (showBillHelp) "Hide bill help" else "Find your service number and learn how TNEB slabs work", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(OceanAquaContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Help,
+                                        contentDescription = null,
+                                        tint = OceanTeal,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
-                                Icon(if (showBillHelp) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showBillHelp) "Hide bill help" else "Show bill help", tint = MaterialTheme.colorScheme.primary)
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = "Need help with your electricity bill?",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = OceanDeepNavy
+                                    )
+                                    Text(
+                                        text = if (showBillHelp) "Hide bill help" else "Find your service number and learn how TNEB slabs work",
+                                        fontSize = 12.sp,
+                                        color = OceanTextSecondary
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if (showBillHelp) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (showBillHelp) "Hide bill help" else "Show bill help",
+                                    tint = OceanTeal
+                                )
                             }
                         }
 
-                        AnimatedVisibility(visible = showBillHelp, enter = fadeIn(animationSpec = tween(180)), exit = fadeOut(animationSpec = tween(120))) {
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        AnimatedVisibility(
+                            visible = showBillHelp,
+                            enter = expandVertically(animationSpec = tween(200)) + fadeIn(animationSpec = tween(200)),
+                            exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                                 WhyConnectBillSection()
                                 WhereToFindConsumerNumberCard()
-                                ReapClassificationCard(uiState = uiState, onLearnMore = onNavigateToTnebBillStatus)
                             }
                         }
+
+                        // IMPORTANT: On first-time screen, hide completely:
+                        // - Explore Tools
+                        // - Meter reading & entry
+                        // - Usage insights graph
+                        // - Bill & payment actions
+                        // - Find where your electricity goes card
+                        // - Recent activity
+
                     } else {
-                        // Bill Connected: Synced Bill Summary + Primary Energy Meter Tracker
-                        if (uiState.pendingBillState !is PendingBillUiState.Pending) {
-                            SyncedBillSummaryStrip(
-                                uiState = uiState,
-                                onViewBillHistory = onNavigateToBillHistory,
-                                onCheckDues = onNavigateToTnebBillStatus
+                        // ════════════════════════════════════════════════════════════
+                        // ── 2. EXISTING USER — BILL CONNECTED ────────────────────────
+                        // ════════════════════════════════════════════════════════════
+
+                        // Optional bill retrieval failure state
+                        if (currentPendingState is PendingBillUiState.RetrievalFailed) {
+                            BillRetrievalFailedCard(
+                                state = currentPendingState,
+                                onCheckBillStatus = onNavigateToTnebBillStatus,
+                                onRetry = { viewModel.retryBillFetch() }
                             )
                         }
 
-                        PrimaryEnergyCard(
+                        // ── 3. Hero Card: Previous Bill Consumption & Dues ───────────
+                        PreviousBillConsumptionHeroCard(
                             uiState = uiState,
-                            onConnectBill = onNavigateToTnebBillStatus,
-                            onViewBillHistory = onNavigateToBillHistory,
+                            onViewBillDetails = onNavigateToBillHistory
+                        )
+
+                        // ── 4. Today's Meter Reading & Entry ─────────────────────────
+                        HomeMeterReadingEntryCard(
+                            uiState = uiState,
                             onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
                             onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
                             onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
                             onStartEditingReading = { viewModel.startEditingReading() },
                             onCancelEditingReading = { viewModel.cancelEditingReading() },
-                            onEditCurrentReading = { viewModel.initiateEditCurrentReading() },
                             onScanMeterReading = onNavigateToMeterScanner
                         )
-                    }
 
-                    // ── Core Utility Bento Grid (Always Accessible to All Users) ───
-                    QuickToolsSection(
-                        onBillStatus = onNavigateToTnebBillStatus,
-                        onChatbot = onNavigateToElectricityChatbot,
-                        onSolarLens = onNavigateToSolarEaseLens,
-                        onCalculator = onNavigateToBillCalculator,
-                        hasConnectedBill = uiState.hasConnectedBill,
-                        tariffCode = uiState.tariffCode
-                    )
-
-                    // ── Solar Lens & Appliance Audit Feature Showcase ────────
-                    if (uiState.hasCompletedAudit) {
-                        CompletedAuditSummaryCard(
-                            uiState = uiState,
-                            onOpenSolarLens = onNavigateToSolarEaseLens
+                        // ── 5. Usage Insights: Consumption Graph ─────────────────────
+                        MeterReadingProgressionGraph(
+                            points = uiState.meterGraphPoints,
+                            billData = uiState.billData,
+                            onEditReading = { viewModel.onInitiateEditReading(it) },
+                            onViewReadingDetails = onNavigateToBillHistory
                         )
-                    } else if (uiState.currentBillingCycleKwh > 0.0) {
+
+                        // ── 6. Bill and Payment Actions ──────────────────────────────
+                        BillActionsSection(
+                            onViewBillHistory = onNavigateToBillHistory,
+                            onCheckDues = onNavigateToTnebBillStatus
+                        )
+
+                        // ── 7. Find Where Your Previous Billed Consumption Went ──────
                         KnowYourConsumptionCard(
                             uiState = uiState,
                             onOpenSolarLens = onNavigateToSolarEaseLens
                         )
-                    } else {
-                        SolarLensShowcaseCard(
-                            onOpenSolarLens = onNavigateToSolarEaseLens
+
+                        // ── 8. Explore Tools: Collapsible Dropdown (Default Collapsed)
+                        CollapsibleExploreToolsSection(
+                            onBillStatus = onNavigateToTnebBillStatus,
+                            onChatbot = onNavigateToElectricityChatbot,
+                            onSolarLens = onNavigateToSolarEaseLens,
+                            onCalculator = onNavigateToBillCalculator,
+                            hasConnectedBill = true,
+                            tariffCode = uiState.tariffCode
                         )
-                    }
 
-                    // ── Meter Progression Graph (When Readings Are Available) ─
-                    if (uiState.hasConnectedBill && uiState.meterGraphPoints.isNotEmpty()) {
-                        MeterReadingProgressionGraph(
-                            points = uiState.meterGraphPoints,
-                            billData = uiState.billData,
-                            onEditReading = { viewModel.onInitiateEditReading(it) }
-                        )
-                    }
-
-                    // ── Connected User Extra Actions & Activity ──────────────
-                    if (uiState.hasConnectedBill) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics {
-                                    stateDescription = if (showInsightsAndTools) "Expanded" else "Collapsed"
-                                },
-                            shape = RoundedCornerShape(18.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            shadowElevation = 0.dp,
-                            onClick = { showInsightsAndTools = !showInsightsAndTools }
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.Analytics, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                                }
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Usage insights & billing history", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(if (showInsightsAndTools) "Hide details" else "View tariff classification, past bills, and activity", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Icon(if (showInsightsAndTools) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (showInsightsAndTools) "Collapse insights" else "Expand insights", tint = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-
-                        AnimatedVisibility(visible = showInsightsAndTools, enter = fadeIn(animationSpec = tween(180)), exit = fadeOut(animationSpec = tween(120))) {
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                ReapClassificationCard(uiState = uiState, onLearnMore = onNavigateToTnebBillStatus)
-                                BillActionsSection(onViewBillHistory = onNavigateToBillHistory, onCheckDues = onNavigateToTnebBillStatus)
-                                if (uiState.recentActivities.isNotEmpty()) {
-                                    RecentActivitySection(activities = uiState.recentActivities)
-                                }
-                            }
-                        }
+                        // Completely removed:
+                        // - Recent Activity section
+                        // - Separate TNEB Bill Linked card
+                        // - Energy Conservation Home card
                     }
 
                     Spacer(modifier = Modifier.height(48.dp))

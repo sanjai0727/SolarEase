@@ -387,3 +387,40 @@ val StitchOnErrorContainer: Color
     @Composable
     @ReadOnlyComposable
     get() = MaterialTheme.colorScheme.onErrorContainer
+
+// ============================================================================
+// 7. SolarEase V1 Green Brand Glassmorphism Design Tokens
+// Primary green: #004F2E (exact match to selected Home nav tab)
+// Secondary: #176B45 | Light green: #E7F1E9 | Soft surface: #F3F7F1
+// Background: #F7F9F5 | Main text: #17251C | Secondary text: #68766D | White: #FFFFFF
+// ============================================================================
+val SolarBrandGreen = Color(0xFF004F2E)
+val SolarBrandGreenSecondary = Color(0xFF176B45)
+val SolarBrandGreenLight = Color(0xFFE7F1E9)
+val SolarBrandGreenSurface = Color(0xFFF3F7F1)
+val SolarBrandBackground = Color(0xFFF7F9F5)
+val SolarBrandTextPrimary = Color(0xFF17251C)
+val SolarBrandTextSecondary = Color(0xFF68766D)
+val SolarBrandTextMuted = Color(0xFF88968C)
+val SolarBrandGlassCardBg = Color(0xFFFFFFFF)
+val SolarBrandGlassCardBorder = Color(0xFFD8E4DB)
+val SolarBrandBarBilled = Color(0xFF004F2E)       // Bottom darker segment: verified billed units (#004F2E)
+val SolarBrandBarAdditional = Color(0xFF5BA77E)   // Top lighter segment: current/additional units
+
+// Aliases mapped directly to brand greens:
+val OceanDeepNavy = SolarBrandTextPrimary
+val OceanPrimaryBlue = SolarBrandGreen
+val OceanTeal = SolarBrandGreen
+val OceanAqua = SolarBrandGreenSecondary
+val OceanAquaLight = SolarBrandGreenLight
+val OceanAquaContainer = SolarBrandGreenLight
+val OceanGlassSurface = SolarBrandGreenSurface
+val OceanGlassCardBg = SolarBrandGlassCardBg
+val OceanGlassCardBorder = SolarBrandGlassCardBorder
+val OceanGlassCardBorderSubtle = Color(0x33004F2E)
+val OceanTextPrimary = SolarBrandTextPrimary
+val OceanTextSecondary = SolarBrandTextSecondary
+val OceanTextMuted = SolarBrandTextMuted
+val OceanBarBilled = SolarBrandBarBilled
+val OceanBarAdditional = SolarBrandBarAdditional
+

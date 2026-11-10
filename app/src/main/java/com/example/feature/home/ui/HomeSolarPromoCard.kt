@@ -32,6 +32,7 @@ import com.example.ui.theme.StitchPrimary
 import com.example.ui.theme.StitchPrimaryContainer
 import com.example.ui.theme.StitchSurfaceContainerLow
 import com.example.ui.theme.StitchSurfaceContainerLowest
+import com.example.ui.theme.*
 import java.util.Locale
 
 /**
@@ -264,6 +265,8 @@ fun CompletedAuditSummaryCard(
 
 /**
  * Educational promotion card encouraging appliance audit with dynamic kWh insertion.
+ * Uses previous bill's verified consumption (e.g. "Find where your 258 kWh went").
+ * Explanatory paragraph removed for a clean, minimal, action-focused card.
  */
 @Composable
 fun KnowYourConsumptionCard(
@@ -271,50 +274,81 @@ fun KnowYourConsumptionCard(
     onOpenSolarLens: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currentKwh = uiState.currentBillingCycleKwh
-    val kwhText = if (currentKwh > 0.0) {
-        if (currentKwh % 1.0 == 0.0) "${currentKwh.toInt()}" else String.format(Locale.getDefault(), "%.1f", currentKwh)
+    val previousKwh = uiState.previousBillConsumptionKwh
+    val kwhText = if (previousKwh != null && previousKwh > 0.0) {
+        if (previousKwh % 1.0 == 0.0) "${previousKwh.toInt()}" else String.format(Locale.getDefault(), "%.1f", previousKwh)
     } else null
 
     val headingText = if (kwhText != null) {
-        "Find where your $kwhText kWh is going"
+        "Find where your $kwhText kWh went"
     } else {
-        "Find where your electricity is going"
+        "Find where your electricity went"
     }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(20.dp),
+        color = OceanGlassCardBg,
+        border = BorderStroke(1.dp, OceanGlassCardBorder),
         shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "KNOW YOUR CONSUMPTION",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF9A7B0A),
-                letterSpacing = 0.8.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = OceanAquaContainer,
+                    border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sensors,
+                            contentDescription = null,
+                            tint = OceanTeal,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "KNOW YOUR CONSUMPTION",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OceanTeal,
+                            letterSpacing = 0.8.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = OceanAquaContainer.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = "Solar Lens AI",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OceanTeal,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                    )
+                }
+            }
 
             Text(
                 text = headingText,
-                fontSize = 16.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Text(
-                text = "Run an appliance audit to discover which heavy loads (AC, water heater, pump) can be optimized to lower your bill into the next lower tariff slab.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 17.sp
+                color = OceanDeepNavy,
+                letterSpacing = (-0.2).sp
             )
 
             Button(
@@ -322,10 +356,10 @@ fun KnowYourConsumptionCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = OceanTeal,
+                    contentColor = Color.White
                 )
             ) {
                 Row(
@@ -334,13 +368,13 @@ fun KnowYourConsumptionCard(
                 ) {
                     Text(
                         text = "Start Appliance Audit with Solar Lens",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
             }

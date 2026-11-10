@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.subtleTopRightGradient
 import com.example.ui.theme.SolarEaseSemanticColors
+import com.example.ui.theme.*
 import java.util.Locale
 
 /**
@@ -1153,6 +1154,282 @@ fun MeterCalibrationProgressCard(
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 15.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dedicated Meter Readings and Entry card (Item 6 of the proposed Home screen redesign).
+ * Clean, glassmorphic card for entering today's meter reading or editing previously logged entry.
+ */
+@Composable
+fun HomeMeterReadingEntryCard(
+    uiState: HomeUiState,
+    onMeterInputChanged: (String) -> Unit,
+    onSaveMeterReading: () -> Unit,
+    onUpdateTodayReading: () -> Unit,
+    onStartEditingReading: () -> Unit,
+    onCancelEditingReading: () -> Unit,
+    onScanMeterReading: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val baseline = uiState.meterBaseline
+    val baselineKwh = baseline?.baselineReading ?: 0.0
+    val baselineDate = baseline?.baselineDate?.ifBlank { "01 Sep 2026" } ?: "01 Sep 2026"
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = OceanGlassCardBg,
+        border = BorderStroke(1.dp, OceanGlassCardBorder),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header with badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = OceanAquaContainer,
+                    border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = null,
+                            tint = OceanTeal,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "METER READINGS & ENTRY",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OceanTeal,
+                            letterSpacing = 0.8.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (uiState.isTodayReadingEntered) OceanAquaContainer else Color(0xFFFEF3C7),
+                    border = BorderStroke(1.dp, if (uiState.isTodayReadingEntered) OceanAqua.copy(alpha = 0.5f) else Color(0xFFF59E0B).copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = if (uiState.isTodayReadingEntered) "Today Recorded ✓" else "Daily Entry",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (uiState.isTodayReadingEntered) OceanTeal else Color(0xFFB45309),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            if (uiState.isTodayReadingEntered && !uiState.isEditingReading) {
+                // Today's reading already recorded
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = OceanAquaContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "TODAY'S RECORDED READING",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanTeal,
+                                letterSpacing = 0.5.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${String.format(Locale.getDefault(), "%,.0f", uiState.todayEnteredReading ?: baselineKwh)} kWh",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanDeepNavy
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = onStartEditingReading,
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, OceanTeal)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp),
+                                tint = OceanTeal
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Edit",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanTeal
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Input mode
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (uiState.isEditingReading) "Edit today's meter reading" else "Enter current cumulative reading from meter",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = OceanTextPrimary
+                        )
+
+                        IconButton(
+                            onClick = onScanMeterReading,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Scan meter reading",
+                                tint = OceanTeal,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = uiState.meterInputText,
+                        onValueChange = onMeterInputChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = if (baselineKwh > 0.0) "e.g. ${String.format(Locale.getDefault(), "%.0f", baselineKwh + 10)}" else "e.g. 42390",
+                                color = OceanTextMuted.copy(alpha = 0.6f)
+                            )
+                        },
+                        trailingIcon = {
+                            Text(
+                                text = "kWh",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = OceanTextSecondary,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        isError = uiState.meterValidationError != null,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = OceanTeal,
+                            unfocusedBorderColor = OceanGlassCardBorder
+                        )
+                    )
+
+                    if (uiState.meterValidationError != null) {
+                        Text(
+                            text = uiState.meterValidationError,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+
+                    if (uiState.isEditingReading) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onCancelEditingReading,
+                                modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, OceanGlassCardBorder)
+                            ) {
+                                Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = OceanTextPrimary)
+                            }
+                            Button(
+                                onClick = onUpdateTodayReading,
+                                modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = OceanTeal,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Update", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = onSaveMeterReading,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 46.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OceanTeal,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                text = "Save Reading →",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Baseline reference strip
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = SolarBrandGreenSurface,
+                border = BorderStroke(1.dp, OceanGlassCardBorder.copy(alpha = 0.6f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (baselineKwh > 0.0) "Last Bill: ${String.format(Locale.getDefault(), "%,.0f", baselineKwh)} kWh" else "Baseline Pending",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OceanTextPrimary
+                    )
+                    Text(
+                        text = baselineDate,
+                        fontSize = 11.sp,
+                        color = OceanTextSecondary
                     )
                 }
             }

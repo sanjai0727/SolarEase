@@ -12,10 +12,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CameraOutdoor
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
@@ -28,15 +30,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.feature.home.ui.modules.PendingBillUiState
 import com.example.ui.components.subtleTopRightGradient
 import com.example.ui.theme.SolarEaseSemanticColors
 import com.example.ui.theme.StitchOnSurface
 import com.example.ui.theme.StitchOnSurfaceVariant
 import com.example.ui.theme.StitchPrimary
 import com.example.ui.theme.StitchPrimaryContainer
+import com.example.ui.theme.*
+import java.util.Locale
 
 /**
  * Modern, airy greeting header for SolarEase Home.
+ * Primary heading with 24sp bold title, refined spacing, and dynamic username.
  */
 @Composable
 fun ModernHomeHeader(
@@ -51,24 +57,24 @@ fun ModernHomeHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            val displayName = userName?.takeIf { it.isNotBlank() } ?: "Homeowner"
+            val displayName = userName?.trim()?.takeIf { it.isNotBlank() } ?: "Homeowner"
             Text(
                 text = "Welcome, $displayName",
-                fontSize = 22.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                letterSpacing = (-0.3).sp
+                color = OceanDeepNavy,
+                letterSpacing = (-0.4).sp
             )
-            Spacer(modifier = Modifier.height(3.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(7.dp)
+                        .size(8.dp)
                         .clip(CircleShape)
-                        .background(if (hasConnectedBill) SolarEaseSemanticColors.SuccessText else MaterialTheme.colorScheme.primary)
+                        .background(if (hasConnectedBill) OceanTeal else Color(0xFFD4AF37))
                 )
                 Text(
                     text = if (hasConnectedBill && !consumerNumber.isNullOrBlank()) {
@@ -80,26 +86,327 @@ fun ModernHomeHeader(
                     },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = OceanTextSecondary
                 )
             }
         }
 
         Surface(
             shape = CircleShape,
-            color = Color(0xFFFDFDD0),
-            border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.5f))
+            color = OceanAquaContainer,
+            border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.5f))
         ) {
             Box(
-                modifier = Modifier.size(38.dp),
+                modifier = Modifier.size(40.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.WbSunny,
                     contentDescription = "Peak solar hours",
-                    tint = Color(0xFFD4AF37),
-                    modifier = Modifier.size(19.dp)
+                    tint = OceanTeal,
+                    modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Premium Translucent Glassmorphic Hero Card displaying Previous Bill Consumption.
+ * Shows verified completed billing cycle consumption and pending bill status.
+ */
+@Composable
+fun PreviousBillConsumptionHeroCard(
+    uiState: HomeUiState,
+    onViewBillDetails: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val prevKwh = uiState.previousBillConsumptionKwh
+    val kwhText = if (prevKwh != null && prevKwh > 0.0) {
+        if (prevKwh % 1.0 == 0.0) "${prevKwh.toInt()}" else String.format(Locale.getDefault(), "%.1f", prevKwh)
+    } else null
+
+    val pendingBill = uiState.pendingBillState as? PendingBillUiState.Pending
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = OceanGlassCardBg,
+        border = BorderStroke(1.dp, OceanGlassCardBorder),
+        shadowElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .subtleTopRightGradient(
+                    shape = RoundedCornerShape(22.dp),
+                    radiusMultiplier = 0.85f
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header badge row: Feature Category & Bill Status Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = OceanAquaContainer,
+                        border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = OceanTeal,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "PREVIOUS BILL CONSUMPTION",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanTeal,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+                    }
+
+                    if (pendingBill != null) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFFEF3C7),
+                            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "Pending Bill",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFB45309),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    } else if (uiState.isPaid || uiState.billData?.isDuesNil == true) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = OceanAquaContainer,
+                            border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "Paid · Nil Dues ✓",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = OceanTeal,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Primary Metrics Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "CONSUMPTION RECORDED",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OceanTextMuted,
+                            letterSpacing = 0.6.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        if (kwhText != null) {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = kwhText,
+                                    fontSize = 34.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = OceanDeepNavy,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "kWh",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = OceanTextSecondary,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                            Text(
+                                text = "Previous completed billing cycle",
+                                fontSize = 11.sp,
+                                color = OceanTextSecondary
+                            )
+                        } else {
+                            Text(
+                                text = "Unavailable",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanTextSecondary
+                            )
+                            Text(
+                                text = "Billing cycle data not yet synchronized",
+                                fontSize = 11.sp,
+                                color = OceanTextMuted
+                            )
+                        }
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        if (pendingBill != null) {
+                            Text(
+                                text = "OUTSTANDING",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB45309),
+                                letterSpacing = 0.6.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = pendingBill.amountFormatted,
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF9A3412)
+                            )
+                            Text(
+                                text = "Due: ${pendingBill.dueDateFormatted ?: "Due Soon"}",
+                                fontSize = 11.sp,
+                                color = OceanTextSecondary
+                            )
+                        } else {
+                            Text(
+                                text = "BILL STATUS",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanTeal,
+                                letterSpacing = 0.6.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "₹0",
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OceanTeal
+                            )
+                            Text(
+                                text = "No outstanding dues",
+                                fontSize = 11.sp,
+                                color = OceanTextSecondary
+                            )
+                        }
+                    }
+                }
+
+                // Billing Cycle & Tariff Banner Strip
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = SolarBrandGreenSurface,
+                    border = BorderStroke(1.dp, OceanGlassCardBorder.copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                tint = OceanTeal,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "Cycle: ${uiState.previousBillingPeriodLabel}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = OceanTextPrimary
+                            )
+                        }
+
+                        Text(
+                            text = uiState.tariffCategory,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = OceanTeal
+                        )
+                    }
+                }
+
+                // CTA Button
+                if (pendingBill != null) {
+                    Button(
+                        onClick = onViewBillDetails,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 46.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = OceanPrimaryBlue,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "View Bill Details (${pendingBill.amountFormatted}) →",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = onViewBillDetails,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, OceanTeal.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = null,
+                                tint = OceanTeal,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "View Verified Bill History →",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = OceanTeal
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -108,6 +415,7 @@ fun ModernHomeHeader(
 /**
  * Clean, single-surface hero card for new users without a connected bill.
  * Eliminates nested cards, bloated steppers, and visual congestion.
+ * Translucent glass styling with clear call-to-action.
  */
 @Composable
 fun ConnectBillHeroCard(
@@ -117,16 +425,16 @@ fun ConnectBillHeroCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(22.dp),
+        color = OceanGlassCardBg,
+        border = BorderStroke(1.dp, OceanGlassCardBorder),
         shadowElevation = 0.dp
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .subtleTopRightGradient(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(22.dp),
                     radiusMultiplier = 0.85f
                 )
                 .padding(20.dp)
@@ -143,8 +451,8 @@ fun ConnectBillHeroCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                        color = OceanAquaContainer,
+                        border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -154,14 +462,14 @@ fun ConnectBillHeroCard(
                             Icon(
                                 imageVector = Icons.Default.Bolt,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = OceanTeal,
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
                                 text = "TNEB LT-1A DOMESTIC",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = OceanTeal,
                                 letterSpacing = 0.6.sp
                             )
                         }
@@ -169,13 +477,13 @@ fun ConnectBillHeroCard(
 
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = SolarEaseSemanticColors.WarningContainer
+                        color = Color(0xFFFEF3C7)
                     ) {
                         Text(
                             text = "Bill Not Linked",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = SolarEaseSemanticColors.WarningText,
+                            color = Color(0xFFB45309),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
@@ -185,15 +493,15 @@ fun ConnectBillHeroCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = "Connect Your Electricity Bill",
-                        fontSize = 19.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        letterSpacing = (-0.2).sp
+                        color = OceanDeepNavy,
+                        letterSpacing = (-0.3).sp
                     )
                     Text(
                         text = "Link your 11–12 digit consumer number to establish your baseline tariff schedule, avoid bi-monthly slab jumps, and unlock rooftop solar savings.",
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = OceanTextSecondary,
                         lineHeight = 18.sp
                     )
                 }
@@ -215,8 +523,8 @@ fun ConnectBillHeroCard(
                         .fillMaxWidth()
                         .heightIn(min = 48.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = OceanPrimaryBlue,
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -249,13 +557,13 @@ fun ConnectBillHeroCard(
                         Text(
                             text = "Where do I find my consumer number?  ",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = OceanTeal,
                             fontWeight = FontWeight.Medium
                         )
                         Icon(
                             imageVector = Icons.Default.Help,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = OceanTeal,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -270,8 +578,8 @@ private fun BenefitChip(label: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+        color = OceanAquaContainer,
+        border = BorderStroke(1.dp, OceanAqua.copy(alpha = 0.4f))
     ) {
         Row(
             modifier = Modifier
@@ -283,7 +591,7 @@ private fun BenefitChip(label: String, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = OceanTeal,
                 modifier = Modifier.size(12.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -291,7 +599,7 @@ private fun BenefitChip(label: String, modifier: Modifier = Modifier) {
                 text = label,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = OceanTeal,
                 maxLines = 1
             )
         }
