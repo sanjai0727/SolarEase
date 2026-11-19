@@ -14,12 +14,14 @@ import com.example.core.session.UserSession
  *
  * Displays previously paid and recorded TNEB billing cycles.
  * Reuses existing models [TnebConsumerBillData] and [TnebBillRecord] from [TnebBillCache],
- * and allows tapping on any historical billing cycle to view its itemized charges breakdown.
+ * and allows tapping on any historical billing cycle to view its itemized charges breakdown,
+ * or tapping the chart icon to navigate to the comprehensive Bill Analytics screen.
  */
 @Composable
 fun BillHistoryRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToSolarLens: () -> Unit = {}
+    onNavigateToSolarLens: () -> Unit = {},
+    onNavigateToBillAnalytics: () -> Unit = {}
 ) {
     val billData by TnebBillCache.billData.collectAsState()
     val user = UserSession.currentUser
@@ -28,13 +30,26 @@ fun BillHistoryRoute(
     val bills = consumerData.bills
 
     var selectedBill by remember { mutableStateOf<TnebBillRecord?>(null) }
+    var showAnalytics by remember { mutableStateOf(false) }
 
-    // Intercept back press when inspecting a specific bill to return to history list
-    BackHandler(enabled = selectedBill != null) {
-        selectedBill = null
+    // Intercept back press when inspecting a specific bill or analytics to return to history list
+    BackHandler(enabled = selectedBill != null || showAnalytics) {
+        if (selectedBill != null) {
+            selectedBill = null
+        } else if (showAnalytics) {
+            showAnalytics = false
+        }
     }
 
-    if (selectedBill != null) {
+    if (showAnalytics) {
+        BillAnalyticsView(
+            serviceNo = consumerData.consumerNumber.ifBlank { serviceNo },
+            consumerData = consumerData,
+            bills = bills,
+            onNavigateBack = { showAnalytics = false },
+            onNavigateToSolarLens = onNavigateToSolarLens
+        )
+    } else if (selectedBill != null) {
         BillDetailsView(
             serviceNo = consumerData.consumerNumber.ifBlank { serviceNo },
             consumerData = consumerData,
@@ -49,7 +64,11 @@ fun BillHistoryRoute(
             bills = bills,
             onNavigateBack = onNavigateBack,
             onSelectBill = { bill -> selectedBill = bill },
-            onNavigateToSolarLens = onNavigateToSolarLens
+            onNavigateToSolarLens = onNavigateToSolarLens,
+            onNavigateToBillAnalytics = {
+                showAnalytics = true
+                onNavigateToBillAnalytics()
+            }
         )
     }
 }

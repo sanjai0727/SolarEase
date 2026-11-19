@@ -21,8 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import com.example.core.session.UserSession
 import com.example.ui.theme.*
 import com.example.ui.components.SolarEaseButton
 import com.example.ui.components.SolarEaseButtonVariant
@@ -579,8 +585,10 @@ internal fun BillHistoryView(
     bills: List<TnebBillRecord>,
     onNavigateBack: () -> Unit,
     onSelectBill: (TnebBillRecord) -> Unit,
-    onNavigateToSolarLens: () -> Unit
+    onNavigateToSolarLens: () -> Unit,
+    onNavigateToBillAnalytics: () -> Unit = {}
 ) {
+    val isDark = LocalIsDarkTheme.current
     var selectedFilter by remember { mutableStateOf("All") }
 
     val filteredBills = remember(selectedFilter, bills) {
@@ -594,20 +602,30 @@ internal fun BillHistoryView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bill History", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Bill History",
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = if (isDark) MaterialTheme.colorScheme.background else SolarBrandBackground,
+                    titleContentColor = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary,
+                    navigationIconContentColor = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = if (isDark) MaterialTheme.colorScheme.background else SolarBrandBackground
     ) { padding ->
         Column(
             modifier = Modifier
@@ -616,73 +634,214 @@ internal fun BillHistoryView(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
-            // Consumer Header Pill
+            // ── 1. Redesigned Consumer Information Card ────────────────────────────
+            val rawName = consumerData.consumerName
+                .replace(Regex("(?i)\\s*consumer\\s*(number|no)?\\s*:?\\s*[0-9]+.*"), "")
+                .trim()
+                .ifBlank {
+                    UserSession.currentUser?.name?.trim()?.ifBlank { "TNEB Consumer" } ?: "TNEB Consumer"
+                }
+            val tariffLabel = consumerData.normalizedTariff.displayLabel.ifBlank {
+                consumerData.tariffCode.ifBlank { consumerData.serviceCategory.ifBlank { "LT-1A · Domestic" } }
+            }
+            val effectiveConsumerNo = consumerData.consumerNumber.trim().ifBlank { serviceNo.trim() }
+
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) Color(0xFF003820) else SolarBrandGreen,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Bolt, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    // Consumer Name (Cleaned, larger, bold)
                     Column {
-                        val name = consumerData.consumerName.ifBlank { "TNEB Consumer" }
-                        val tariff = consumerData.normalizedTariff.displayLabel
-                        Text("$name • $tariff", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
-                        val circle = consumerData.region.ifBlank { consumerData.circle.ifBlank { "Tamil Nadu" } }
-                        Text("$serviceNo • $circle", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = rawName,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            letterSpacing = (-0.3).sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color.White.copy(alpha = 0.18f),
+                            border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.25f))
+                        ) {
+                            Text(
+                                text = tariffLabel,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.2f),
+                        thickness = 0.8.dp
+                    )
+
+                    // Consumer Number (Slightly bold label and distinct value)
+                    Column {
+                        Text(
+                            text = "Consumer Number",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = 0.82f)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = effectiveConsumerNo.ifBlank { "Not Connected" },
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    // Consumer Location and Service Details
+                    val locationFields = listOfNotNull(
+                        if (consumerData.region.isNotBlank()) "Region" to consumerData.region else null,
+                        if (consumerData.circle.isNotBlank()) "Circle" to consumerData.circle else null,
+                        if (consumerData.section.isNotBlank()) "Section" to consumerData.section else null,
+                        if (consumerData.distribution.isNotBlank()) "Distribution" to consumerData.distribution else null,
+                        if (consumerData.serviceNumber.isNotBlank()) "Service Number" to consumerData.serviceNumber else null
+                    )
+
+                    if (locationFields.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White.copy(alpha = 0.12f),
+                            border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                locationFields.forEach { (label, value) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.White.copy(alpha = 0.75f)
+                                        )
+                                        Text(
+                                            text = value,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Annual Baseline Overview Strip (Computed from Real History)
-            val avgUnits = if (bills.isNotEmpty()) {
-                bills.mapNotNull { it.units.toDoubleOrNull() }.average().toInt()
-            } else 0
-            val avgBill = if (bills.isNotEmpty()) {
-                bills.mapNotNull { it.amountDue.toDoubleOrNull() }.average().toInt()
-            } else 0
-            val paidCount = bills.count { it.isPaid }
-            val settlementRate = if (bills.isNotEmpty()) ((paidCount.toDouble() / bills.size) * 100).toInt() else 100
+            // ── 2. TNEB Consumption Baseline Card ──────────────────────────────────
+            val validDemands = remember(bills) {
+                bills.mapNotNull { bill ->
+                    val clean = bill.recordedDemand.replace(Regex("[^0-9.]"), "").trim()
+                    clean.toDoubleOrNull()
+                }
+            }
+            val avgDemandFormatted = remember(validDemands) {
+                if (validDemands.isNotEmpty()) {
+                    val avg = validDemands.average()
+                    val unit = bills.firstOrNull { it.recordedDemand.contains("kVA", ignoreCase = true) }?.let { "kVA" } ?: "KW"
+                    if (avg % 1.0 == 0.0) "${avg.toInt()} $unit" else String.format(Locale.US, "%.1f %s", avg, unit)
+                } else "—"
+            }
 
-            Card(
+            val avgBill = remember(bills) {
+                if (bills.isNotEmpty()) {
+                    val validBills = bills.mapNotNull { it.amountDue.replace(Regex("[^0-9.]"), "").trim().toDoubleOrNull() }
+                    if (validBills.isNotEmpty()) validBills.average().toInt() else 0
+                } else 0
+            }
+            val paidCount = remember(bills) { bills.count { it.isPaid } }
+            val settlementRate = remember(bills) {
+                if (bills.isNotEmpty()) ((paidCount.toDouble() / bills.size) * 100).toInt() else 100
+            }
+
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
+                shadowElevation = 0.5.dp
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text("TNEB LT CONSUMPTION BASELINE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 0.5.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "TNEB LT CONSUMPTION BASELINE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Avg Units", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("$avgUnits kWh", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "Avg Recorded Demand",
+                                fontSize = 11.sp,
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                avgDemandFormatted,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                            )
                         }
                         Column {
-                            Text("Avg Cycle Bill", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("₹$avgBill", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "Avg Cycle Bill",
+                                fontSize = 11.sp,
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                "₹$avgBill",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                            )
                         }
                         Column {
-                            Text("Settlement Rate", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("$settlementRate% on-time", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "Settlement Rate",
+                                fontSize = 11.sp,
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                "$settlementRate% on-time",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color(0xFF6EE7B7) else SolarBrandGreen
+                            )
                         }
                     }
                 }
@@ -690,25 +849,64 @@ internal fun BillHistoryView(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Filter Chips
+            // ── 3. Filter Chips and Bill Analytics Icon ────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf("All", "Paid", "Pending").forEach { filter ->
-                    val isSelected = selectedFilter == filter
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { selectedFilter = filter },
-                        label = { Text(filter) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            labelColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf("All", "Paid", "Pending").forEach { filter ->
+                        val isSelected = selectedFilter == filter
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedFilter = filter },
+                            label = {
+                                Text(
+                                    filter,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = SolarBrandGreen,
+                                selectedLabelColor = Color.White,
+                                containerColor = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                                labelColor = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) SolarBrandGreen else (if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder)
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+                }
+
+                // Chart / Analytics Icon Button
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                    border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(role = Role.Button) { onNavigateToBillAnalytics() }
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Bill Analytics"
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.BarChart,
+                            contentDescription = "Bill Analytics",
+                            tint = SolarBrandGreen,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
 

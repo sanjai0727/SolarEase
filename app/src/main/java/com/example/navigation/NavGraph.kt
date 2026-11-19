@@ -44,6 +44,7 @@ import com.example.core.network.RetrofitClient
 import com.example.feature.lens.data.LensRepository
 import com.example.feature.home.ui.modules.TnebBillStatusRoute
 import com.example.feature.home.ui.modules.BillHistoryRoute
+import com.example.feature.home.ui.modules.BillAnalyticsRoute
 import com.example.feature.home.ui.modules.SolarPanelRoute
 import com.example.feature.ebservice.ui.EbServiceNumberRoute
 import com.example.feature.assessment.ui.CustomerCategoryRoute
@@ -387,6 +388,14 @@ fun SolarEaseNavGraph(navController: NavHostController, startDestination: Any = 
         
         composable<Screen.BillHistory> {
             BillHistoryRoute(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSolarLens = { navController.navigate(Screen.SolarEaseLens) },
+                onNavigateToBillAnalytics = { navController.navigate(Screen.BillAnalytics) }
+            )
+        }
+
+        composable<Screen.BillAnalytics> {
+            BillAnalyticsRoute(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToSolarLens = { navController.navigate(Screen.SolarEaseLens) }
             )
