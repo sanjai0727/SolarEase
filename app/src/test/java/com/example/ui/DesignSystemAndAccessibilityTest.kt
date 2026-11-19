@@ -277,7 +277,8 @@ class DesignSystemAndAccessibilityTest {
                         uiState = com.example.feature.recommends.model.RecommendsUiState(
                             coinBalance = 140,
                             streakDays = 5,
-                            mantras = defaultMantras
+                            mantras = defaultMantras,
+                            isMantrasExpanded = false
                         ),
                         onMantraClick = {},
                         onNavigateToHome = {},
@@ -289,22 +290,22 @@ class DesignSystemAndAccessibilityTest {
 
         // Verify primary headings render without crash or missing semantics at 200% font scale on 320dp width
         composeTestRule.onAllNodesWithText("Recommends").onFirst().assertExists()
-        composeTestRule.onNodeWithText("SolarEase Coins").assertExists()
+        composeTestRule.onNodeWithText("SolarEase Coins").assertDoesNotExist()
         composeTestRule.onNodeWithText("9 Energy-Saving Mantras").assertExists()
 
         // Verify expandable headers expose Expanded/Collapsed stateDescription and >= 48dp touch target
-        val coinsHeader = composeTestRule.onNodeWithText("SolarEase Coins")
+        val mantrasHeader = composeTestRule.onNodeWithText("9 Energy-Saving Mantras")
         assertEquals(
             "Collapsed",
-            coinsHeader.fetchSemanticsNode().config[SemanticsProperties.StateDescription]
+            mantrasHeader.fetchSemanticsNode().config[SemanticsProperties.StateDescription]
         )
 
-        val coinsToggle = composeTestRule.onNodeWithContentDescription("Expand SolarEase Coins card")
-        coinsToggle.assertExists()
-        val coinsBounds = coinsToggle.getUnclippedBoundsInRoot()
+        val mantrasToggle = composeTestRule.onNodeWithContentDescription("Expand 9 Energy-Saving Mantras")
+        mantrasToggle.assertExists()
+        val mantrasBounds = mantrasToggle.getUnclippedBoundsInRoot()
         assertTrue(
-            "Expandable coin details button must be >= 48dp (was ${coinsBounds.bottom - coinsBounds.top})",
-            (coinsBounds.bottom - coinsBounds.top) >= 48.dp
+            "Expandable mantras toggle button must be >= 48dp (was ${mantrasBounds.bottom - mantrasBounds.top})",
+            (mantrasBounds.bottom - mantrasBounds.top) >= 48.dp
         )
 
         // Verify no raw emoji text nodes are rendered for the 9 mantras

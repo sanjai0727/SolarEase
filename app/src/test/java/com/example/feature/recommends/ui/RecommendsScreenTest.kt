@@ -294,8 +294,9 @@ class RecommendsScreenTest {
     }
 
     @Test
-    fun testCoinsCardAndBillingCardInitialCollapsedAndExpandIndependently() {
+    fun testCoinsCardAndBillingCardRemovedFromRecommendsScreenInV1() {
         val testState = com.example.feature.recommends.model.RecommendsUiState(
+            mantras = MantraPreferences.mantrasState.value,
             coinBalance = 5,
             streakDays = 3,
             streakState = StreakState(currentStreak = 3),
@@ -319,39 +320,16 @@ class RecommendsScreenTest {
             )
         }
 
-        // 1. Initial collapsed summary is displayed / exists
-        composeTestRule.onNodeWithText("5").assertIsDisplayed()
-        composeTestRule.onNodeWithText("SolarEase Coins").assertIsDisplayed()
-        composeTestRule.onNodeWithText("3 Day Streak").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Last Billing Cycle").assertExists()
-        composeTestRule.onNodeWithText("302 kWh").assertExists()
-        composeTestRule.onNodeWithText("180 kWh").assertExists()
-        composeTestRule.onNodeWithText("122 kWh").assertExists()
-
-        // 2. Expanded-only content is not displayed while collapsed
+        // Coins and Rewards must NOT exist anywhere on Recommends screen in V1
+        composeTestRule.onNodeWithText("SolarEase Coins").assertDoesNotExist()
+        composeTestRule.onNodeWithText("3 Day Streak").assertDoesNotExist()
         composeTestRule.onNodeWithText("Earning Rules & History").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Last Billing Cycle").assertDoesNotExist()
 
-        // 3. Expand Coins card
-        composeTestRule.onNodeWithContentDescription("Expand SolarEase Coins card").performClick()
-        composeTestRule.waitForIdle()
-
-        // 4. Coins card content is revealed
-        composeTestRule.onNodeWithText("Earning Rules & History").assertExists()
-        composeTestRule.onNodeWithText("Recent Activity").assertExists()
-
-        // 5. Billing card remains collapsed independently
-        composeTestRule.onNodeWithText("Select Cycle").assertDoesNotExist()
-
-        // 6. Expand Billing card
-        composeTestRule.onNodeWithContentDescription("Expand Last Billing Cycle card").performScrollTo().performClick()
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("• Saved").assertExists()
-
-        // 7. Collapse Coins card without collapsing Billing card
-        composeTestRule.onNodeWithContentDescription("Collapse SolarEase Coins card").performScrollTo().performClick()
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Earning Rules & History").assertDoesNotExist()
-        composeTestRule.onNodeWithText("• Saved").assertExists()
+        // Primary content is the 9 Mantra Check-in
+        composeTestRule.onNodeWithText("Efficiency Guidelines").assertExists()
+        composeTestRule.onNodeWithText("Today's Mantra Progress").assertExists()
+        composeTestRule.onNodeWithText("9 Energy-Saving Mantras").assertExists()
     }
 
     @Test
@@ -493,17 +471,16 @@ class RecommendsScreenTest {
             )
         }
 
-        val coinsTop = composeTestRule.onNodeWithText("SolarEase Coins").getUnclippedBoundsInRoot().top
-        val billingTop = composeTestRule.onNodeWithText("Last Billing Cycle").getUnclippedBoundsInRoot().top
+        val headerTop = composeTestRule.onNodeWithText("Efficiency Guidelines").getUnclippedBoundsInRoot().top
         val todayProgressTop = composeTestRule.onNodeWithText("Today's Mantra Progress").getUnclippedBoundsInRoot().top
+        val mantrasTop = composeTestRule.onNodeWithText("9 Energy-Saving Mantras").getUnclippedBoundsInRoot().top
 
-        assertTrue("Last Billing Cycle must appear after SolarEase Coins", billingTop > coinsTop)
-        assertTrue("Today's Mantra Progress must appear after Last Billing Cycle", todayProgressTop > billingTop)
+        assertTrue("Today's Mantra Progress must appear after Hero Header", todayProgressTop > headerTop)
+        assertTrue("9 Energy-Saving Mantras must appear after Today's Mantra Progress", mantrasTop > todayProgressTop)
 
-        // 4. 9 Energy-Saving Mantras section exists below
-        composeTestRule.onNodeWithText("9 Energy-Saving Mantras").assertExists()
-
-        // 5. In Version 1 scope: Solar Vendor card must NOT exist
+        // V1 scope: Coins, Last Billing Cycle, and Explore Solar must NOT exist
+        composeTestRule.onNodeWithText("SolarEase Coins").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Last Billing Cycle").assertDoesNotExist()
         composeTestRule.onNodeWithText("How much could your home reduce its carbon footprint?").assertDoesNotExist()
         composeTestRule.onNodeWithText("Explore Solar").assertDoesNotExist()
     }

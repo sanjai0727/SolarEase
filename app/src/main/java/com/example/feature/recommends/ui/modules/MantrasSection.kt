@@ -9,7 +9,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import com.example.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -35,7 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.feature.recommends.model.MantraItem
-import com.example.ui.theme.SolarEaseTheme
+import com.example.ui.theme.*
 
 @Composable
 fun TodayProgressCard(
@@ -43,17 +43,17 @@ fun TodayProgressCard(
     checkedCount: Int,
     totalCount: Int
 ) {
-    val colors = SolarEaseTheme.colors
+    val isDark = LocalIsDarkTheme.current
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.outlineVariant),
-        shadowElevation = 1.dp
+        shape = RoundedCornerShape(20.dp),
+        color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+        border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
+        shadowElevation = 0.5.dp
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -62,27 +62,27 @@ fun TodayProgressCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(colors.primaryContainer),
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.CalendarToday,
                             contentDescription = null,
-                            tint = colors.onPrimaryContainer,
-                            modifier = Modifier.size(16.dp)
+                            tint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else SolarBrandGreen,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                     Text(
                         text = "Today's Mantra Progress",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.onSurface
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
                     )
                 }
 
@@ -90,7 +90,7 @@ fun TodayProgressCard(
                     text = "$checkedCount of $totalCount completed",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = colors.primary
+                    color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
                 )
             }
 
@@ -98,18 +98,18 @@ fun TodayProgressCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(colors.surfaceVariant)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(3.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                colors = listOf(Color(0xFF006850), Color(0xFFD4AF37))
+                            Brush.horizontalGradient(
+                                colors = listOf(SolarBrandGreen, SolarBrandGreenSecondary)
                             )
                         )
                 )
@@ -125,12 +125,11 @@ fun MantrasSection(
     onToggleExpand: () -> Unit = {},
     onMantraClick: (Int) -> Unit
 ) {
-    val colors = SolarEaseTheme.colors
     val isDark = LocalIsDarkTheme.current
     val checkedCount = mantras.count { it.isCheckedIn }
     val totalCount = mantras.size
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Header Row: Heading + Description (Left) & Progress Pill + Chevron (Right)
         Row(
             modifier = Modifier
@@ -153,15 +152,17 @@ fun MantrasSection(
             ) {
                 Text(
                     text = "9 Energy-Saving Mantras",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.onSurface,
-                    letterSpacing = 0.sp
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary,
+                    letterSpacing = (-0.2).sp
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Check in regularly, build the habit and reduce your electricity consumption.",
                     fontSize = 12.sp,
-                    color = colors.onSurfaceVariant
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
+                    lineHeight = 16.sp
                 )
             }
 
@@ -174,16 +175,16 @@ fun MantrasSection(
                         modifier = Modifier.testTag("mantras_progress_pill"),
                         shape = RoundedCornerShape(20.dp),
                         color = if (checkedCount == totalCount) {
-                            if (isDark) Color(0xFF064E3B) else Color(0xFFF0FDF4)
+                            if (isDark) Color(0xFF064E3B) else SolarBrandGreenLight
                         } else {
-                            colors.surfaceVariant
+                            if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenSurface
                         },
                         border = BorderStroke(
                             1.dp,
                             if (checkedCount == totalCount) {
-                                if (isDark) Color(0xFF065F46) else Color(0xFFBBF7D0)
+                                if (isDark) Color(0xFF065F46) else SolarBrandGlassCardBorder
                             } else {
-                                colors.outlineVariant
+                                if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder
                             }
                         )
                     ) {
@@ -192,9 +193,9 @@ fun MantrasSection(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (checkedCount == totalCount) {
-                                if (isDark) Color(0xFF86EFAC) else Color(0xFF16A34A)
+                                if (isDark) Color(0xFF86EFAC) else SolarBrandGreen
                             } else {
-                                colors.onSurfaceVariant
+                                if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
                             },
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
@@ -208,7 +209,7 @@ fun MantrasSection(
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
                         contentDescription = if (isExpanded) "Collapse 9 Energy-Saving Mantras" else "Expand 9 Energy-Saving Mantras",
-                        tint = colors.onSurfaceVariant,
+                        tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -240,7 +241,6 @@ fun MantraCard(
     item: MantraItem,
     onClick: () -> Unit
 ) {
-    val colors = SolarEaseTheme.colors
     val isDark = LocalIsDarkTheme.current
 
     val mantraVectorIcon = when (item.id) {
@@ -258,11 +258,11 @@ fun MantraCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.outlineVariant),
+        color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+        border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
         shadowElevation = 0.5.dp
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             // Top row: Number + Icon + Title + Action button
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -272,17 +272,21 @@ fun MantraCard(
                 // Number index badge
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(26.dp)
                         .clip(CircleShape)
-                        .background(if (isDark) colors.primaryContainer else Color(0xFFFDFDD0))
-                        .border(1.dp, if (isDark) colors.primary.copy(alpha = 0.5f) else Color(0xFFD4AF37).copy(alpha = 0.6f), CircleShape),
+                        .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight)
+                        .border(
+                            1.dp,
+                            if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else SolarBrandGlassCardBorder,
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = item.number,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (isDark) colors.onPrimaryContainer else Color(0xFF004F2E),
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else SolarBrandGreen,
                     )
                 }
 
@@ -291,13 +295,13 @@ fun MantraCard(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(if (isDark) colors.primaryContainer else Color(item.iconBgColorHex)),
+                        .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenSurface),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = mantraVectorIcon,
                         contentDescription = null,
-                        tint = if (isDark) colors.onPrimaryContainer else Color(0xFF19380A),
+                        tint = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -308,16 +312,16 @@ fun MantraCard(
                 ) {
                     Text(
                         text = item.title,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = colors.onSurface,
-                        lineHeight = 16.sp
+                        color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary,
+                        lineHeight = 17.sp
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = item.description,
                         fontSize = 11.sp,
-                        color = colors.onSurfaceVariant,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
                         lineHeight = 15.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -331,21 +335,21 @@ fun MantraCard(
                 ) {
                     if (item.isCheckedIn) {
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isDark) Color(0xFF059669) else Color(0xFF16A34A),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDark) Color(0xFF059669) else SolarBrandGreen,
                             modifier = Modifier
-                                .heightIn(min = 48.dp)
+                                .heightIn(min = 40.dp)
                                 .clickable(role = Role.Button) { onClick() }
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .padding(horizontal = 9.dp, vertical = 5.dp)
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
                                     .fillMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
@@ -356,7 +360,7 @@ fun MantraCard(
                                     Text(
                                         text = "Checked In",
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
+                                        fontWeight = FontWeight.Bold,
                                         color = Color.White,
                                         maxLines = 1
                                     )
@@ -369,29 +373,29 @@ fun MantraCard(
                                 text = item.checkInTimeDisplay,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = colors.onSurfaceVariant,
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextMuted,
                                 maxLines = 1
                             )
                         }
                     } else {
                         OutlinedButton(
                             onClick = onClick,
-                            modifier = Modifier.heightIn(min = 48.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, colors.primary),
+                            modifier = Modifier.heightIn(min = 40.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = colors.surface,
-                                contentColor = colors.primary
+                                containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
+                                contentColor = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
                             )
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.CheckCircle,
                                 contentDescription = null,
-                                tint = colors.primary,
+                                tint = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
                                 modifier = Modifier.size(12.dp)
                             )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Check In",
                                 fontSize = 11.sp,
@@ -409,7 +413,7 @@ fun MantraCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 60.dp),
+                    .padding(start = 74.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -422,37 +426,29 @@ fun MantraCard(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = if (isDark) Color(0xFF34D399) else Color(0xFF10B981),
+                            tint = if (isDark) Color(0xFF34D399) else SolarBrandGreenSecondary,
                             modifier = Modifier.size(11.dp)
                         )
                         Text(
                             text = item.potentialSavings,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isDark) Color(0xFF6EE7B7) else Color(0xFF047857),
+                            color = if (isDark) Color(0xFF6EE7B7) else SolarBrandGreenSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                // Frequency badge — always horizontal, never wraps
-                val (badgeBg, badgeText) = when (item.frequencyBadge) {
-                    "Daily" -> if (isDark) Pair(Color(0xFF1E3A8A), Color(0xFF93C5FD)) else Pair(Color(0xFFEFF6FF), Color(0xFF2563EB))
-                    "Weekly" -> if (isDark) Pair(Color(0xFF581C87), Color(0xFFD8B4FE)) else Pair(Color(0xFFFAF5FF), Color(0xFF9333EA))
-                    "Monthly" -> if (isDark) Pair(Color(0xFF881337), Color(0xFFFDA4AF)) else Pair(Color(0xFFFFF1F2), Color(0xFFE11D48))
-                    else -> if (isDark) Pair(Color(0xFF451A03), Color(0xFFFDBA74)) else Pair(Color(0xFFFFFBEB), Color(0xFFB45309))
-                }
-
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = badgeBg
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight
                 ) {
                     Text(
                         text = item.frequencyBadge,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = badgeText,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
                         maxLines = 1,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
