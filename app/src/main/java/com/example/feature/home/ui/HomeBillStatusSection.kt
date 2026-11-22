@@ -631,6 +631,8 @@ fun WhyConnectBillSection(
                 iconBg = SolarEaseSemanticColors.SuccessContainer,
                 title = "Zero-Waste Solar Sizing",
                 description = "Recommends the right rooftop solar kW size to offset your bill without wasting money on unneeded panels."
+                title = "Avoid Tariff Slab Jumps",
+                description = "Identifies peak consumption periods to help you keep bi-monthly units within lower slab brackets."
             )
         }
     }

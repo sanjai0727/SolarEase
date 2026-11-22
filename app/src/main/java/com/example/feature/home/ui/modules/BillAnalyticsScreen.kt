@@ -8,6 +8,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -185,8 +186,8 @@ fun BillAnalyticsView(
                 settlementRate = settlementRate
             )
 
-            // ── 2. Consumption Analytics Chart ─────────────────────────────────────
-            ConsumptionAnalyticsSection(bills = bills)
+            // ── 2. Complete Billing Records — Table View ───────────────────────────
+            BillingRecordsTableView(bills = bills)
 
             // ── 3. Charges & Cost Breakdown Analytics ──────────────────────────────
             ChargesAnalyticsSection(bills = bills)
@@ -195,6 +196,7 @@ fun BillAnalyticsView(
             CompleteBillingRecordsSection(bills = bills)
 
             // ── Bottom Solar Lens CTA ──────────────────────────────────────────────
+            // ── Bottom Appliance Audit CTA ──────────────────────────────────────────
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
@@ -216,6 +218,7 @@ fun BillAnalyticsView(
                     ) {
                         Icon(
                             Icons.Default.WbSunny,
+                            Icons.Default.Sensors,
                             contentDescription = null,
                             tint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else SolarBrandGreen,
                             modifier = Modifier.size(22.dp)
@@ -225,12 +228,14 @@ fun BillAnalyticsView(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Optimize With Solar Lens",
+                            text = "Appliance Energy Audit",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
                         )
                         Text(
                             text = "Model rooftop solar capacity to offset baseline billing slabs →",
+                            text = "Audit connected heavy loads to see where your bi-monthly units go →",
                             fontSize = 11.sp,
                             color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
                         )
@@ -471,201 +476,624 @@ private fun MetricKpiCard(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 2. CONSUMPTION ANALYTICS SECTION (CHARTS)
+// 2. COMPLETE BILLING RECORDS — TABLE VIEW
 // ──────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun ConsumptionAnalyticsSection(bills: List<TnebBillRecord>) {
+private fun BillingRecordsTableView(bills: List<TnebBillRecord>) {
     val isDark = LocalIsDarkTheme.current
-    var selectedMetric by remember { mutableStateOf("Units (kWh)") }
-    val metricsList = listOf("Units (kWh)", "Demand (KW)", "Power Factor", "KWH Reading", "KVAH Reading")
+    var selectedBill by remember { mutableStateOf<TnebBillRecord?>(null) }
+
+    // Pagination (10 records per page)
+    val pageSize = 10
+    var currentPage by remember { mutableIntStateOf(0) }
+    val pageCount = maxOf(1, (bills.size + pageSize - 1) / pageSize)
+    val pagedBills = remember(bills, currentPage) {
+        bills.drop(currentPage * pageSize).take(pageSize)
+    }
+
+    // Colors matching TNEB official statement & SolarEase green theme
+    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg
+    val cardBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder
+    val tableBorderColor = if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCBD5E1)
+    val bannerBg = if (isDark) Color(0xFF2E2415) else Color(0xFFFEF3C7)
+    val bannerText = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E)
+    val groupHeaderBg = if (isDark) Color(0xFF1E3A2B) else Color(0xFFDCFCE7)
+    val groupHeaderText = if (isDark) Color(0xFF86EFAC) else Color(0xFF14532D)
+    val colHeaderBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8FAFC)
+    val colHeaderText = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF334155)
+    val numberRowBg = if (isDark) Color(0xFF1F2937) else Color(0xFFF1F5F9)
+    val numberRowText = if (isDark) Color(0xFF9CA3AF) else Color(0xFF64748B)
+
+    // Column widths in dp
+    val dateColWidth = 104.dp
+    val entryDateColWidth = 96.dp
+    val statusColWidth = 76.dp
+    val kwhColWidth = 76.dp
+    val kvahColWidth = 68.dp
+    val demandColWidth = 80.dp
+    val pfColWidth = 76.dp
+    val unitsColWidth = 76.dp
+    val ccChargesColWidth = 84.dp
+    val electyTaxColWidth = 76.dp
+    val weldingColWidth = 68.dp
+    val excessDemandColWidth = 80.dp
+    val pfPenaltyColWidth = 76.dp
+    val fixedChargesColWidth = 80.dp
+    val totalChargesColWidth = 86.dp
+    val advancePaidColWidth = 80.dp
+    val adjustmentColWidth = 76.dp
+    val amountDueColWidth = 86.dp
+    val dueDateColWidth = 96.dp
+    val amountPaidColWidth = 86.dp
+    val receiptColWidth = 144.dp
+    val paymentDateColWidth = 96.dp
+
+    // Group header widths (sum of child columns)
+    val assessmentScrollWidth = entryDateColWidth + statusColWidth
+    val consumptionReadingWidth = kwhColWidth + kvahColWidth + demandColWidth + pfColWidth
+    val consumptionWidth = unitsColWidth
+    val splitupChargesWidth = ccChargesColWidth + electyTaxColWidth + weldingColWidth + excessDemandColWidth + pfPenaltyColWidth + fixedChargesColWidth
+    val totalChargesWidth = totalChargesColWidth
+    val deductionsWidth = advancePaidColWidth + adjustmentColWidth
+    val finalBillWidth = amountDueColWidth + dueDateColWidth
+    val collectionDetailsWidth = amountPaidColWidth + receiptColWidth + paymentDateColWidth
+    val totalScrollableWidth = assessmentScrollWidth + consumptionReadingWidth + consumptionWidth + splitupChargesWidth + totalChargesWidth + deductionsWidth + finalBillWidth + collectionDetailsWidth
+
+    // Fixed heights for row alignment
+    val bannerHeight = 30.dp
+    val groupHeaderHeight = 32.dp
+    val colHeaderHeight = 40.dp
+    val numberRowHeight = 22.dp
+    val rowHeight = 40.dp
+
+    val horizontalScrollState = rememberScrollState()
 
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
-        border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 0.5.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column {
-                Text(
-                    text = "Consumption Analytics",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
-                )
-                Text(
-                    text = "Bi-monthly consumption telemetry and electrical readings across cycles",
-                    fontSize = 11.sp,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
-                )
-            }
-
-            // Metric Selector Pills
+            // Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                metricsList.forEach { metric ->
-                    val isSelected = selectedMetric == metric
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isSelected) SolarBrandGreen else (if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenSurface),
-                        border = BorderStroke(
-                            1.dp,
-                            if (isSelected) SolarBrandGreen else (if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGreenLight)
-                        ),
-                        modifier = Modifier.clickable { selectedMetric = metric }
-                    ) {
-                        Text(
-                            text = metric,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) Color.White else (if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-                }
-            }
-
-            // Chart Render
-            if (bills.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "No billing history available to display chart.",
-                        fontSize = 12.sp,
+                        text = "Complete Billing Records — Table View",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                    )
+                    Text(
+                        text = "Official 22-column TNEB statement with horizontal swipe & pinned date",
+                        fontSize = 11.sp,
                         color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
                     )
                 }
-            } else {
-                val chartPoints = remember(bills, selectedMetric) {
-                    bills.reversed().map { bill ->
-                        val label = formatChartPeriod(bill.period.ifBlank { bill.assessmentDate })
-                        val rawValue = when (selectedMetric) {
-                            "Units (kWh)" -> bill.units.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
-                            "Demand (KW)" -> bill.recordedDemand.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
-                            "Power Factor" -> bill.powerFactor.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
-                            "KWH Reading" -> bill.kwh.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
-                            else -> bill.kvah.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = SolarBrandGreen.copy(alpha = 0.12f),
+                    border = BorderStroke(0.8.dp, SolarBrandGreen.copy(alpha = 0.35f))
+                ) {
+                    Text(
+                        text = "${bills.size} Cycles",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SolarBrandGreen,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // Swipe prompt badge
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) else Color(0xFFF1F5F9),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.TableChart,
+                    contentDescription = null,
+                    tint = SolarBrandGreen,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = "Swipe horizontally to inspect all 22 columns • Tap any row for cycle summary",
+                    fontSize = 10.sp,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF475569)
+                )
+            }
+
+            // Table Container
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, tableBorderColor),
+                color = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (bills.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No billing records available to display.",
+                            fontSize = 12.sp,
+                            color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
+                        )
+                    }
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        // ── Pinned Column: Date (Assessment Date, Col 1) ─────────────────
+                        Column(
+                            modifier = Modifier
+                                .width(dateColWidth)
+                                .background(if (isDark) MaterialTheme.colorScheme.surface else Color.White)
+                        ) {
+                            // Top banner segment for pinned col
+                            Box(
+                                modifier = Modifier
+                                    .width(dateColWidth)
+                                    .height(bannerHeight)
+                                    .background(bannerBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Statement",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = bannerText
+                                )
+                            }
+                            // Group Header: Assessment
+                            Box(
+                                modifier = Modifier
+                                    .width(dateColWidth)
+                                    .height(groupHeaderHeight)
+                                    .background(groupHeaderBg)
+                                    .border(BorderStroke(0.5.dp, tableBorderColor)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Assessment",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = groupHeaderText
+                                )
+                            }
+                            // Column Header: Date
+                            Box(
+                                modifier = Modifier
+                                    .width(dateColWidth)
+                                    .height(colHeaderHeight)
+                                    .background(colHeaderBg)
+                                    .border(BorderStroke(0.5.dp, tableBorderColor)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Date",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colHeaderText
+                                )
+                            }
+                            // Column Number: 1
+                            Box(
+                                modifier = Modifier
+                                    .width(dateColWidth)
+                                    .height(numberRowHeight)
+                                    .background(numberRowBg)
+                                    .border(BorderStroke(0.5.dp, tableBorderColor)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "1",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = numberRowText
+                                )
+                            }
+                            // Rows: Assessment Date
+                            pagedBills.forEachIndexed { index, bill ->
+                                val isSelected = selectedBill?.id == bill.id
+                                val rowBg = when {
+                                    isSelected -> SolarBrandGreen.copy(alpha = 0.15f)
+                                    index % 2 == 1 -> if (isDark) Color(0xFF1E293B).copy(alpha = 0.4f) else Color(0xFFF8FAFC)
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .width(dateColWidth)
+                                        .height(rowHeight)
+                                        .background(rowBg)
+                                        .border(BorderStroke(0.5.dp, tableBorderColor))
+                                        .clickable {
+                                            selectedBill = if (selectedBill?.id == bill.id) null else bill
+                                        }
+                                        .padding(horizontal = 6.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Text(
+                                        text = bill.assessmentDate.ifBlank { bill.period.ifBlank { "—" } },
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isSelected) SolarBrandGreen else (if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
-                        ChartBarData(label = label, value = rawValue, isPaid = bill.isPaid)
+
+                        // Subtle boundary divider between pinned column and scrollable section
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(bannerHeight + groupHeaderHeight + colHeaderHeight + numberRowHeight + (rowHeight * pagedBills.size))
+                                .background(SolarBrandGreen.copy(alpha = 0.35f))
+                        )
+
+                        // ── Scrollable Columns: Cols 2 to 22 ────────────────────────────
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .horizontalScroll(horizontalScrollState)
+                        ) {
+                            Column(modifier = Modifier.width(totalScrollableWidth)) {
+                                // Top Orange/Amber Banner
+                                Box(
+                                    modifier = Modifier
+                                        .width(totalScrollableWidth)
+                                        .height(bannerHeight)
+                                        .background(bannerBg)
+                                        .padding(horizontal = 12.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Text(
+                                        text = "Consumption Charges and Collection Details",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = bannerText
+                                    )
+                                }
+
+                                // Tier 1: Group Headers
+                                Row(
+                                    modifier = Modifier
+                                        .width(totalScrollableWidth)
+                                        .height(groupHeaderHeight)
+                                ) {
+                                    GroupHeaderCell("Assessment (Cont.)", assessmentScrollWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Consumption Reading", consumptionReadingWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Consumption", consumptionWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Splitup of Charges", splitupChargesWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Total Charges", totalChargesWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Deductions", deductionsWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Final Bill Details", finalBillWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                    GroupHeaderCell("Collection Details", collectionDetailsWidth, groupHeaderBg, groupHeaderText, tableBorderColor)
+                                }
+
+                                // Tier 2: Column Headers (Cols 2..22)
+                                Row(
+                                    modifier = Modifier
+                                        .width(totalScrollableWidth)
+                                        .height(colHeaderHeight)
+                                ) {
+                                    ColumnHeaderCell("Entry Date", entryDateColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Status", statusColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("KWH", kwhColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("KVAH", kvahColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Recorded\nDemand", demandColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Power\nFactor", pfColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("In Units", unitsColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("CC\nCharges", ccChargesColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Electy\nTax", electyTaxColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Welding", weldingColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Excess\nDemand", excessDemandColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("PF\nPenalty", pfPenaltyColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Fixed\nCharges", fixedChargesColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("15=9+..+14", totalChargesColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Advance\nAmount Paid", advancePaidColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Adjustment", adjustmentColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Amount To\nBe paid", amountDueColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Due Date", dueDateColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Amount\nPaid", amountPaidColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Receipt\nNo", receiptColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                    ColumnHeaderCell("Date", paymentDateColWidth, colHeaderBg, colHeaderText, tableBorderColor)
+                                }
+
+                                // Tier 3: Column Numbers Row (2..22)
+                                Row(
+                                    modifier = Modifier
+                                        .width(totalScrollableWidth)
+                                        .height(numberRowHeight)
+                                ) {
+                                    val widths = listOf(
+                                        entryDateColWidth, statusColWidth, kwhColWidth, kvahColWidth, demandColWidth, pfColWidth,
+                                        unitsColWidth, ccChargesColWidth, electyTaxColWidth, weldingColWidth, excessDemandColWidth,
+                                        pfPenaltyColWidth, fixedChargesColWidth, totalChargesColWidth, advancePaidColWidth,
+                                        adjustmentColWidth, amountDueColWidth, dueDateColWidth, amountPaidColWidth,
+                                        receiptColWidth, paymentDateColWidth
+                                    )
+                                    (2..22).forEachIndexed { i, num ->
+                                        Box(
+                                            modifier = Modifier
+                                                .width(widths[i])
+                                                .height(numberRowHeight)
+                                                .background(numberRowBg)
+                                                .border(BorderStroke(0.5.dp, tableBorderColor)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = num.toString(),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = numberRowText
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Data Rows
+                                pagedBills.forEachIndexed { index, bill ->
+                                    val isSelected = selectedBill?.id == bill.id
+                                    val rowBg = when {
+                                        isSelected -> SolarBrandGreen.copy(alpha = 0.15f)
+                                        index % 2 == 1 -> if (isDark) Color(0xFF1E293B).copy(alpha = 0.4f) else Color(0xFFF8FAFC)
+                                        else -> Color.Transparent
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .width(totalScrollableWidth)
+                                            .height(rowHeight)
+                                            .background(rowBg)
+                                            .clickable {
+                                                selectedBill = if (selectedBill?.id == bill.id) null else bill
+                                            }
+                                    ) {
+                                        TableCell(bill.entryDate.ifBlank { "—" }, entryDateColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.status.ifBlank { "NORMAL" }, statusColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.kwh.ifBlank { "—" }, kwhColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.kvah.ifBlank { "—" }, kvahColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.recordedDemand.ifBlank { "—" }, demandColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.powerFactor.ifBlank { "—" }, pfColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.units.ifBlank { "—" }, unitsColWidth, tableBorderColor, isDark, fontWeight = FontWeight.SemiBold)
+                                        TableCell(bill.ccCharges.ifBlank { "—" }, ccChargesColWidth, tableBorderColor, isDark, textColor = Color(0xFFB91C1C), fontWeight = FontWeight.SemiBold)
+                                        TableCell(bill.electricityTax.ifBlank { "0" }, electyTaxColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.weldingCharges.ifBlank { "0" }, weldingColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.excessDemand.ifBlank { "0" }, excessDemandColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.pfPenalty.ifBlank { "0" }, pfPenaltyColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.fixedCharges.ifBlank { "0" }, fixedChargesColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.totalCharges.ifBlank { bill.amountDue.ifBlank { "—" } }, totalChargesColWidth, tableBorderColor, isDark, fontWeight = FontWeight.Bold)
+                                        TableCell(bill.advancePaid.ifBlank { "0" }, advancePaidColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.adjustment.ifBlank { "0" }, adjustmentColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.amountDue.ifBlank { "—" }, amountDueColWidth, tableBorderColor, isDark, fontWeight = FontWeight.Bold)
+                                        TableCell(bill.dueDate.ifBlank { "—" }, dueDateColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.amountPaid.ifBlank { "—" }, amountPaidColWidth, tableBorderColor, isDark, fontWeight = FontWeight.Bold, textColor = SolarBrandGreen)
+                                        TableCell(bill.receiptNumber.ifBlank { "—" }, receiptColWidth, tableBorderColor, isDark)
+                                        TableCell(bill.paymentDate.ifBlank { "—" }, paymentDateColWidth, tableBorderColor, isDark)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+            }
 
-                BarChartCanvas(
-                    data = chartPoints,
-                    unit = when (selectedMetric) {
-                        "Units (kWh)" -> "kWh"
-                        "Demand (KW)" -> "KW"
-                        "Power Factor" -> ""
-                        else -> "pts"
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
+            // Pagination Controls (if > 10 records)
+            if (pageCount > 1) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Page ${currentPage + 1} of $pageCount • Showing ${pagedBills.size} of ${bills.size} records",
+                        fontSize = 11.sp,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        IconButton(
+                            onClick = { if (currentPage > 0) currentPage-- },
+                            enabled = currentPage > 0,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronLeft,
+                                contentDescription = "Previous Page",
+                                tint = if (currentPage > 0) SolarBrandGreen else (if (isDark) MaterialTheme.colorScheme.outlineVariant else Color.LightGray)
+                            )
+                        }
+                        IconButton(
+                            onClick = { if (currentPage < pageCount - 1) currentPage++ },
+                            enabled = currentPage < pageCount - 1,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "Next Page",
+                                tint = if (currentPage < pageCount - 1) SolarBrandGreen else (if (isDark) MaterialTheme.colorScheme.outlineVariant else Color.LightGray)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Selected Row Detail Inspector Card
+            selectedBill?.let { bill ->
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenSurface,
+                    border = BorderStroke(1.dp, SolarBrandGreen.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = SolarBrandGreen,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Cycle Details: ${bill.assessmentDate.ifBlank { bill.period }}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                                )
+                            }
+                            IconButton(
+                                onClick = { selectedBill = null },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("In Units", fontSize = 10.sp, color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary)
+                                Text("${bill.units} kWh", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary)
+                            }
+                            Column {
+                                Text("CC Charges", fontSize = 10.sp, color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary)
+                                Text(formatCurrency(bill.ccCharges), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB91C1C))
+                            }
+                            Column {
+                                Text("Total Paid", fontSize = 10.sp, color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary)
+                                Text(formatCurrency(bill.amountPaid), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SolarBrandGreen)
+                            }
+                            Column {
+                                Text("Receipt No", fontSize = 10.sp, color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary)
+                                Text(bill.receiptNumber.ifBlank { "—" }, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-data class ChartBarData(
-    val label: String,
-    val value: Double,
-    val isPaid: Boolean
-)
+@Composable
+private fun GroupHeaderCell(
+    text: String,
+    width: androidx.compose.ui.unit.Dp,
+    bgColor: Color,
+    textColor: Color,
+    borderColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .fillMaxHeight()
+            .background(bgColor)
+            .border(BorderStroke(0.5.dp, borderColor)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
 
 @Composable
-private fun BarChartCanvas(
-    data: List<ChartBarData>,
-    unit: String,
-    modifier: Modifier = Modifier
+private fun ColumnHeaderCell(
+    text: String,
+    width: androidx.compose.ui.unit.Dp,
+    bgColor: Color,
+    textColor: Color,
+    borderColor: Color
 ) {
-    val isDark = LocalIsDarkTheme.current
-    val maxValue = remember(data) {
-        val max = data.maxOfOrNull { it.value } ?: 1.0
-        if (max <= 0.0) 1.0 else max
+    Box(
+        modifier = Modifier
+            .width(width)
+            .fillMaxHeight()
+            .background(bgColor)
+            .border(BorderStroke(0.5.dp, borderColor))
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor,
+            textAlign = TextAlign.Center,
+            lineHeight = 12.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
+}
 
-    Column(modifier = modifier) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val width = size.width
-                val height = size.height
-                val barCount = data.size
-                if (barCount == 0) return@Canvas
-
-                val slotWidth = width / barCount
-                val barWidth = (slotWidth * 0.45f).coerceIn(12f, 36f)
-                val cornerRadius = CornerRadius(barWidth / 3f, barWidth / 3f)
-
-                data.forEachIndexed { index, item ->
-                    val normHeight = if (maxValue > 0) ((item.value / maxValue) * (height * 0.85f)).toFloat() else 0f
-                    val x = index * slotWidth + (slotWidth - barWidth) / 2f
-                    val y = height - normHeight
-
-                    // Bar
-                    drawRoundRect(
-                        brush = Brush.verticalGradient(
-                            colors = if (item.isPaid) {
-                                listOf(Color(0xFF5BA77E), Color(0xFF004F2E))
-                            } else {
-                                listOf(Color(0xFFFDBA74), Color(0xFFD97706))
-                            }
-                        ),
-                        topLeft = Offset(x, y),
-                        size = Size(barWidth, normHeight.coerceAtLeast(4f)),
-                        cornerRadius = cornerRadius
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // X-Axis labels and value labels
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            data.forEach { item ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.widthIn(max = 64.dp)
-                ) {
-                    val valStr = if (item.value % 1.0 == 0.0) item.value.toInt().toString() else String.format(Locale.US, "%.1f", item.value)
-                    Text(
-                        text = if (unit.isNotBlank()) "$valStr $unit" else valStr,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = item.label,
-                        fontSize = 9.sp,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
+@Composable
+private fun TableCell(
+    text: String,
+    width: androidx.compose.ui.unit.Dp,
+    borderColor: Color,
+    isDark: Boolean,
+    textColor: Color? = null,
+    fontWeight: FontWeight = FontWeight.Normal
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .fillMaxHeight()
+            .border(BorderStroke(0.5.dp, borderColor))
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = fontWeight,
+            color = textColor ?: (if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

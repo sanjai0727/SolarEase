@@ -112,8 +112,10 @@ fun SolarLensPriorityHeroCard(
                 Text(
                     text = if (consumedUnits > 0.0) {
                         "You've consumed ${String.format(Locale.getDefault(), "%.1f", consumedUnits)} kWh since your baseline. Scan your appliances with Solar Lens to audit high-power loads before sizing solar."
+                        "You've consumed ${String.format(Locale.getDefault(), "%.1f", consumedUnits)} kWh since your baseline. Scan your appliances with Lens to audit high-power loads and lower your bill."
                     } else {
                         "Audit your high-power appliances with Solar Lens to understand individual device consumption before sizing your rooftop solar system."
+                        "Audit your high-power appliances with Lens to understand individual device consumption and optimize bi-monthly usage."
                     },
                     fontSize = 12.sp,
                     color = Color.White.copy(alpha = 0.8f),
@@ -514,6 +516,7 @@ fun SolarLensHeroCard(
                     FeatureBullet(
                         icon = Icons.Default.Tune,
                         text = "Precision multi-tier solar array sizing recommendation"
+                        text = "Precision load audit and peak power breakdown"
                     )
                 }
             }

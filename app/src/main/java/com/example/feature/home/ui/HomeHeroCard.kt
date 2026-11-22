@@ -500,6 +500,7 @@ fun ConnectBillHeroCard(
                     )
                     Text(
                         text = "Link your 11–12 digit consumer number to establish your baseline tariff schedule, avoid bi-monthly slab jumps, and unlock rooftop solar savings.",
+                        text = "Link your 11–12 digit consumer number to establish your baseline tariff schedule, avoid bi-monthly slab jumps, and verify official statements.",
                         fontSize = 13.sp,
                         color = OceanTextSecondary,
                         lineHeight = 18.sp
@@ -514,6 +515,7 @@ fun ConnectBillHeroCard(
                     BenefitChip(label = "Slab Alerts", modifier = Modifier.weight(1f))
                     BenefitChip(label = "Due Reminders", modifier = Modifier.weight(1f))
                     BenefitChip(label = "Solar Subsidy", modifier = Modifier.weight(1f))
+                    BenefitChip(label = "Statement History", modifier = Modifier.weight(1f))
                 }
 
                 // Primary CTA button
@@ -649,6 +651,7 @@ fun SolarLensShowcaseCard(
                         )
                         Text(
                             text = "SOLAR LENS AI AUDIT",
+                            text = "APPLIANCE LOAD AUDIT",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -680,6 +683,7 @@ fun SolarLensShowcaseCard(
                 )
                 Text(
                     text = "Scan air conditioners, water heaters, and pumps to calculate your day vs. night load split and size your rooftop solar perfectly.",
+                    text = "Scan air conditioners, water heaters, and pumps to calculate your day vs. night load split and detect heavy power draw.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 17.sp
@@ -721,6 +725,7 @@ fun SolarLensShowcaseCard(
                 ) {
                     Text(
                         text = "Launch Solar Lens Audit",
+                        text = "Launch Appliance Audit",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary

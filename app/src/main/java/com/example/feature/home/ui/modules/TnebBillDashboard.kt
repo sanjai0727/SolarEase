@@ -1011,6 +1011,7 @@ internal fun BillHistoryView(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Bottom Solar Lens Teaser
+            // Bottom Appliance Audit Teaser
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -1024,10 +1025,13 @@ internal fun BillHistoryView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Default.WbSunny, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Sensors, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Simulate solar zero-bill setup", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text("Calculate system size and savings in Solar Lens →", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        Text("Audit connected appliances", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Identify heavy power draw across cycles with Lens →", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }

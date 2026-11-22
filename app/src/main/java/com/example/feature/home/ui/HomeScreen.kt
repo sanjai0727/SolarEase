@@ -97,6 +97,7 @@ fun HomeRoute(
             },
             title = { Text("Complete Your Profile", fontWeight = FontWeight.SemiBold, color = StitchOnSurface) },
             text = { Text("Add your email and installation address to calculate precise local solar insolation.", color = StitchOnSurfaceVariant) },
+            text = { Text("Add your email and service address to personalize your electricity bill tracking and slab alerts.", color = StitchOnSurfaceVariant) },
             confirmButton = {
                 TextButton(onClick = {
                     showProfilePrompt = false

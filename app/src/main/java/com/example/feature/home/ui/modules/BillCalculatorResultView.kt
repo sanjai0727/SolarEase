@@ -586,7 +586,7 @@ fun BillCalculatorResultView(
             }
         }
 
-        // Solar Savings Insight Card (Qualitative presentation without fabricated percentages)
+        // Energy Conservation & Tariff Slab Insight Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -601,14 +601,14 @@ fun BillCalculatorResultView(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.WbSunny,
+                            imageVector = Icons.Default.Bolt,
                             contentDescription = null,
                             tint = StitchPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Could Solar reduce this bill?",
+                            text = "Optimize Your Electricity Bill",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = StitchOnSurface
@@ -619,7 +619,7 @@ fun BillCalculatorResultView(
                         color = StitchPrimaryFixed
                     ) {
                         Text(
-                            text = "Net Metering",
+                            text = "Tariff Tips",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = StitchOnPrimaryFixedVariant,
@@ -640,7 +640,7 @@ fun BillCalculatorResultView(
                 ) {
                     Column {
                         Text(
-                            text = "SOLAR ROOFTOP OFFSET",
+                            text = "ENERGY CONSERVATION",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = StitchPrimary,
@@ -648,7 +648,7 @@ fun BillCalculatorResultView(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Rooftop solar can export excess daytime power to the grid through bi-directional net metering, drastically cutting your recurring electricity cost.",
+                            text = "Keep your bi-monthly usage under threshold slab tiers (e.g., 200 kWh, 400 kWh, 500 kWh) to avoid steeper unit rates under TNEB LT-1A.",
                             fontSize = 12.sp,
                             color = StitchOnSurfaceVariant,
                             lineHeight = 17.sp
@@ -658,7 +658,7 @@ fun BillCalculatorResultView(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Sunlight potential banner
+                // Efficiency banner
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -668,14 +668,14 @@ fun BillCalculatorResultView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.WbSunny,
+                        imageVector = Icons.Default.Sensors,
                         contentDescription = null,
                         tint = StitchPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Ideal sun exposure: ~5.2 peak sun hours/day in Tamil Nadu",
+                        text = "Shift heavy laundry and water pumping away from peak domestic hours.",
                         fontSize = 11.sp,
                         color = StitchOnSurfaceVariant,
                         fontWeight = FontWeight.Medium
@@ -685,7 +685,7 @@ fun BillCalculatorResultView(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Actual solar offset and savings depend on roof area, shading, system capacity, and household consumption patterns.",
+                    text = "Actual bill savings depend on appliance wattage, operating hours, and adherence to lower tariff slab brackets.",
                     fontSize = 10.sp,
                     color = StitchOnSurfaceVariant,
                     lineHeight = 14.sp
@@ -693,7 +693,7 @@ fun BillCalculatorResultView(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Primary CTA to Solar Lens
+                // Primary CTA to Appliance Audit
                 Button(
                     onClick = onNavigateToSolarLens,
                     modifier = Modifier
@@ -707,7 +707,7 @@ fun BillCalculatorResultView(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Explore Solar with Solar Lens",
+                            text = "Audit Connected Appliances",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
