@@ -119,6 +119,8 @@ fun TnebBillStatusWebView(
         AndroidView(
             factory = { _ ->
                 webView.apply {
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     // Security: Strict SSL validation preserved

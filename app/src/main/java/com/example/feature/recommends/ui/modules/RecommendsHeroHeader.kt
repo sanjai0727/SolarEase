@@ -67,7 +67,7 @@ fun RecommendsTopBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SolarPower,
+                        painter = androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_solarease_logo),
                         contentDescription = "SolarEase",
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)

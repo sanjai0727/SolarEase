@@ -509,6 +509,10 @@ fun BillActionsSection(
                 }
             }
 
+            val isDark = LocalIsDarkTheme.current
+            val blueAccent = if (isDark) Color(0xFF60A5FA) else Color(0xFF1D4ED8)
+            val orangeRedAccent = if (isDark) Color(0xFFEF6C52) else Color(0xFFE04F33)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -519,16 +523,16 @@ fun BillActionsSection(
                         .weight(1f)
                         .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.5.dp, SolarBrandGreen),
+                    border = BorderStroke(1.5.dp, blueAccent),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = SolarBrandGreen
+                        contentColor = blueAccent
                     )
                 ) {
                     Text(
                         text = "View Bill History",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = SolarBrandGreen
+                        color = blueAccent
                     )
                 }
 
@@ -539,7 +543,7 @@ fun BillActionsSection(
                         .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = SolarBrandGreen,
+                        containerColor = orangeRedAccent,
                         contentColor = Color.White
                     )
                 ) {
@@ -629,8 +633,6 @@ fun WhyConnectBillSection(
                 icon = Icons.Default.Bolt,
                 iconTint = SolarEaseSemanticColors.SuccessText,
                 iconBg = SolarEaseSemanticColors.SuccessContainer,
-                title = "Zero-Waste Solar Sizing",
-                description = "Recommends the right rooftop solar kW size to offset your bill without wasting money on unneeded panels."
                 title = "Avoid Tariff Slab Jumps",
                 description = "Identifies peak consumption periods to help you keep bi-monthly units within lower slab brackets."
             )

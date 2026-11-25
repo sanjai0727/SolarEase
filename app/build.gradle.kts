@@ -34,6 +34,8 @@ android {
       abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
     }
 
+    resourceConfigurations += listOf("en", "ta")
+
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
@@ -67,6 +69,10 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = true
       isShrinkResources = true
+      ndk {
+        abiFilters.clear()
+        abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+      }
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
     debug {

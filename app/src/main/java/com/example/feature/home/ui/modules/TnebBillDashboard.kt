@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,7 @@ import com.example.core.session.UserSession
 import com.example.ui.theme.*
 import com.example.ui.components.SolarEaseButton
 import com.example.ui.components.SolarEaseButtonVariant
+import com.example.ui.components.subtleTopRightGradient
 import com.example.ui.theme.SolarEaseSemanticColors
 
 import java.text.NumberFormat
@@ -413,14 +415,16 @@ private fun CurrentBillView(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Solar Rooftop Sizing & Return Card
+            // Tariff Optimization & Slab Analysis Card
             val unitsDouble = currentBill.units.toDoubleOrNull()
             if (unitsDouble != null && unitsDouble > 0) {
-                val solarKw = String.format(Locale.US, "%.1f", (unitsDouble / 150.0).coerceAtLeast(1.0))
-                val annualSavingsNum = (unitsDouble * 6.5 * 6).toInt()
-                val savingsFormatted = "₹" + NumberFormat.getNumberInstance(Locale.US).format(annualSavingsNum) + " / yr"
-                val systemCost = solarKw.toDouble() * 55000.0
-                val paybackYears = String.format(Locale.US, "%.1f Yrs ROI", (systemCost / annualSavingsNum.coerceAtLeast(1)).coerceIn(3.0, 8.0))
+                val slabStatus = when {
+                    unitsDouble <= 100 -> "Free Units Tier (100 kWh Subsidy)"
+                    unitsDouble <= 200 -> "Low Consumption Tier"
+                    unitsDouble <= 400 -> "Standard Domestic Tier"
+                    unitsDouble <= 500 -> "Upper Domestic Tier"
+                    else -> "High Consumption Tier (Higher Slab Rates)"
+                }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -437,14 +441,14 @@ private fun CurrentBillView(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Bolt, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Solar Rooftop Sizing", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Tariff Slab Analysis", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Text(
-                                    "ESTIMATED",
+                                    "LT-1A",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -456,7 +460,7 @@ private fun CurrentBillView(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "Based on ${currentBill.units} kWh bi-monthly consumption, a recommended $solarKw kW solar system can offset grid demand under Tamil Nadu Net Metering.",
+                            text = "Your billing cycle recorded ${currentBill.units} kWh units. Current tier: $slabStatus under Tamil Nadu TNEB LT-1A domestic schedule.",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 18.sp
@@ -472,12 +476,12 @@ private fun CurrentBillView(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
-                                Text("Projected Savings", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(savingsFormatted, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Text("Current Cycle Units", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${currentBill.units} kWh", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("Estimated Return", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(paybackYears, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Tariff Schedule", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Bi-Monthly", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
@@ -490,9 +494,9 @@ private fun CurrentBillView(
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Icon(Icons.Default.Architecture, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Sensors, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Verify with Solar Lens", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            Text("Audit Connected Appliances", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -507,11 +511,11 @@ private fun CurrentBillView(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Solar Sizing Unavailable", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Units Analysis Unavailable", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Consumption units are not specified on this statement. Audit your connected appliances with Solar Lens for verified sizing.",
+                            text = "Consumption units are not specified on this statement. Audit your connected appliances with Lens for detailed load tracking.",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1010,7 +1014,6 @@ internal fun BillHistoryView(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Bottom Solar Lens Teaser
             // Bottom Appliance Audit Teaser
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -1024,12 +1027,9 @@ internal fun BillHistoryView(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.WbSunny, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                     Icon(Icons.Default.Sensors, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Simulate solar zero-bill setup", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Calculate system size and savings in Solar Lens →", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                         Text("Audit connected appliances", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text("Identify heavy power draw across cycles with Lens →", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                     }
@@ -1053,6 +1053,17 @@ internal fun BillDetailsView(
     onNavigateBack: () -> Unit,
     onNavigateToSolarLens: () -> Unit
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) MaterialTheme.colorScheme.background else SolarBrandBackground
+    val cardBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
+    val subCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight.copy(alpha = 0.55f)
+    val accentGreen = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1071,7 +1082,7 @@ internal fun BillDetailsView(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = screenBg,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                     actionIconContentColor = MaterialTheme.colorScheme.onSurface
@@ -1080,7 +1091,7 @@ internal fun BillDetailsView(
         },
         bottomBar = {
             Surface(
-                color = MaterialTheme.colorScheme.surface,
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
                 shadowElevation = 8.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -1096,7 +1107,7 @@ internal fun BillDetailsView(
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        border = BorderStroke(1.dp, cardBorder)
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurface)
                         Spacer(modifier = Modifier.width(6.dp))
@@ -1113,10 +1124,10 @@ internal fun BillDetailsView(
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = accentGreen,
+                            contentColor = Color.White,
+                            disabledContainerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight,
+                            disabledContentColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandGreen
                         )
                     ) {
                         Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -1126,229 +1137,360 @@ internal fun BillDetailsView(
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = screenBg
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Consumer Header Ribbon
+            // Consumer Header Card (Fixed weight so badge never wraps vertically)
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardGradient)
+                        .subtleTopRightGradient(shape = RoundedCornerShape(20.dp), radiusMultiplier = 0.8f)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(consumerData.consumerName.ifBlank { "TNEB Consumer" }, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text("No. ${consumerData.consumerNumber.ifBlank { serviceNo.ifBlank { "Not available" } }}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Text(consumerData.normalizedTariff.displayLabel, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Bill & Due Date Summary Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("TOTAL AMOUNT DUE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = accentGreen,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                val cleanName = consumerData.consumerName
+                                    .substringBefore("CONSUMER NUMBER", missingDelimiterValue = consumerData.consumerName)
+                                    .trim()
+                                    .ifBlank { "TNEB Consumer" }
+                                Text(
+                                    text = cleanName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "No. ${consumerData.consumerNumber.ifBlank { serviceNo.ifBlank { "Not available" } }}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (bill.isPaid) SolarEaseSemanticColors.SuccessContainer else SolarEaseSemanticColors.WarningContainer
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight,
+                            border = BorderStroke(1.dp, accentGreen.copy(alpha = 0.2f))
                         ) {
                             Text(
-                                if (bill.isPaid) "PAID" else "PENDING",
-                                fontSize = 10.sp,
+                                text = consumerData.normalizedTariff.displayLabel,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (bill.isPaid) SolarEaseSemanticColors.SuccessText else SolarEaseSemanticColors.WarningText,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                color = accentGreen,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    val rawAmt = bill.amountDue.trim()
-                    val displayAmt = if (bill.isPaid) "₹0.00" else (if (rawAmt.startsWith("₹")) rawAmt else "₹$rawAmt.00")
-                    Text(displayAmt, fontSize = 32.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Bill Date", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(bill.assessmentDate.ifBlank { "Not available" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            // Bill & Due Date Summary Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 1.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardGradient)
+                        .subtleTopRightGradient(shape = RoundedCornerShape(20.dp), radiusMultiplier = 0.8f)
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "TOTAL AMOUNT DUE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = accentGreen,
+                                letterSpacing = 0.6.sp
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (bill.isPaid) SolarEaseSemanticColors.SuccessContainer else SolarEaseSemanticColors.WarningContainer
+                            ) {
+                                Text(
+                                    if (bill.isPaid) "PAID" else "PENDING",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (bill.isPaid) SolarEaseSemanticColors.SuccessText else SolarEaseSemanticColors.WarningText,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("Due Date", fontSize = 11.sp, color = if (bill.isPaid) MaterialTheme.colorScheme.onSurfaceVariant else SolarEaseSemanticColors.ErrorText)
-                            Text(bill.dueDate.ifBlank { "Not available" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (bill.isPaid) MaterialTheme.colorScheme.onSurface else SolarEaseSemanticColors.ErrorText)
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        val rawAmt = bill.amountDue.trim()
+                        val displayAmt = if (bill.isPaid) "₹0.00" else (if (rawAmt.startsWith("₹")) rawAmt else "₹$rawAmt.00")
+                        Text(displayAmt, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(subCardBg, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Bill Date", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(bill.assessmentDate.ifBlank { "Not available" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("Due Date", fontSize = 11.sp, color = if (bill.isPaid) MaterialTheme.colorScheme.onSurfaceVariant else SolarEaseSemanticColors.ErrorText)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(bill.dueDate.ifBlank { "Not available" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (bill.isPaid) MaterialTheme.colorScheme.onSurface else SolarEaseSemanticColors.ErrorText)
+                            }
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // Consumption & Meter Readings Card (Real TNEB Values)
-            Card(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Text("METER READING & CONSUMPTION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.5.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardGradient)
+                        .subtleTopRightGradient(shape = RoundedCornerShape(20.dp), radiusMultiplier = 0.8f)
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Text("METER READING & CONSUMPTION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = accentGreen, letterSpacing = 0.6.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Billed Consumption", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${bill.units.ifBlank { "0" }} kWh", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                        val unitsD = bill.units.toDoubleOrNull() ?: 0.0
-                        val dailyAvg = String.format(Locale.US, "%.1f", unitsD / 60.0)
-                        Text("$dailyAvg kWh / day", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(subCardBg, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text("METER READING (KWH)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(bill.kwh.ifBlank { "Not available" }, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                Text(bill.assessmentDate.ifBlank { "Current cycle" }, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Column {
+                                Text("Billed Consumption", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("${bill.units.ifBlank { "0" }} kWh", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = accentGreen)
+                            }
+                            val unitsD = bill.units.toDoubleOrNull() ?: 0.0
+                            val dailyAvg = String.format(Locale.US, "%.1f", unitsD / 60.0)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isDark) MaterialTheme.colorScheme.surface else Color(0xFFFCFDF9)
+                            ) {
+                                Text(
+                                    "$dailyAvg kWh / day",
+                                    fontSize = 11.5.sp,
+                                    color = accentGreen,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
                             }
                         }
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Max),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text("RECORDED DEMAND", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(bill.recordedDemand.ifBlank { "Not available" }, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                Text(if (bill.powerFactor.isNotBlank()) "PF: ${bill.powerFactor}" else "Entry: ${bill.entryDate.ifBlank { "Synced" }}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = subCardBg,
+                                border = BorderStroke(1.dp, cardBorder)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("METER READING (KWH)", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(bill.kwh.ifBlank { "Not available" }, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(bill.assessmentDate.ifBlank { "Current cycle" }, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = subCardBg,
+                                border = BorderStroke(1.dp, cardBorder)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("RECORDED DEMAND", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(bill.recordedDemand.ifBlank { "Not available" }, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(if (bill.powerFactor.isNotBlank()) "PF: ${bill.powerFactor}" else "Entry: ${bill.entryDate.ifBlank { "Synced" }}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Itemized Bill Breakdown Card (Real TNEB Charges Only)
-            Card(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Text("BILL ASSESSMENT BREAKDOWN", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.5.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    BreakdownLineItem("Current Consumption Charges (CC)", "₹" + bill.ccCharges.ifBlank { "0.00" })
-                    BreakdownLineItem("Electricity Tax", "₹" + bill.electricityTax.ifBlank { "0.00" })
-                    BreakdownLineItem("Fixed Infrastructure Charges", "₹" + bill.fixedCharges.ifBlank { "0.00" })
-
-                    if (bill.weldingCharges.isNotBlank() && bill.weldingCharges != "0") {
-                        BreakdownLineItem("Welding Charges", "₹" + bill.weldingCharges)
-                    }
-                    if (bill.excessDemand.isNotBlank() && bill.excessDemand != "0") {
-                        BreakdownLineItem("Excess Demand Charges", "₹" + bill.excessDemand)
-                    }
-                    if (bill.pfPenalty.isNotBlank() && bill.pfPenalty != "0") {
-                        BreakdownLineItem("Power Factor Penalty", "₹" + bill.pfPenalty)
-                    }
-                    if (bill.advancePaid.isNotBlank() && bill.advancePaid != "0") {
-                        BreakdownLineItem("Advance Amount Paid", "-₹" + bill.advancePaid, isSubsidy = true)
-                    }
-                    if (bill.adjustment.isNotBlank() && bill.adjustment != "0") {
-                        BreakdownLineItem("Adjustment", "₹" + bill.adjustment)
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Net Total Payable", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        val totalPayable = bill.amountDue.ifBlank { bill.totalCharges }.ifBlank { "0" }
-                        Text(if (totalPayable.startsWith("₹")) totalPayable else "₹$totalPayable", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-
-                    // Collection info if paid
-                    if (bill.isPaid && (bill.amountPaid.isNotBlank() || bill.receiptNumber.isNotBlank() || bill.paymentDate.isNotBlank())) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardGradient)
+                        .subtleTopRightGradient(shape = RoundedCornerShape(20.dp), radiusMultiplier = 0.8f)
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Text("BILL ASSESSMENT BREAKDOWN", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = accentGreen, letterSpacing = 0.6.sp)
                         Spacer(modifier = Modifier.height(12.dp))
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            modifier = Modifier.fillMaxWidth()
+
+                        BreakdownLineItem("Current Consumption Charges (CC)", "₹" + bill.ccCharges.ifBlank { "0.00" })
+                        BreakdownLineItem("Electricity Tax", "₹" + bill.electricityTax.ifBlank { "0.00" })
+                        BreakdownLineItem("Fixed Infrastructure Charges", "₹" + bill.fixedCharges.ifBlank { "0.00" })
+
+                        if (bill.weldingCharges.isNotBlank() && bill.weldingCharges != "0") {
+                            BreakdownLineItem("Welding Charges", "₹" + bill.weldingCharges)
+                        }
+                        if (bill.excessDemand.isNotBlank() && bill.excessDemand != "0") {
+                            BreakdownLineItem("Excess Demand Charges", "₹" + bill.excessDemand)
+                        }
+                        if (bill.pfPenalty.isNotBlank() && bill.pfPenalty != "0") {
+                            BreakdownLineItem("Power Factor Penalty", "₹" + bill.pfPenalty)
+                        }
+                        if (bill.advancePaid.isNotBlank() && bill.advancePaid != "0") {
+                            BreakdownLineItem("Advance Amount Paid", "-₹" + bill.advancePaid, isSubsidy = true)
+                        }
+                        if (bill.adjustment.isNotBlank() && bill.adjustment != "0") {
+                            BreakdownLineItem("Adjustment", "₹" + bill.adjustment)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = cardBorder)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("COLLECTION DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                if (bill.amountPaid.isNotBlank()) {
-                                    Text("Amount Paid: ₹${bill.amountPaid}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                                }
-                                if (bill.receiptNumber.isNotBlank()) {
-                                    Text("Receipt No: ${bill.receiptNumber}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
-                                }
-                                if (bill.paymentDate.isNotBlank()) {
-                                    Text("Payment Date: ${bill.paymentDate}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Net Total Payable", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                            val totalPayable = bill.amountDue.ifBlank { bill.totalCharges }.ifBlank { "0" }
+                            Text(if (totalPayable.startsWith("₹")) totalPayable else "₹$totalPayable", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = accentGreen)
+                        }
+
+                        // Collection info if paid
+                        if (bill.isPaid && (bill.amountPaid.isNotBlank() || bill.receiptNumber.isNotBlank() || bill.paymentDate.isNotBlank())) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = subCardBg,
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Text("COLLECTION DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = accentGreen, letterSpacing = 0.5.sp)
+                                    if (bill.amountPaid.isNotBlank()) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Amount Paid", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text("₹${bill.amountPaid}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    if (bill.receiptNumber.isNotBlank()) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Receipt No", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(bill.receiptNumber, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                                        }
+                                    }
+                                    if (bill.paymentDate.isNotBlank()) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Payment Date", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(bill.paymentDate, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                                        }
+                                    }
                                 }
                             }
                         }

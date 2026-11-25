@@ -1272,23 +1272,30 @@ fun HomeMeterReadingEntryCard(
                             )
                         }
 
+                        val isDark = LocalIsDarkTheme.current
+                        val blueEdit = if (isDark) Color(0xFF60A5FA) else Color(0xFF1D4ED8)
+                        val blueEditBg = if (isDark) Color(0xFF1E3A8A).copy(alpha = 0.35f) else Color(0xFFEFF6FF)
                         OutlinedButton(
                             onClick = onStartEditingReading,
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, OceanTeal)
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, blueEdit),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = blueEditBg,
+                                contentColor = blueEdit
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = null,
                                 modifier = Modifier.size(13.dp),
-                                tint = OceanTeal
+                                tint = blueEdit
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Edit",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = OceanTeal
+                                color = blueEdit
                             )
                         }
                     }
@@ -1308,6 +1315,7 @@ fun HomeMeterReadingEntryCard(
                             color = OceanTextPrimary
                         )
 
+                        val scanBlue = if (LocalIsDarkTheme.current) Color(0xFF60A5FA) else Color(0xFF1D4ED8)
                         IconButton(
                             onClick = onScanMeterReading,
                             modifier = Modifier.size(36.dp)
@@ -1315,7 +1323,7 @@ fun HomeMeterReadingEntryCard(
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "Scan meter reading",
-                                tint = OceanTeal,
+                                tint = scanBlue,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -1372,11 +1380,12 @@ fun HomeMeterReadingEntryCard(
                             ) {
                                 Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = OceanTextPrimary)
                             }
+                            val updateBlue = if (LocalIsDarkTheme.current) Color(0xFF3B82F6) else Color(0xFF1D4ED8)
                             Button(
                                 onClick = onUpdateTodayReading,
                                 modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = OceanTeal,
+                                    containerColor = updateBlue,
                                     contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp)

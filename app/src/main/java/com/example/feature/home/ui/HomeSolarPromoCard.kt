@@ -1,7 +1,10 @@
 package com.example.feature.home.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,9 +18,13 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -111,10 +118,8 @@ fun SolarLensPriorityHeroCard(
                 )
                 Text(
                     text = if (consumedUnits > 0.0) {
-                        "You've consumed ${String.format(Locale.getDefault(), "%.1f", consumedUnits)} kWh since your baseline. Scan your appliances with Solar Lens to audit high-power loads before sizing solar."
                         "You've consumed ${String.format(Locale.getDefault(), "%.1f", consumedUnits)} kWh since your baseline. Scan your appliances with Lens to audit high-power loads and lower your bill."
                     } else {
-                        "Audit your high-power appliances with Solar Lens to understand individual device consumption before sizing your rooftop solar system."
                         "Audit your high-power appliances with Lens to understand individual device consumption and optimize bi-monthly usage."
                     },
                     fontSize = 12.sp,
@@ -287,16 +292,31 @@ fun KnowYourConsumptionCard(
         "Find where your electricity went"
     }
 
+    val isDark = LocalIsDarkTheme.current
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
+    val btnInteraction = remember { MutableInteractionSource() }
+    val btnPressed by btnInteraction.collectIsPressedAsState()
+    val btnScale by animateFloatAsState(
+        targetValue = if (btnPressed) 0.98f else 1f,
+        animationSpec = motionTween(durationMillis = 120),
+        label = "auditBtnScale"
+    )
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = OceanGlassCardBg,
         border = BorderStroke(1.dp, OceanGlassCardBorder),
-        shadowElevation = 0.dp
+        shadowElevation = 1.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(cardGradient)
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -355,8 +375,10 @@ fun KnowYourConsumptionCard(
 
             Button(
                 onClick = onOpenSolarLens,
+                interactionSource = btnInteraction,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .scale(btnScale)
                     .heightIn(min = 48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -515,7 +537,6 @@ fun SolarLensHeroCard(
                     )
                     FeatureBullet(
                         icon = Icons.Default.Tune,
-                        text = "Precision multi-tier solar array sizing recommendation"
                         text = "Precision load audit and peak power breakdown"
                     )
                 }

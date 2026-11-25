@@ -217,7 +217,6 @@ fun BillAnalyticsView(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.WbSunny,
                             Icons.Default.Sensors,
                             contentDescription = null,
                             tint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else SolarBrandGreen,
@@ -227,14 +226,12 @@ fun BillAnalyticsView(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Optimize With Solar Lens",
                             text = "Appliance Energy Audit",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
                         )
                         Text(
-                            text = "Model rooftop solar capacity to offset baseline billing slabs →",
                             text = "Audit connected heavy loads to see where your bi-monthly units go →",
                             fontSize = 11.sp,
                             color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen

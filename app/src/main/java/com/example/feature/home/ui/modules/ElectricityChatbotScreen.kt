@@ -557,23 +557,17 @@ private fun EmptyWelcomeStateStitch(
 
     val welcomeTitle = if (isTamil) "SolarEase AI உதவியாளர்" else "SolarEase AI"
     val welcomeDesc = if (isTamil)
-        "மின்சாரம், சோலார் பேனல்கள், மாதாந்திர மின்கட்டணம் மற்றும் PM சூர்யா கர் மானியம் பற்றிய உங்களின் கேள்விகளுக்கு துல்லியமான வழிகாட்டி."
         "மின் நுகர்வு, TNEB மின்கட்டணம், ஸ்லாப் கணக்கீடு மற்றும் மின்சார சேமிப்பு பற்றிய உங்களின் கேள்விகளுக்கு துல்லியமான வழிகாட்டி."
     else
-        "Your on-demand solar & energy advisory engine. Ask anything regarding solar sizing, electricity tariffs, government subsidies, and home energy."
         "Your on-demand electricity & tariff advisory engine. Ask anything regarding TNEB billing, slab rates, appliance power draw, and home energy conservation."
 
     val suggestions = if (isTamil) {
         listOf(
-            "வீட்டிற்கு எத்தனை கிலோவாட் சோலார் தேவை?" to "மின் நுகர்வுக்கு ஏற்ப தேவையான சோலார் திறன் கணக்கீடு.",
-            "PM சூர்யா கர் திட்டத்தின் கீழ் மானியம் பெறுவது எப்படி?" to "மத்திய அரசின் ₹78,000 வரையிலான மானிய உதவி விபரங்கள்."
             "TNEB மின்கட்டண ஸ்லாப் கணக்கீடு எப்படி?" to "LT-1A கட்டண அமைப்புகள் மற்றும் 100 இலவச யூனிட் விபரங்கள்.",
             "மாதாந்திர மின் நுகர்வை குறைப்பது எப்படி?" to "அதிக மின்சாரம் எடுக்கும் சாதனங்களை கண்டறிந்து சேமிக்கும் வழிகள்."
         )
     } else {
         listOf(
-            "How much solar capacity do I need?" to "Calculates optimal PV output based on household load.",
-            "What government subsidy can I get under PM Surya Ghar?" to "Central financial assistance up to ₹78,000 for residential systems."
             "How are my bi-monthly bill slabs calculated?" to "Explains TNEB LT-1A slab tiers, fixed charges, and subsidies.",
             "How can I reduce my bi-monthly consumption?" to "Practical tips to audit high-power loads and stay in lower slabs."
         )
@@ -1219,10 +1213,7 @@ private fun ChatHistoryView(
 
     val categories = listOf(
         "all" to "All",
-        "solar-sizing" to "Solar Sizing",
-        "subsidies" to "Subsidies",
         "tariffs" to "Bills & Tariffs",
-        "solar-lens" to "Solar Lens"
         "efficiency" to "Energy Savings",
         "solar-lens" to "Appliance Audit"
     )

@@ -1,11 +1,17 @@
 package com.example.feature.home.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,10 +28,16 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,12 +82,41 @@ fun ModernHomeHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                val isReducedMotion = LocalIsReducedMotionEnabled.current
+                val pulseScale = if (hasConnectedBill && !isReducedMotion) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "liveDotPulse")
+                    val scaleVal by infiniteTransition.animateFloat(
+                        initialValue = 0.85f,
+                        targetValue = 1.25f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 1400, easing = SolarEaseMotion.easingStandard),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "dotScale"
+                    )
+                    scaleVal
+                } else 1f
+
                 Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (hasConnectedBill) OceanTeal else Color(0xFFD4AF37))
-                )
+                    modifier = Modifier.size(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (hasConnectedBill) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .scale(pulseScale)
+                                .clip(CircleShape)
+                                .background(OceanTeal.copy(alpha = 0.22f))
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(if (hasConnectedBill) OceanTeal else Color(0xFFD4AF37))
+                    )
+                }
                 Text(
                     text = if (hasConnectedBill && !consumerNumber.isNullOrBlank()) {
                         "TNEB LT-1A · Consumer $consumerNumber"
@@ -122,22 +163,43 @@ fun PreviousBillConsumptionHeroCard(
     modifier: Modifier = Modifier
 ) {
     val prevKwh = uiState.previousBillConsumptionKwh
+    var animateTrigger by remember(prevKwh) { mutableStateOf(false) }
+    LaunchedEffect(prevKwh) {
+        animateTrigger = true
+    }
+    val targetKwh = (prevKwh ?: 0.0).toFloat()
+    val animatedKwh by animateFloatAsState(
+        targetValue = if (animateTrigger) targetKwh else 0f,
+        animationSpec = motionTween(
+            durationMillis = 650,
+            easing = SolarEaseMotion.easingDecelerate
+        ),
+        label = "prevKwhCountUp"
+    )
     val kwhText = if (prevKwh != null && prevKwh > 0.0) {
-        if (prevKwh % 1.0 == 0.0) "${prevKwh.toInt()}" else String.format(Locale.getDefault(), "%.1f", prevKwh)
+        val displayVal = if (LocalIsReducedMotionEnabled.current) prevKwh else animatedKwh.toDouble()
+        if (prevKwh % 1.0 == 0.0) "${displayVal.toInt()}" else String.format(Locale.getDefault(), "%.1f", displayVal)
     } else null
 
     val pendingBill = uiState.pendingBillState as? PendingBillUiState.Pending
+    val isDark = LocalIsDarkTheme.current
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = OceanGlassCardBg,
         border = BorderStroke(1.dp, OceanGlassCardBorder),
-        shadowElevation = 0.dp
+        shadowElevation = 2.dp
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(cardGradient)
                 .subtleTopRightGradient(
                     shape = RoundedCornerShape(22.dp),
                     radiusMultiplier = 0.85f
@@ -352,13 +414,14 @@ fun PreviousBillConsumptionHeroCard(
 
                 // CTA Button
                 if (pendingBill != null) {
+                    val blueCta = if (isDark) Color(0xFF3B82F6) else Color(0xFF1D4ED8)
                     Button(
                         onClick = onViewBillDetails,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 46.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = OceanPrimaryBlue,
+                            containerColor = blueCta,
                             contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(12.dp)
@@ -423,16 +486,31 @@ fun ConnectBillHeroCard(
     modifier: Modifier = Modifier,
     onLearnMore: (() -> Unit)? = null
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val connectGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
+    val ctaInteraction = remember { MutableInteractionSource() }
+    val ctaPressed by ctaInteraction.collectIsPressedAsState()
+    val ctaScale by animateFloatAsState(
+        targetValue = if (ctaPressed) 0.98f else 1f,
+        animationSpec = motionTween(durationMillis = 120),
+        label = "connectCtaScale"
+    )
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = OceanGlassCardBg,
         border = BorderStroke(1.dp, OceanGlassCardBorder),
-        shadowElevation = 0.dp
+        shadowElevation = 2.dp
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(connectGradient)
                 .subtleTopRightGradient(
                     shape = RoundedCornerShape(22.dp),
                     radiusMultiplier = 0.85f
@@ -499,7 +577,6 @@ fun ConnectBillHeroCard(
                         letterSpacing = (-0.3).sp
                     )
                     Text(
-                        text = "Link your 11–12 digit consumer number to establish your baseline tariff schedule, avoid bi-monthly slab jumps, and unlock rooftop solar savings.",
                         text = "Link your 11–12 digit consumer number to establish your baseline tariff schedule, avoid bi-monthly slab jumps, and verify official statements.",
                         fontSize = 13.sp,
                         color = OceanTextSecondary,
@@ -514,15 +591,16 @@ fun ConnectBillHeroCard(
                 ) {
                     BenefitChip(label = "Slab Alerts", modifier = Modifier.weight(1f))
                     BenefitChip(label = "Due Reminders", modifier = Modifier.weight(1f))
-                    BenefitChip(label = "Solar Subsidy", modifier = Modifier.weight(1f))
                     BenefitChip(label = "Statement History", modifier = Modifier.weight(1f))
                 }
 
                 // Primary CTA button
                 Button(
                     onClick = onConnectBill,
+                    interactionSource = ctaInteraction,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .scale(ctaScale)
                         .heightIn(min = 48.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = OceanPrimaryBlue,
@@ -650,7 +728,6 @@ fun SolarLensShowcaseCard(
                             modifier = Modifier.size(13.dp)
                         )
                         Text(
-                            text = "SOLAR LENS AI AUDIT",
                             text = "APPLIANCE LOAD AUDIT",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -682,7 +759,6 @@ fun SolarLensShowcaseCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Scan air conditioners, water heaters, and pumps to calculate your day vs. night load split and size your rooftop solar perfectly.",
                     text = "Scan air conditioners, water heaters, and pumps to calculate your day vs. night load split and detect heavy power draw.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -724,7 +800,6 @@ fun SolarLensShowcaseCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Launch Solar Lens Audit",
                         text = "Launch Appliance Audit",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,

@@ -396,31 +396,42 @@ val StitchOnErrorContainer: Color
 // ============================================================================
 val SolarBrandGreen = Color(0xFF004F2E)
 val SolarBrandGreenSecondary = Color(0xFF176B45)
-val SolarBrandGreenLight = Color(0xFFE7F1E9)
-val SolarBrandGreenSurface = Color(0xFFF3F7F1)
-val SolarBrandBackground = Color(0xFFF7F9F5)
-val SolarBrandTextPrimary = Color(0xFF17251C)
-val SolarBrandTextSecondary = Color(0xFF68766D)
-val SolarBrandTextMuted = Color(0xFF88968C)
-val SolarBrandGlassCardBg = Color(0xFFFFFFFF)
-val SolarBrandGlassCardBorder = Color(0xFFD8E4DB)
+val SolarBrandGreenLight: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF15382B) else Color(0xFFE7F1E9)
+val SolarBrandGreenSurface: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF1A221B) else Color(0xFFF3F5EC)
+val SolarBrandBackground: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) SurfaceDark else Color(0xFFF8F8F2)
+val SolarBrandTextPrimary: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnSurfaceDark else Color(0xFF17251C)
+val SolarBrandTextSecondary: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) OnSurfaceVariantDark else Color(0xFF68766D)
+val SolarBrandTextMuted: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF94A090) else Color(0xFF88968C)
+val SolarBrandGlassCardBg: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) SurfaceContainerLowDark else Color(0xFFFCFDF9)
+val SolarBrandGlassCardBorder: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF2D3A2F) else Color(0xFFDEE4D8)
 val SolarBrandBarBilled = Color(0xFF004F2E)       // Bottom darker segment: verified billed units (#004F2E)
 val SolarBrandBarAdditional = Color(0xFF5BA77E)   // Top lighter segment: current/additional units
 
-// Aliases mapped directly to brand greens:
-val OceanDeepNavy = SolarBrandTextPrimary
+// Aliases mapped directly to brand greens (Dark Mode aware):
+val OceanDeepNavy: Color @Composable @ReadOnlyComposable get() = SolarBrandTextPrimary
 val OceanPrimaryBlue = SolarBrandGreen
-val OceanTeal = SolarBrandGreen
-val OceanAqua = SolarBrandGreenSecondary
-val OceanAquaLight = SolarBrandGreenLight
-val OceanAquaContainer = SolarBrandGreenLight
-val OceanGlassSurface = SolarBrandGreenSurface
-val OceanGlassCardBg = SolarBrandGlassCardBg
-val OceanGlassCardBorder = SolarBrandGlassCardBorder
-val OceanGlassCardBorderSubtle = Color(0x33004F2E)
-val OceanTextPrimary = SolarBrandTextPrimary
-val OceanTextSecondary = SolarBrandTextSecondary
-val OceanTextMuted = SolarBrandTextMuted
+val OceanTeal: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF5ED8B0) else SolarBrandGreen
+val OceanAqua: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0xFF7DE1BE) else SolarBrandGreenSecondary
+val OceanAquaLight: Color @Composable @ReadOnlyComposable get() = SolarBrandGreenLight
+val OceanAquaContainer: Color @Composable @ReadOnlyComposable get() = SolarBrandGreenLight
+val OceanGlassSurface: Color @Composable @ReadOnlyComposable get() = SolarBrandGreenSurface
+val OceanGlassCardBg: Color @Composable @ReadOnlyComposable get() = SolarBrandGlassCardBg
+val OceanGlassCardBorder: Color @Composable @ReadOnlyComposable get() = SolarBrandGlassCardBorder
+val OceanGlassCardBorderSubtle: Color
+    @Composable @ReadOnlyComposable get() = if (LocalIsDarkTheme.current) Color(0x4D5ED8B0) else Color(0x33004F2E)
+val OceanTextPrimary: Color @Composable @ReadOnlyComposable get() = SolarBrandTextPrimary
+val OceanTextSecondary: Color @Composable @ReadOnlyComposable get() = SolarBrandTextSecondary
+val OceanTextMuted: Color @Composable @ReadOnlyComposable get() = SolarBrandTextMuted
 val OceanBarBilled = SolarBrandBarBilled
 val OceanBarAdditional = SolarBrandBarAdditional
 

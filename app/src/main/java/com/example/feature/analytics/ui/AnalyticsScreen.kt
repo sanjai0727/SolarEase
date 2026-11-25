@@ -566,7 +566,6 @@ private fun EmptyAnalyticsView(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Privacy First Storage", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StitchOnSurface)
                     Text(
-                        "Your billing identifiers are locally encrypted and used solely for calculating rooftop solar ROI.",
                         "Your billing identifiers are locally encrypted and used solely for your personal consumption and tariff analytics.",
                         fontSize = 11.sp,
                         color = StitchOnSurfaceVariant,

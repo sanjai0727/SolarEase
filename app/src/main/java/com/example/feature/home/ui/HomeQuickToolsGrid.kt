@@ -155,7 +155,6 @@ fun CollapsibleExploreToolsSection(
                         QuickToolCard(
                             modifier = Modifier.weight(1f),
                             title = "Calculator",
-                            subtitle = "Solar sizing & savings",
                             subtitle = "Tariff & slab estimate",
                             icon = Icons.Default.Calculate,
                             containerBg = if (isDark) Color(0xFF382C07) else SolarIvory,
@@ -248,7 +247,6 @@ fun QuickToolsSection(
             QuickToolCard(
                 modifier = Modifier.weight(1f),
                 title = "Calculator",
-                subtitle = "Solar sizing & savings",
                 subtitle = "Tariff & slab estimate",
                 icon = Icons.Default.Calculate,
                 containerBg = if (isDark) Color(0xFF382C07) else SolarIvory,

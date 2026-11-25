@@ -190,8 +190,8 @@ fun BillCalculatorCalculatingView(
 
                 // Step 3
                 CalculatingStepRow(
-                    title = "Preparing your estimate & solar savings",
-                    subtitle = "Benchmarking rooftop net-metering yields",
+                    title = "Preparing your bill breakdown & slab estimate",
+                    subtitle = "Benchmarking domestic tariff schedules",
                     isCompleted = step >= 3,
                     isActive = step == 3
                 )

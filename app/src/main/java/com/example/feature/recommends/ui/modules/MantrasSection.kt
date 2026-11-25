@@ -1,14 +1,23 @@
 package com.example.feature.recommends.ui.modules
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,11 +29,15 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -35,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.feature.recommends.model.MantraItem
+import com.example.ui.components.subtleTopRightGradient
 import com.example.ui.theme.*
 
 @Composable
@@ -44,75 +58,95 @@ fun TodayProgressCard(
     totalCount: Int
 ) {
     val isDark = LocalIsDarkTheme.current
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
         color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
         border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
-        shadowElevation = 0.5.dp
+        shadowElevation = 1.dp
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(cardGradient)
+                .subtleTopRightGradient(
+                    shape = RoundedCornerShape(20.dp),
+                    radiusMultiplier = 0.8f
+                )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CalendarToday,
-                            contentDescription = null,
-                            tint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else SolarBrandGreen,
-                            modifier = Modifier.size(18.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                tint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else SolarBrandGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text = "Today's Mantra Progress",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
                         )
                     }
+
                     Text(
-                        text = "Today's Mantra Progress",
-                        fontSize = 14.sp,
+                        text = "$checkedCount of $totalCount completed",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurface else SolarBrandTextPrimary
+                        color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
                     )
                 }
 
-                Text(
-                    text = "$checkedCount of $totalCount completed",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
+                val targetProgress = (checkedCount.toFloat() / totalCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
+                val animatedProgress by animateFloatAsState(
+                    targetValue = targetProgress,
+                    animationSpec = motionTween(durationMillis = 500, easing = SolarEaseMotion.easingDecelerate),
+                    label = "mantraProgress"
                 )
-            }
-
-            val progress = (checkedCount.toFloat() / totalCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight)
-            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(progress)
-                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(SolarBrandGreen, SolarBrandGreenSecondary)
+                        .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(SolarBrandGreen, SolarBrandGreenSecondary)
+                                )
                             )
-                        )
-                )
+                    )
+                }
             }
         }
     }
@@ -202,15 +236,22 @@ fun MantrasSection(
                     }
                 }
 
+                val chevronRotation by animateFloatAsState(
+                    targetValue = if (isExpanded) 180f else 0f,
+                    animationSpec = motionTween(durationMillis = 200),
+                    label = "mantraChevronRotation"
+                )
                 IconButton(
                     onClick = onToggleExpand,
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                        imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = if (isExpanded) "Collapse 9 Energy-Saving Mantras" else "Expand 9 Energy-Saving Mantras",
                         tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextSecondary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer { rotationZ = chevronRotation }
                     )
                 }
             }
@@ -255,14 +296,43 @@ fun MantraCard(
         else -> Icons.Outlined.Restaurant
     }
 
+    val borderColor by animateColorAsState(
+        targetValue = if (item.isCheckedIn) {
+            if (isDark) Color(0xFF059669) else SolarBrandGreen.copy(alpha = 0.45f)
+        } else {
+            if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder
+        },
+        animationSpec = motionTween(durationMillis = 250),
+        label = "mantraCardBorder"
+    )
+    val cardGradient = if (item.isCheckedIn) {
+        if (isDark) Brush.linearGradient(listOf(Color(0xFF0D2E23), Color(0xFF092019)))
+        else Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFE7F5EC)))
+    } else {
+        if (isDark) Brush.linearGradient(listOf(Color(0xFF132620), Color(0xFF0E1D18)))
+        else Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF3F8F2)))
+    }
+    val btnInteraction = remember { MutableInteractionSource() }
+    val btnPressed by btnInteraction.collectIsPressedAsState()
+    val btnScale by animateFloatAsState(
+        targetValue = if (btnPressed) 0.96f else 1f,
+        animationSpec = motionTween(durationMillis = 120),
+        label = "mantraBtnScale"
+    )
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
-        border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
-        shadowElevation = 0.5.dp
+        border = BorderStroke(1.dp, borderColor),
+        shadowElevation = 1.dp
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(cardGradient)
+                .padding(14.dp)
+        ) {
             // Top row: Number + Icon + Title + Action button
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -331,77 +401,101 @@ fun MantraCard(
                 // Action / Check in button (top-right aligned)
                 Column(
                     horizontalAlignment = Alignment.End,
-                    modifier = Modifier.padding(top = 1.dp)
+                    modifier = Modifier
+                        .padding(top = 1.dp)
+                        .scale(btnScale)
                 ) {
-                    if (item.isCheckedIn) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isDark) Color(0xFF059669) else SolarBrandGreen,
-                            modifier = Modifier
-                                .heightIn(min = 40.dp)
-                                .clickable(role = Role.Button) { onClick() }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    .fillMaxHeight(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    val isReducedMotion = LocalIsReducedMotionEnabled.current
+                    AnimatedContent(
+                        targetState = item.isCheckedIn,
+                        transitionSpec = {
+                            if (isReducedMotion) {
+                                (fadeIn(snap()) + scaleIn(initialScale = 1f, animationSpec = snap()))
+                                    .togetherWith(fadeOut(snap()))
+                            } else {
+                                (fadeIn(tween(180)) + scaleIn(initialScale = 0.92f, animationSpec = tween(180)))
+                                    .togetherWith(fadeOut(tween(120)))
+                            }
+                        },
+                        label = "checkInState"
+                    ) { checked ->
+                        if (checked) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isDark) Color(0xFF059669) else SolarBrandGreen,
+                                    modifier = Modifier
+                                        .heightIn(min = 40.dp)
+                                        .clickable(
+                                            interactionSource = btnInteraction,
+                                            indication = null,
+                                            role = Role.Button
+                                        ) { onClick() }
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(12.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                            .fillMaxHeight(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                            Text(
+                                                text = "Checked In",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                                if (item.checkInTimeDisplay != null) {
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
-                                        text = "Checked In",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
+                                        text = item.checkInTimeDisplay,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextMuted,
                                         maxLines = 1
                                     )
                                 }
                             }
-                        }
-                        if (item.checkInTimeDisplay != null) {
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = item.checkInTimeDisplay,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else SolarBrandTextMuted,
-                                maxLines = 1
-                            )
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = onClick,
-                            modifier = Modifier.heightIn(min = 40.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
-                                contentColor = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.CheckCircle,
-                                contentDescription = null,
-                                tint = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Check In",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1
-                            )
+                        } else {
+                            OutlinedButton(
+                                onClick = onClick,
+                                interactionSource = btnInteraction,
+                                modifier = Modifier.heightIn(min = 40.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
+                                    contentColor = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CheckCircle,
+                                    contentDescription = null,
+                                    tint = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Check In",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }

@@ -65,7 +65,6 @@ enum class ReapTier(
         code = "EEH",
         title = "Energy Efficiency Home",
         bracket = "501–800 units",
-        description = "Targeted optimization tier. Focus on appliance efficiency, usage shifting, and eliminating standby waste before rooftop solar sizing.",
         description = "Targeted optimization tier. Focus on appliance efficiency, usage shifting, and eliminating standby waste.",
         targetUnits = 500.0
     ),
@@ -80,7 +79,6 @@ enum class ReapTier(
         code = "ETH",
         title = "Energy Transition Home",
         bracket = "> 1,000 units",
-        description = "High-consumption household with significant load flexibility. Highest priority for deep efficiency, 5–8 kW rooftop solar, and BESS feasibility.",
         description = "High-consumption household with significant load flexibility. Priority for deep efficiency and peak load management.",
         targetUnits = 1000.0
     )

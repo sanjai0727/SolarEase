@@ -1,10 +1,16 @@
 package com.example.feature.profile.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -47,9 +55,14 @@ import com.example.feature.profile.ui.sheets.ThemeSelectorSheet
 import com.example.ui.components.SolarEaseBottomNavigation
 import com.example.ui.components.SolarEaseNavTab
 import com.example.ui.components.SolarEaseNavigationRail
+import com.example.ui.components.subtleTopRightGradient
+import com.example.ui.theme.LocalIsDarkTheme
+import com.example.ui.theme.LocalIsReducedMotionEnabled
 import com.example.ui.theme.LocalThemeController
+import com.example.ui.theme.SolarEaseMotion
 import com.example.ui.theme.SolarEaseTheme
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.motionTween
 import com.example.ui.theme.rememberSolarEaseWindowLayoutInfo
 import kotlin.math.abs
 
@@ -329,37 +342,47 @@ fun ProfileContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 1. Profile Header Section
-                ProfileHeaderSection(
-                    user = user,
-                    onAddressClick = { showAddressSheet = true }
-                )
+                StaggeredProfileItem(index = 0) {
+                    ProfileHeaderSection(
+                        user = user,
+                        onAddressClick = { showAddressSheet = true }
+                    )
+                }
 
                 // 2. Energy Details Section
-                EnergyDetailsSection()
+                StaggeredProfileItem(index = 1) {
+                    EnergyDetailsSection()
+                }
 
                 // 3. My Details Section
-                MyDetailsSection(
-                    user = user,
-                    onPersonalInfoClick = { showPersonalInfoSheet = true },
-                    onElectricityDetailsClick = { showElectricitySheet = true },
-                    onAddressClick = { showAddressSheet = true }
-                )
+                StaggeredProfileItem(index = 2) {
+                    MyDetailsSection(
+                        user = user,
+                        onPersonalInfoClick = { showPersonalInfoSheet = true },
+                        onElectricityDetailsClick = { showElectricitySheet = true },
+                        onAddressClick = { showAddressSheet = true }
+                    )
+                }
 
                 // 4. Account & App Section
-                AccountAppSection(
-                    currentThemeMode = themeController.currentThemeMode,
-                    selectedLanguage = selectedLanguage,
-                    onNotificationsClick = { showNotificationsSheet = true },
-                    onPrivacyClick = { showPrivacySheet = true },
-                    onThemeClick = { showThemeSheet = true },
-                    onDpdpClick = { showDpdpSheet = true },
-                    onHelpClick = { showHelpSheet = true },
-                    onLanguageClick = { showLanguageSheet = true },
-                    onAboutClick = { showAboutSheet = true }
-                )
+                StaggeredProfileItem(index = 3) {
+                    AccountAppSection(
+                        currentThemeMode = themeController.currentThemeMode,
+                        selectedLanguage = selectedLanguage,
+                        onNotificationsClick = { showNotificationsSheet = true },
+                        onPrivacyClick = { showPrivacySheet = true },
+                        onThemeClick = { showThemeSheet = true },
+                        onDpdpClick = { showDpdpSheet = true },
+                        onHelpClick = { showHelpSheet = true },
+                        onLanguageClick = { showLanguageSheet = true },
+                        onAboutClick = { showAboutSheet = true }
+                    )
+                }
 
                 // 5. Sign Out Section
-                SignOutSection(onSignOutClick = onSignOutClick)
+                StaggeredProfileItem(index = 4) {
+                    SignOutSection(onSignOutClick = onSignOutClick)
+                }
                 Spacer(modifier = Modifier.height(48.dp))
             }
         }
@@ -529,18 +552,35 @@ private fun ProfileHeaderSection(
             )
         }
 
+        val isDark = LocalIsDarkTheme.current
+        val headerGradient = if (isDark) {
+            Brush.linearGradient(listOf(Color(0xFF171D15), Color(0xFF121811)))
+        } else {
+            Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+        }
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             color = colors.surface,
             shadowElevation = 1.dp,
             border = BorderStroke(1.dp, colors.outlineVariant)
         ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(headerGradient)
+                    .subtleTopRightGradient(
+                        shape = RoundedCornerShape(20.dp),
+                        radiusMultiplier = 0.8f
+                    )
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                 val displayName = user.name?.trim()?.ifBlank { null } ?: user.username.trim()
                 val avatarLetter = displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
 
@@ -662,6 +702,7 @@ private fun ProfileHeaderSection(
                     }
                 }
             }
+            }
         }
     }
 }
@@ -732,34 +773,40 @@ private fun EnergyDetailsSection() {
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             EnergyMetricCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 icon = Icons.Filled.Bolt,
                 iconBgColor = colors.secondaryContainer,
                 iconTint = colors.secondary,
-                label = "CURRENT CONSUMPTION",
+                label = "CURRENT USAGE",
                 value = if (hasCurrentData) "$currentUnits" else "Unavailable",
                 unit = if (hasCurrentData) "kWh" else "",
                 subtitle = if (hasCurrentData) {
                     if (currentPeriod.isNotEmpty()) "$currentPeriod cycle" else "Current cycle"
                 } else {
-                    "Consumption data unavailable"
+                    "Connect bill to track"
                 }
             )
 
             if (!hasDiffData) {
                 EnergyMetricCard(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                     icon = Icons.Filled.CompareArrows,
                     iconBgColor = colors.surfaceVariant,
                     iconTint = colors.onSurfaceVariant,
-                    label = "CONSUMPTION DIFFERENCE",
+                    label = "CYCLE CHANGE",
                     value = "Unavailable",
                     unit = "",
-                    subtitle = "Consumption data unavailable"
+                    subtitle = "Needs 2 billing cycles"
                 )
             } else {
                 val nonNullDiff = diff!!
@@ -767,44 +814,50 @@ private fun EnergyDetailsSection() {
                     nonNullDiff < 0 -> {
                         val absDiff = abs(nonNullDiff)
                         EnergyMetricCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             icon = Icons.Filled.ArrowDownward,
                             iconBgColor = colors.primaryContainer.copy(alpha = 0.5f),
                             iconTint = colors.primary,
-                            label = "CONSUMPTION DIFFERENCE",
+                            label = "CYCLE CHANGE",
                             value = "↓ $absDiff",
                             unit = "kWh",
                             valueTint = colors.primary,
                             unitTint = colors.primary.copy(alpha = 0.8f),
-                            subtitle = if (previousPeriod.isNotEmpty()) "↓ $absDiff kWh compared with $previousPeriod" else "↓ $absDiff kWh vs previous"
+                            subtitle = if (previousPeriod.isNotEmpty()) "vs $previousPeriod" else "vs previous cycle"
                         )
                     }
                     nonNullDiff > 0 -> {
                         EnergyMetricCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             icon = Icons.Filled.ArrowUpward,
                             iconBgColor = colors.errorContainer.copy(alpha = 0.5f),
                             iconTint = colors.error,
-                            label = "CONSUMPTION DIFFERENCE",
+                            label = "CYCLE CHANGE",
                             value = "↑ $nonNullDiff",
                             unit = "kWh",
                             valueTint = colors.error,
                             unitTint = colors.error.copy(alpha = 0.8f),
-                            subtitle = if (previousPeriod.isNotEmpty()) "↑ $nonNullDiff kWh compared with $previousPeriod" else "↑ $nonNullDiff kWh vs previous"
+                            subtitle = if (previousPeriod.isNotEmpty()) "vs $previousPeriod" else "vs previous cycle"
                         )
                     }
                     else -> {
                         EnergyMetricCard(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             icon = Icons.Filled.Remove,
                             iconBgColor = colors.surfaceVariant,
                             iconTint = colors.onSurfaceVariant,
-                            label = "CONSUMPTION DIFFERENCE",
-                            value = "No change",
-                            unit = "(0 kWh)",
+                            label = "CYCLE CHANGE",
+                            value = "0",
+                            unit = "kWh",
                             valueTint = colors.onSurface,
                             unitTint = colors.onSurfaceVariant,
-                            subtitle = if (previousPeriod.isNotEmpty()) "Equal to $previousPeriod (0 kWh)" else "Equal to previous (0 kWh)"
+                            subtitle = if (previousPeriod.isNotEmpty()) "Same as $previousPeriod" else "Same as previous"
                         )
                     }
                 }
@@ -855,71 +908,100 @@ private fun EnergyMetricCard(
     subtitle: String
 ) {
     val colors = SolarEaseTheme.colors
+    val isDark = LocalIsDarkTheme.current
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF171D15), Color(0xFF121811)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF3F8F2)))
+    }
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         color = colors.surface,
-        shadowElevation = 0.5.dp,
+        shadowElevation = 1.dp,
         border = BorderStroke(1.dp, colors.outlineVariant)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(iconBgColor),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = iconTint
-                    )
-                }
-                Text(
-                    text = label,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onSurfaceVariant,
-                    letterSpacing = 0.5.sp
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(cardGradient)
+                .subtleTopRightGradient(
+                    shape = RoundedCornerShape(20.dp),
+                    radiusMultiplier = 0.8f
                 )
-            }
-            Spacer(modifier = Modifier.height(2.dp))
-            Column {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = value,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = valueTint,
-                        letterSpacing = 0.sp
-                    )
-                    if (unit.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = unit,
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = unitTint
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(iconBgColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = iconTint
                         )
                     }
+                    Text(
+                        text = label,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurfaceVariant,
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 10.5.sp,
-                    color = colors.onSurfaceVariant,
-                    lineHeight = 14.sp
-                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = value,
+                            fontSize = if (value == "Unavailable") 17.sp else 21.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = valueTint,
+                            letterSpacing = (-0.2).sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.alignByBaseline()
+                        )
+                        if (unit.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = unit,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = unitTint,
+                                maxLines = 1,
+                                modifier = Modifier.alignByBaseline()
+                            )
+                        }
+                    }
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = colors.onSurfaceVariant,
+                        lineHeight = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -1163,7 +1245,7 @@ private fun AccountAppSection(
                     iconBgColor = colors.surfaceVariant,
                     iconTint = colors.secondary,
                     title = "Help & Support",
-                    subtitle = "FAQ, meter reading guides, solar lens support",
+                    subtitle = "FAQ, meter reading guides, appliance audit support",
                     onClick = onHelpClick,
                     showDivider = true
                 )
@@ -1265,6 +1347,13 @@ private fun AccountRow(
 @Composable
 private fun SignOutSection(onSignOutClick: () -> Unit) {
     val colors = SolarEaseTheme.colors
+    val btnInteraction = remember { MutableInteractionSource() }
+    val btnPressed by btnInteraction.collectIsPressedAsState()
+    val btnScale by animateFloatAsState(
+        targetValue = if (btnPressed) 0.98f else 1f,
+        animationSpec = motionTween(durationMillis = 120),
+        label = "signOutScale"
+    )
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1272,8 +1361,10 @@ private fun SignOutSection(onSignOutClick: () -> Unit) {
     ) {
         OutlinedButton(
             onClick = onSignOutClick,
+            interactionSource = btnInteraction,
             modifier = Modifier
                 .fillMaxWidth()
+                .scale(btnScale)
                 .heightIn(min = 48.dp),
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, colors.error.copy(alpha = 0.4f)),
@@ -1399,7 +1490,7 @@ private fun AppLanguageSheet(
             }
 
             Text(
-                text = "Application labels and Solar Mantras will adapt to your selected language.",
+                text = "Application labels and Energy Guidelines will adapt to your selected language.",
                 fontSize = 11.5.sp,
                 color = colors.onSurfaceVariant
             )
@@ -1414,6 +1505,44 @@ private fun AppLanguageSheet(
             ) {
                 Text("Confirm", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
+        }
+    }
+}
+
+@Composable
+private fun StaggeredProfileItem(
+    index: Int,
+    content: @Composable () -> Unit
+) {
+    val isReducedMotion = LocalIsReducedMotionEnabled.current
+    var visible by remember { mutableStateOf(isReducedMotion) }
+    LaunchedEffect(Unit) {
+        if (!isReducedMotion) {
+            visible = true
+        }
+    }
+
+    if (isReducedMotion) {
+        content()
+    } else {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(
+                animationSpec = tween(
+                    durationMillis = 280,
+                    delayMillis = (index * 55).coerceAtMost(260),
+                    easing = SolarEaseMotion.easingDecelerate
+                )
+            ) + slideInVertically(
+                animationSpec = tween(
+                    durationMillis = 300,
+                    delayMillis = (index * 55).coerceAtMost(260),
+                    easing = SolarEaseMotion.easingDecelerate
+                ),
+                initialOffsetY = { it / 10 }
+            )
+        ) {
+            content()
         }
     }
 }

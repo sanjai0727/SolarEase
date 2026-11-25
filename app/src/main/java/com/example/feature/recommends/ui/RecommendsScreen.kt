@@ -1,5 +1,9 @@
 package com.example.feature.recommends.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,7 +25,9 @@ import com.example.ui.components.SolarEaseBottomNavigation
 import com.example.ui.components.SolarEaseNavTab
 import com.example.ui.components.SolarEaseNavigationRail
 import com.example.ui.theme.LocalIsDarkTheme
+import com.example.ui.theme.LocalIsReducedMotionEnabled
 import com.example.ui.theme.SolarBrandBackground
+import com.example.ui.theme.SolarEaseMotion
 import com.example.ui.theme.rememberSolarEaseWindowLayoutInfo
 
 @Composable
@@ -114,26 +120,70 @@ fun RecommendsScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 1. Hero Header Section
-                    RecommendsHeroHeader()
+                    StaggeredRecommendsItem(index = 0) {
+                        RecommendsHeroHeader()
+                    }
 
                     // 2. Today's Mantra Progress (Full-width compact card)
-                    TodayProgressCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        checkedCount = uiState.todayProgressChecked,
-                        totalCount = uiState.todayProgressTotal
-                    )
+                    StaggeredRecommendsItem(index = 1) {
+                        TodayProgressCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            checkedCount = uiState.todayProgressChecked,
+                            totalCount = uiState.todayProgressTotal
+                        )
+                    }
 
                     // 3. 9 Energy-Saving Mantras Section
-                    MantrasSection(
-                        mantras = uiState.mantras,
-                        isExpanded = uiState.isMantrasExpanded,
-                        onToggleExpand = onToggleMantrasExpanded,
-                        onMantraClick = onMantraClick
-                    )
+                    StaggeredRecommendsItem(index = 2) {
+                        MantrasSection(
+                            mantras = uiState.mantras,
+                            isExpanded = uiState.isMantrasExpanded,
+                            onToggleExpand = onToggleMantrasExpanded,
+                            onMantraClick = onMantraClick
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(48.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StaggeredRecommendsItem(
+    index: Int,
+    content: @Composable () -> Unit
+) {
+    val isReducedMotion = LocalIsReducedMotionEnabled.current
+    var visible by remember { mutableStateOf(isReducedMotion) }
+    LaunchedEffect(Unit) {
+        if (!isReducedMotion) {
+            visible = true
+        }
+    }
+
+    if (isReducedMotion) {
+        content()
+    } else {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(
+                animationSpec = tween(
+                    durationMillis = 280,
+                    delayMillis = (index * 55).coerceAtMost(240),
+                    easing = SolarEaseMotion.easingDecelerate
+                )
+            ) + slideInVertically(
+                animationSpec = tween(
+                    durationMillis = 300,
+                    delayMillis = (index * 55).coerceAtMost(240),
+                    easing = SolarEaseMotion.easingDecelerate
+                ),
+                initialOffsetY = { it / 10 }
+            )
+        ) {
+            content()
         }
     }
 }

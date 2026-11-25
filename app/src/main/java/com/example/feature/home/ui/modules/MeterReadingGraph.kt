@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
@@ -40,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -646,11 +649,18 @@ fun MeterReadingProgressionGraph(
         shape = RoundedCornerShape(20.dp),
         color = SolarBrandGlassCardBg,
         border = BorderStroke(1.dp, SolarBrandGlassCardBorder),
-        shadowElevation = 0.dp
+        shadowElevation = 1.dp
     ) {
+        val isDark = LocalIsDarkTheme.current
+        val cardGradient = if (isDark) {
+            Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+        } else {
+            Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(cardGradient)
                 .padding(12.dp)
                 .animateContentSize()
         ) {
@@ -688,12 +698,19 @@ fun MeterReadingProgressionGraph(
                 }
 
                 if (weeklyData.latestReading != null && weeklyData.latestReading > 0.0) {
-                    Text(
-                        text = "${String.format(Locale.getDefault(), "%,.0f", weeklyData.latestReading)} kWh",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GraphBluePrimary
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = GraphBlueContainer,
+                        border = BorderStroke(1.dp, GraphBluePrimary.copy(alpha = 0.2f))
+                    ) {
+                        Text(
+                            text = "${String.format(Locale.getDefault(), "%,.0f", weeklyData.latestReading)} kWh",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GraphBluePrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
 
@@ -834,11 +851,30 @@ fun MeterReadingProgressionGraph(
                 val amberWarningCol = AmberWarning
                 val graphBluePrimaryCol = GraphBluePrimary
                 val graphBluePrimaryDarkCol = GraphBluePrimaryDark
+                val isReducedMotion = LocalIsReducedMotionEnabled.current
+                val barGrowth = remember(weekOffset, days) {
+                    Animatable(if (isReducedMotion) 1f else 0f)
+                }
+                LaunchedEffect(weekOffset, days, isReducedMotion) {
+                    if (!isReducedMotion) {
+                        barGrowth.snapTo(0f)
+                        barGrowth.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = 550,
+                                easing = SolarEaseMotion.easingDecelerate
+                            )
+                        )
+                    } else {
+                        barGrowth.snapTo(1f)
+                    }
+                }
+                val growthProgress = barGrowth.value
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(116.dp)
+                        .height(132.dp)
                 ) {
                     Canvas(
                         modifier = Modifier
@@ -883,36 +919,49 @@ fun MeterReadingProgressionGraph(
                             )
                         }
 
-                        // 2. Bars for Sunday through Saturday
+                        // 2. Bars for Sunday through Saturday + Trend Line Points
                         val colW = chartW / 7f
                         val barW = (colW * 0.44f).coerceAtLeast(13.dp.toPx())
+                        val trendNodes = mutableListOf<Offset>()
 
                         for (i in 0..6) {
                             val day = days[i]
                             val centerX = leftPad + (i * colW) + (colW / 2f)
                             val isSelected = (selectedDayIndex == i)
 
+                            // Subtle background column pill track
+                            drawRoundRect(
+                                color = gridLineCol2.copy(alpha = 0.20f),
+                                topLeft = Offset(centerX - (barW / 2f), topPad),
+                                size = androidx.compose.ui.geometry.Size(barW, chartH),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx(), 5.dp.toPx())
+                            )
+
                             if (isSelected) {
                                 drawRoundRect(
-                                    color = graphBlueContainerCol.copy(alpha = 0.6f),
+                                    color = graphBlueContainerCol.copy(alpha = 0.75f),
                                     topLeft = Offset(centerX - (colW / 2f) + 1.dp.toPx(), topPad - 2.dp.toPx()),
                                     size = androidx.compose.ui.geometry.Size(colW - 2.dp.toPx(), chartH + 4.dp.toPx()),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx(), 8.dp.toPx())
                                 )
                             }
 
                             if (day.reading != null) {
                                 if (day.isDecreasedReading) {
-                                    val barH = (chartH * 0.22f).coerceAtLeast(8.dp.toPx())
+                                    val barH = ((chartH * 0.22f) * growthProgress).coerceAtLeast(8.dp.toPx() * growthProgress)
                                     val barTop = topPad + chartH - barH
                                     drawRoundRect(
-                                        color = amberWarningCol,
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(amberWarningCol.copy(alpha = 0.85f), amberWarningCol),
+                                            startY = barTop,
+                                            endY = topPad + chartH
+                                        ),
                                         topLeft = Offset(centerX - (barW / 2f), barTop),
                                         size = androidx.compose.ui.geometry.Size(barW, barH),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx(), 5.dp.toPx())
                                     )
                                 } else if (day.isBaselinePoint) {
-                                    val anchorH = 6.dp.toPx()
+                                    val anchorH = 6.dp.toPx() * growthProgress
                                     val barTop = topPad + chartH - anchorH
                                     drawRoundRect(
                                         color = graphBluePrimaryCol,
@@ -920,20 +969,64 @@ fun MeterReadingProgressionGraph(
                                         size = androidx.compose.ui.geometry.Size(barW, anchorH),
                                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
                                     )
+                                    trendNodes.add(Offset(centerX, barTop))
                                 } else if (day.cumulativeKwh != null) {
                                     val rel = (day.cumulativeKwh - baselineVal).coerceAtLeast(0.0)
-                                    val fraction = if (span > 0) (rel / span).toFloat().coerceIn(0.04f, 1f) else 0.04f
-                                    val barH = (chartH * fraction).coerceAtLeast(5.dp.toPx())
+                                    val fraction = if (span > 0) (rel / span).toFloat().coerceIn(0.06f, 1f) else 0.06f
+                                    val fullBarH = (chartH * fraction).coerceAtLeast(6.dp.toPx())
+                                    val barH = fullBarH * growthProgress
                                     val barTop = topPad + chartH - barH
 
+                                    val topColor = if (isSelected) graphBluePrimaryDarkCol else graphBluePrimaryCol.copy(alpha = 0.72f)
+                                    val bottomColor = if (isSelected) graphBluePrimaryDarkCol else graphBluePrimaryCol
                                     drawRoundRect(
-                                        color = if (isSelected) graphBluePrimaryDarkCol else graphBluePrimaryCol,
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(topColor, bottomColor),
+                                            startY = barTop,
+                                            endY = topPad + chartH
+                                        ),
                                         topLeft = Offset(centerX - (barW / 2f), barTop),
                                         size = androidx.compose.ui.geometry.Size(barW, barH),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx(), 5.dp.toPx())
                                     )
+                                    trendNodes.add(Offset(centerX, barTop))
                                 }
                             }
+                        }
+
+                        // 3. Smooth Cubic Bezier Trend Line & Crisp Nodes across recorded days
+                        if (trendNodes.size >= 2) {
+                            val trendPath = Path().apply {
+                                moveTo(trendNodes.first().x, trendNodes.first().y)
+                                for (idx in 0 until trendNodes.lastIndex) {
+                                    val p0 = trendNodes[idx]
+                                    val p1 = trendNodes[idx + 1]
+                                    val ctrlX = (p0.x + p1.x) / 2f
+                                    cubicTo(ctrlX, p0.y, ctrlX, p1.y, p1.x, p1.y)
+                                }
+                            }
+                            drawPath(
+                                path = trendPath,
+                                color = graphBluePrimaryCol.copy(alpha = 0.16f),
+                                style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                            drawPath(
+                                path = trendPath,
+                                color = graphBluePrimaryDarkCol.copy(alpha = 0.85f),
+                                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                        }
+                        trendNodes.forEach { node ->
+                            drawCircle(
+                                color = graphBluePrimaryDarkCol,
+                                radius = 3.5.dp.toPx(),
+                                center = node
+                            )
+                            drawCircle(
+                                color = Color.White,
+                                radius = 1.75.dp.toPx(),
+                                center = node
+                            )
                         }
                     }
 

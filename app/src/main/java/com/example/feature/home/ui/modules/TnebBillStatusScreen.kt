@@ -21,8 +21,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.ui.components.subtleTopRightGradient
+import com.example.ui.theme.*
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -56,7 +60,11 @@ fun TnebBillStatusRoute(
     val captchaImageBase64 by viewModel.captchaImageBase64.collectAsState()
     val pageLoadError by viewModel.pageLoadError.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         when {
             submitState == SubmitState.SUCCESS -> {
                 BackHandler(enabled = true) {
@@ -122,7 +130,9 @@ fun TnebBillStatusRoute(
         if (isChecking) {
             TnebBillStatusWebView(
                 viewModel = viewModel,
-                modifier = Modifier.size(1.dp)
+                modifier = Modifier
+                    .size(1.dp)
+                    .alpha(0f)
             )
         }
     }
@@ -527,6 +537,16 @@ fun TnebCaptchaVerificationScreen(
     val captchaInput by viewModel.captchaInput.collectAsState()
     val submitState by viewModel.submitState.collectAsState()
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) MaterialTheme.colorScheme.background else SolarBrandBackground
+    val cardBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
+    val accentGreen = if (isDark) Color(0xFF5ED8B0) else SolarBrandGreen
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -538,17 +558,17 @@ fun TnebCaptchaVerificationScreen(
                 },
                 actions = {
                     TextButton(onClick = onNavigateBack) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                        Text("Cancel", color = accentGreen, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = screenBg,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = screenBg
     ) { padding ->
         Column(
             modifier = Modifier
@@ -558,82 +578,96 @@ fun TnebCaptchaVerificationScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             // Step Progress Chip
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight,
+                border = BorderStroke(1.dp, cardBorder)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(10.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(accentGreen),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = if (isDark) Color(0xFF0B251B) else Color.White,
+                            modifier = Modifier.size(10.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Step 2 of 2 • TNPDCL Portal Sync",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Step 2 of 2 • TNPDCL Portal Sync",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Verified Consumer Summary Card
-            Card(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                shape = RoundedCornerShape(20.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 1.dp
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .background(cardGradient)
+                        .subtleTopRightGradient(shape = RoundedCornerShape(20.dp), radiusMultiplier = 0.8f)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = accentGreen)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Service: ${formatConsumerNumber(serviceConnectionNumber)}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Mobile: +91 ${registeredMobileNumber.take(5)} ${registeredMobileNumber.takeLast(5)}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Service: ${formatConsumerNumber(serviceConnectionNumber)}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Mobile: +91 ${registeredMobileNumber.take(5)} ${registeredMobileNumber.takeLast(5)}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
 
-                    TextButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Edit", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                        TextButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = accentGreen)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit", color = accentGreen, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -642,11 +676,11 @@ fun TnebCaptchaVerificationScreen(
 
             // Invalid CAPTCHA feedback alert if applicable
             if (submitState == SubmitState.INVALID_CAPTCHA) {
-                Card(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = SolarEaseSemanticColors.ErrorContainer),
-                    border = BorderStroke(1.dp, Color(0xFFFFCDD2))
+                    shape = RoundedCornerShape(16.dp),
+                    color = SolarEaseSemanticColors.ErrorContainer,
+                    border = BorderStroke(1.dp, SolarEaseSemanticColors.ErrorText.copy(alpha = 0.35f))
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
@@ -667,125 +701,171 @@ fun TnebCaptchaVerificationScreen(
             }
 
             // Main CAPTCHA Card
-            val captchaInputBg = if (LocalIsDarkTheme.current) Color(0xFF20251D) else Color(0xFFF9FBF8)
-            val captchaInputBorder = MaterialTheme.colorScheme.outlineVariant
+            val captchaInputBg = if (isDark) Color(0xFF1A231C) else Color(0xFFFCFDF9)
 
-            Card(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, captchaInputBorder),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                shape = RoundedCornerShape(22.dp),
+                color = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 2.dp
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardGradient)
+                        .subtleTopRightGradient(shape = RoundedCornerShape(22.dp), radiusMultiplier = 0.85f)
                 ) {
-                    Text(
-                        text = "Enter Security Code",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Type the characters shown in the security image below.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // CAPTCHA Preview & Reload Button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val bitmap = remember(captchaImageBase64) {
-                            try {
-                                val b64 = captchaImageBase64 ?: ""
-                                val imageBytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT)
-                                android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .width(200.dp)
-                                .height(60.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (LocalIsDarkTheme.current) Color(0xFF20251D) else Color(0xFFE8F0FE))
-                                .border(1.dp, captchaInputBorder, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight,
+                            border = BorderStroke(1.dp, accentGreen.copy(alpha = 0.25f))
                         ) {
-                            if (bitmap != null) {
-                                Image(
-                                    bitmap = bitmap,
-                                    contentDescription = "CAPTCHA Code",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            Row(
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = accentGreen,
+                                    modifier = Modifier.size(13.dp)
                                 )
-                            } else {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                                Text(
+                                    text = "TNPDCL SECURITY CHECK",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accentGreen,
+                                    letterSpacing = 0.7.sp
+                                )
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        IconButton(
-                            onClick = { viewModel.requestCaptchaRefresh() },
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Reload CAPTCHA",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // CAPTCHA Input Field
-                    OutlinedTextField(
-                        value = captchaInput,
-                        onValueChange = { viewModel.updateCaptchaInput(it.uppercase()) },
-                        placeholder = { Text("CAPTCHA Code", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(0.8f),
-                        textStyle = LocalTextStyle.current.copy(
-                            textAlign = TextAlign.Center,
-                            fontFamily = FontFamily.Monospace,
+                        Text(
+                            text = "Enter Security Code",
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            letterSpacing = 2.sp
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = captchaInputBorder,
-                            focusedContainerColor = captchaInputBg,
-                            unfocusedContainerColor = captchaInputBg,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                    )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Type the characters shown in the security image below to verify your official statement.",
+                            fontSize = 12.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 17.sp
+                        )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
-                    Text(
-                        text = "Code is case-sensitive • Numbers & Letters",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        // CAPTCHA Preview & Reload Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            val bitmap = remember(captchaImageBase64) {
+                                try {
+                                    val b64 = captchaImageBase64 ?: ""
+                                    val imageBytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT)
+                                    android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .width(206.dp)
+                                    .height(64.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isDark) Color(0xFFE8EFEA) else Color(0xFFF3F8F4))
+                                    .border(1.dp, cardBorder, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap,
+                                        contentDescription = "CAPTCHA Code",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(4.dp),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                    )
+                                } else {
+                                    CircularProgressIndicator(color = accentGreen, modifier = Modifier.size(24.dp))
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Surface(
+                                onClick = { viewModel.requestCaptchaRefresh() },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight,
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Reload CAPTCHA",
+                                        tint = accentGreen,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // CAPTCHA Input Field
+                        OutlinedTextField(
+                            value = captchaInput,
+                            onValueChange = { viewModel.updateCaptchaInput(it.uppercase()) },
+                            placeholder = {
+                                Text(
+                                    "TYPE CODE",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(0.86f),
+                            textStyle = LocalTextStyle.current.copy(
+                                textAlign = TextAlign.Center,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 19.sp,
+                                letterSpacing = 3.sp
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = accentGreen,
+                                unfocusedBorderColor = cardBorder,
+                                focusedContainerColor = captchaInputBg,
+                                unfocusedContainerColor = captchaInputBg,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "Code is case-sensitive • Numbers & Letters",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -926,7 +1006,7 @@ fun TnebBillLoadingScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(18.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outlineVariant))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Computing Solar Rooftop savings", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Analyzing tariff slabs & consumption", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
 

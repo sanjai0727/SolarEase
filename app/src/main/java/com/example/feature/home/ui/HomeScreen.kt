@@ -1,11 +1,13 @@
 package com.example.feature.home.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,12 +19,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CameraOutdoor
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.SolarPower
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -76,6 +88,16 @@ fun HomeRoute(
     var showProfilePrompt by remember { mutableStateOf(false) }
     var showInsightsAndTools by rememberSaveable { mutableStateOf(false) }
     var showBillHelp by rememberSaveable { mutableStateOf(false) }
+    var showNewUserGuide by rememberSaveable { mutableStateOf(true) }
+    var wasTodayReadingEntered by remember { mutableStateOf(uiState.isTodayReadingEntered) }
+    var showExploreToolsPopup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.isTodayReadingEntered) {
+        if (!wasTodayReadingEntered && uiState.isTodayReadingEntered && uiState.hasConnectedBill) {
+            showExploreToolsPopup = true
+        }
+        wasTodayReadingEntered = uiState.isTodayReadingEntered
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -96,7 +118,6 @@ fun HomeRoute(
                 currentUser?.id?.let { UserSession.setProfilePromptDismissed(context, it) }
             },
             title = { Text("Complete Your Profile", fontWeight = FontWeight.SemiBold, color = StitchOnSurface) },
-            text = { Text("Add your email and installation address to calculate precise local solar insolation.", color = StitchOnSurfaceVariant) },
             text = { Text("Add your email and service address to personalize your electricity bill tracking and slab alerts.", color = StitchOnSurfaceVariant) },
             confirmButton = {
                 TextButton(onClick = {
@@ -118,30 +139,133 @@ fun HomeRoute(
         )
     }
 
+    if (showExploreToolsPopup) {
+        val isDark = LocalIsDarkTheme.current
+        AlertDialog(
+            onDismissRequest = { showExploreToolsPopup = false },
+            containerColor = if (isDark) MaterialTheme.colorScheme.surface else SolarBrandGlassCardBg,
+            shape = RoundedCornerShape(22.dp),
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Reading Saved!",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = StitchOnSurface
+                        )
+                        Text(
+                            text = "Explore tools to analyze your usage",
+                            fontSize = 12.sp,
+                            color = StitchOnSurfaceVariant
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ExploreToolSuggestionRow(
+                        icon = Icons.Default.Calculate,
+                        title = "Bill Calculator",
+                        subtitle = "Estimate TNEB slab cost & units",
+                        onClick = {
+                            showExploreToolsPopup = false
+                            onNavigateToBillCalculator()
+                        }
+                    )
+                    ExploreToolSuggestionRow(
+                        icon = Icons.Default.SmartToy,
+                        title = "Energy AI Chatbot",
+                        subtitle = "Ask about tariffs, slabs & savings",
+                        onClick = {
+                            showExploreToolsPopup = false
+                            onNavigateToElectricityChatbot()
+                        }
+                    )
+                    ExploreToolSuggestionRow(
+                        icon = Icons.Default.CameraOutdoor,
+                        title = "Appliance Audit",
+                        subtitle = "Identify heavy power-drawing devices",
+                        onClick = {
+                            showExploreToolsPopup = false
+                            onNavigateToSolarEaseLens()
+                        }
+                    )
+                    ExploreToolSuggestionRow(
+                        icon = Icons.Default.ReceiptLong,
+                        title = "Bill Status & Ledger",
+                        subtitle = "Check dues & past billing history",
+                        onClick = {
+                            showExploreToolsPopup = false
+                            onNavigateToTnebBillStatus()
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showExploreToolsPopup = false }) {
+                    Text(
+                        text = "Maybe Later",
+                        color = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        )
+    }
+
     if (showAccountPreview) {
         AlertDialog(
             onDismissRequest = { showAccountPreview = false },
             title = { Text("Account Details", fontWeight = FontWeight.SemiBold, color = StitchOnSurface) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = "Name: ${currentUser?.name ?: currentUser?.username ?: "Guest"}", fontWeight = FontWeight.Medium, color = StitchOnSurface)
-                    if (!currentUser?.email.isNullOrBlank()) {
-                        Text(text = "Email: ${currentUser?.email}", color = StitchOnSurfaceVariant, fontSize = 13.sp)
-                    }
-                    if (!currentUser?.houseAddress.isNullOrBlank()) {
-                        Text(text = "Address: ${currentUser?.houseAddress}", color = StitchOnSurfaceVariant, fontSize = 13.sp)
-                    }
-                    if (!currentUser?.ebServiceNumber.isNullOrBlank()) {
-                        Text(text = "EB Service Number: ${currentUser?.ebServiceNumber}", color = StitchPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val displayName = currentUser?.name?.takeIf { it.isNotBlank() }
+                        ?: currentUser?.username?.takeIf { it.isNotBlank() }
+                        ?: "Guest"
+                    val serviceNumber = currentUser?.ebServiceNumber?.takeIf { it.isNotBlank() }
+                        ?: uiState.consumerNumberFormatted.takeIf { it.isNotBlank() }
+                        ?: "Not Connected"
+
+                    Text(
+                        text = "Name: $displayName",
+                        fontWeight = FontWeight.Medium,
+                        color = StitchOnSurface,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "Service Number: $serviceNumber",
+                        color = if (uiState.hasConnectedBill) StitchPrimary else StitchOnSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.5.sp
+                    )
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showAccountPreview = false
-                    onNavigateToProfile()
-                }) {
-                    Text("Manage Profile", color = StitchPrimary, fontWeight = FontWeight.Bold)
+                if (uiState.hasConnectedBill) {
+                    TextButton(onClick = {
+                        showAccountPreview = false
+                        onNavigateToProfile()
+                    }) {
+                        Text("Manage Profile", color = StitchPrimary, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
@@ -164,7 +288,7 @@ fun HomeRoute(
             )
         },
         bottomBar = {
-            if (!layoutInfo.useNavigationRail) {
+            if (uiState.hasConnectedBill && !layoutInfo.useNavigationRail) {
                 SolarEaseBottomNavigation(
                     currentTab = SolarEaseNavTab.HOME,
                     onNavigateToHome = {},
@@ -179,7 +303,7 @@ fun HomeRoute(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (layoutInfo.useNavigationRail) {
+            if (uiState.hasConnectedBill && layoutInfo.useNavigationRail) {
                 SolarEaseNavigationRail(
                     currentTab = SolarEaseNavTab.HOME,
                     onNavigateToHome = {},
@@ -225,63 +349,73 @@ fun HomeRoute(
                         }
 
                         // ── 3. Connect Your Electricity Bill Hero Card ──────────────
-                        ConnectBillHeroCard(
-                            onConnectBill = onNavigateToTnebBillStatus,
-                            onLearnMore = { showBillHelp = !showBillHelp }
-                        )
+                        StaggeredHomeItem(index = 0) {
+                            ConnectBillHeroCard(
+                                onConnectBill = onNavigateToTnebBillStatus,
+                                onLearnMore = { showBillHelp = !showBillHelp }
+                            )
+                        }
 
                         // ── 4. Need Help With Your Electricity Bill (Expandable) ─────
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics {
-                                    stateDescription = if (showBillHelp) "Expanded" else "Collapsed"
-                                },
-                            shape = RoundedCornerShape(20.dp),
-                            color = OceanGlassCardBg,
-                            border = BorderStroke(1.dp, OceanGlassCardBorder),
-                            shadowElevation = 0.dp,
-                            onClick = { showBillHelp = !showBillHelp }
-                        ) {
-                            Row(
+                        StaggeredHomeItem(index = 1) {
+                            val helpChevronRotation by animateFloatAsState(
+                                targetValue = if (showBillHelp) 180f else 0f,
+                                animationSpec = motionTween(durationMillis = 200),
+                                label = "billHelpChevron"
+                            )
+                            Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    .semantics {
+                                        stateDescription = if (showBillHelp) "Expanded" else "Collapsed"
+                                    },
+                                shape = RoundedCornerShape(20.dp),
+                                color = OceanGlassCardBg,
+                                border = BorderStroke(1.dp, OceanGlassCardBorder),
+                                shadowElevation = 0.dp,
+                                onClick = { showBillHelp = !showBillHelp }
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(OceanAquaContainer),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(OceanAquaContainer),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Help,
+                                            contentDescription = null,
+                                            tint = OceanTeal,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(
+                                            text = "Need help with your electricity bill?",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = OceanDeepNavy
+                                        )
+                                        Text(
+                                            text = if (showBillHelp) "Hide bill help" else "Find your service number and learn how TNEB slabs work",
+                                            fontSize = 12.sp,
+                                            color = OceanTextSecondary
+                                        )
+                                    }
                                     Icon(
-                                        imageVector = Icons.Default.Help,
-                                        contentDescription = null,
+                                        imageVector = Icons.Default.ExpandMore,
+                                        contentDescription = if (showBillHelp) "Hide bill help" else "Show bill help",
                                         tint = OceanTeal,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.graphicsLayer { rotationZ = helpChevronRotation }
                                     )
                                 }
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = "Need help with your electricity bill?",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = OceanDeepNavy
-                                    )
-                                    Text(
-                                        text = if (showBillHelp) "Hide bill help" else "Find your service number and learn how TNEB slabs work",
-                                        fontSize = 12.sp,
-                                        color = OceanTextSecondary
-                                    )
-                                }
-                                Icon(
-                                    imageVector = if (showBillHelp) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = if (showBillHelp) "Hide bill help" else "Show bill help",
-                                    tint = OceanTeal
-                                )
                             }
                         }
 
@@ -294,6 +428,15 @@ fun HomeRoute(
                                 WhyConnectBillSection()
                                 WhereToFindConsumerNumberCard()
                             }
+                        }
+
+                        // ── 5. New User Quick Start Guide ───────────────────────────
+                        StaggeredHomeItem(index = 2) {
+                            NewUserQuickStartGuideCard(
+                                isExpanded = showNewUserGuide,
+                                onToggleExpand = { showNewUserGuide = !showNewUserGuide },
+                                onConnectBill = onNavigateToTnebBillStatus
+                            )
                         }
 
                         // IMPORTANT: On first-time screen, hide completely:
@@ -319,51 +462,63 @@ fun HomeRoute(
                         }
 
                         // ── 3. Hero Card: Previous Bill Consumption & Dues ───────────
-                        PreviousBillConsumptionHeroCard(
-                            uiState = uiState,
-                            onViewBillDetails = onNavigateToBillHistory
-                        )
+                        StaggeredHomeItem(index = 0) {
+                            PreviousBillConsumptionHeroCard(
+                                uiState = uiState,
+                                onViewBillDetails = onNavigateToBillHistory
+                            )
+                        }
 
                         // ── 4. Today's Meter Reading & Entry ─────────────────────────
-                        HomeMeterReadingEntryCard(
-                            uiState = uiState,
-                            onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
-                            onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
-                            onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
-                            onStartEditingReading = { viewModel.startEditingReading() },
-                            onCancelEditingReading = { viewModel.cancelEditingReading() },
-                            onScanMeterReading = onNavigateToMeterScanner
-                        )
+                        StaggeredHomeItem(index = 1) {
+                            HomeMeterReadingEntryCard(
+                                uiState = uiState,
+                                onMeterInputChanged = { viewModel.onMeterInputChanged(it) },
+                                onSaveMeterReading = { viewModel.saveCurrentMeterReading() },
+                                onUpdateTodayReading = { viewModel.updateTodayMeterReading() },
+                                onStartEditingReading = { viewModel.startEditingReading() },
+                                onCancelEditingReading = { viewModel.cancelEditingReading() },
+                                onScanMeterReading = onNavigateToMeterScanner
+                            )
+                        }
 
                         // ── 5. Usage Insights: Consumption Graph ─────────────────────
-                        MeterReadingProgressionGraph(
-                            points = uiState.meterGraphPoints,
-                            billData = uiState.billData,
-                            onEditReading = { viewModel.onInitiateEditReading(it) },
-                            onViewReadingDetails = onNavigateToBillHistory
-                        )
+                        StaggeredHomeItem(index = 2) {
+                            MeterReadingProgressionGraph(
+                                points = uiState.meterGraphPoints,
+                                billData = uiState.billData,
+                                onEditReading = { viewModel.onInitiateEditReading(it) },
+                                onViewReadingDetails = onNavigateToBillHistory
+                            )
+                        }
 
                         // ── 6. Bill and Payment Actions ──────────────────────────────
-                        BillActionsSection(
-                            onViewBillHistory = onNavigateToBillHistory,
-                            onCheckDues = onNavigateToTnebBillStatus
-                        )
+                        StaggeredHomeItem(index = 3) {
+                            BillActionsSection(
+                                onViewBillHistory = onNavigateToBillHistory,
+                                onCheckDues = onNavigateToTnebBillStatus
+                            )
+                        }
 
                         // ── 7. Find Where Your Previous Billed Consumption Went ──────
-                        KnowYourConsumptionCard(
-                            uiState = uiState,
-                            onOpenSolarLens = onNavigateToSolarEaseLens
-                        )
+                        StaggeredHomeItem(index = 4) {
+                            KnowYourConsumptionCard(
+                                uiState = uiState,
+                                onOpenSolarLens = onNavigateToSolarEaseLens
+                            )
+                        }
 
                         // ── 8. Explore Tools: Collapsible Dropdown (Default Collapsed)
-                        CollapsibleExploreToolsSection(
-                            onBillStatus = onNavigateToTnebBillStatus,
-                            onChatbot = onNavigateToElectricityChatbot,
-                            onSolarLens = onNavigateToSolarEaseLens,
-                            onCalculator = onNavigateToBillCalculator,
-                            hasConnectedBill = true,
-                            tariffCode = uiState.tariffCode
-                        )
+                        StaggeredHomeItem(index = 5) {
+                            CollapsibleExploreToolsSection(
+                                onBillStatus = onNavigateToTnebBillStatus,
+                                onChatbot = onNavigateToElectricityChatbot,
+                                onSolarLens = onNavigateToSolarEaseLens,
+                                onCalculator = onNavigateToBillCalculator,
+                                hasConnectedBill = true,
+                                tariffCode = uiState.tariffCode
+                            )
+                        }
 
                         // Completely removed:
                         // - Recent Activity section
@@ -632,7 +787,7 @@ private fun StitchTopBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SolarPower,
+                        painter = androidx.compose.ui.res.painterResource(com.example.R.drawable.ic_solarease_logo),
                         contentDescription = "SolarEase",
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(20.dp)
@@ -719,6 +874,277 @@ private fun StitchTopBar(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Accessibility-aware staggered entrance wrapper for Home cards.
+ * Gently fades and slides content into place on initial composition.
+ */
+@Composable
+private fun StaggeredHomeItem(
+    index: Int,
+    content: @Composable () -> Unit
+) {
+    val isReducedMotion = LocalIsReducedMotionEnabled.current
+    var visible by remember { mutableStateOf(isReducedMotion) }
+    LaunchedEffect(Unit) {
+        if (!isReducedMotion) {
+            visible = true
+        }
+    }
+
+    if (isReducedMotion) {
+        content()
+    } else {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(
+                animationSpec = tween(
+                    durationMillis = 280,
+                    delayMillis = (index * 55).coerceAtMost(300),
+                    easing = SolarEaseMotion.easingDecelerate
+                )
+            ) + slideInVertically(
+                animationSpec = tween(
+                    durationMillis = 300,
+                    delayMillis = (index * 55).coerceAtMost(300),
+                    easing = SolarEaseMotion.easingDecelerate
+                ),
+                initialOffsetY = { it / 10 }
+            )
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ExploreToolSuggestionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    val isDark = LocalIsDarkTheme.current
+    val accentGreen = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = if (isDark) MaterialTheme.colorScheme.surfaceVariant else SolarBrandGreenLight.copy(alpha = 0.55f),
+        border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else SolarBrandGlassCardBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFFCFDF9)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentGreen,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StitchOnSurface
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = StitchOnSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = accentGreen,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun NewUserQuickStartGuideCard(
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    onConnectBill: () -> Unit
+) {
+    val isDark = LocalIsDarkTheme.current
+    val accentGreen = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
+    val cardGradient = if (isDark) {
+        Brush.linearGradient(listOf(Color(0xFF102A22), Color(0xFF0C1D18)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFFCFDF9), Color(0xFFF1F7F1)))
+    }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = motionTween(durationMillis = 200),
+        label = "guideChevron"
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = OceanGlassCardBg,
+        border = BorderStroke(1.dp, OceanGlassCardBorder),
+        shadowElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(cardGradient)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onToggleExpand() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(OceanAquaContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        tint = accentGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "New User Quick Start Guide",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = OceanDeepNavy
+                    )
+                    Text(
+                        text = "3 simple steps to monitor bills & save power",
+                        fontSize = 12.sp,
+                        color = OceanTextSecondary
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) "Hide guide" else "Show guide",
+                    tint = accentGreen,
+                    modifier = Modifier.graphicsLayer { rotationZ = chevronRotation }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = tween(200)) + fadeIn(animationSpec = tween(200)),
+                exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GuideStepRow(
+                        step = "1",
+                        title = "Connect Your TNEB Bill",
+                        description = "Link your 11–12 digit consumer number to fetch your tariff schedule and unlock Recommends & Profile."
+                    )
+                    GuideStepRow(
+                        step = "2",
+                        title = "Log Daily Meter Readings",
+                        description = "Type or scan your meter kWh reading daily to view your weekly graph and avoid high slab jumps."
+                    )
+                    GuideStepRow(
+                        step = "3",
+                        title = "Use Smart Tools & Guidelines",
+                        description = "Estimate slab costs in Calculator, audit heavy appliances, and check off daily Energy Mantras."
+                    )
+
+                    Button(
+                        onClick = onConnectBill,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accentGreen,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "Start Step 1: Connect TNEB Bill →",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideStepRow(
+    step: String,
+    title: String,
+    description: String
+) {
+    val isDark = LocalIsDarkTheme.current
+    val accentGreen = if (isDark) MaterialTheme.colorScheme.primary else SolarBrandGreen
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFCFDF9))
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else SolarBrandGreenLight),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = step,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = accentGreen
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = StitchOnSurface
+            )
+            Text(
+                text = description,
+                fontSize = 11.5.sp,
+                color = StitchOnSurfaceVariant,
+                lineHeight = 15.sp
+            )
         }
     }
 }
